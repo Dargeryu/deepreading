@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#14101d">
+<meta name="theme-color" content="#f5f6f8">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>Deepreading v2.1 · 把书听成故事</title>
+<title>Deepreading v3.0 · 把书听成故事</title>
 <link rel="stylesheet" href="css/styles.css">
 <script>
 if ('serviceWorker' in navigator) {
@@ -21,46 +21,107 @@ if ('serviceWorker' in navigator) {
 <body>
 <div id="app">
 
-  <header id="topbar">
-    <div class="brand"><span class="logo">◐</span> Deepreading</div>
-    <nav class="tabs">
-      <button id="tab-library" class="tab cur">书架</button>
-      <button id="tab-search" class="tab">搜书</button>
-    </nav>
-    <button id="btn-import-top" class="btn-ghost">＋ 导入</button>
-  </header>
+  <!-- 启动页 -->
+  <main id="view-splash" class="view hidden">
+    <div class="splash-logo"><img src="icon-192.png" alt="Deepreading"></div>
+    <h1>Deepreading</h1>
+    <p class="slogan">在阅读与聆听中，<br>遇见更大的世界</p>
+    <button id="btn-start" class="btn-primary">开始使用</button>
+  </main>
 
-  <!-- 书架 -->
-  <main id="view-library" class="view">
-    <div class="lib-head"><h2>书架</h2><p class="sub" id="lib-count"></p></div>
-    <div id="shelf" class="shelf"></div>
-    <div id="shelf-empty" class="empty">
+  <!-- 首页 -->
+  <main id="view-home" class="view hidden">
+    <header class="topbar">
+      <div class="brand"><img src="icon-192.png" alt="">Deepreading</div>
+      <button id="btn-import-home" class="btn-ghost">＋ 导入</button>
+    </header>
+    <div class="greet" id="greet">你好，</div>
+    <p class="greet-sub">今天想读点什么？</p>
+    <div class="search-entry" id="home-search">🔍<span>搜索书籍、作者或主题</span></div>
+    <div class="qa-grid">
+      <button class="qa" id="qa-read"><span class="qi">📖</span>阅读</button>
+      <button class="qa" id="qa-listen"><span class="qi">🎧</span>听书</button>
+      <button class="qa" id="qa-shelf"><span class="qi">📚</span>书单</button>
+      <button class="qa" id="qa-import"><span class="qi">＋</span>导入</button>
+    </div>
+    <div id="continue-wrap" class="hidden">
+      <div class="sec-head"><h3>继续阅读</h3></div>
+      <div class="cont-card" id="continue-card">
+        <div class="lb">上次读到</div>
+        <div class="t" id="cont-title"></div>
+        <div class="d" id="cont-meta" style="font-size:13px;opacity:.75"></div>
+        <div class="bar"><i id="cont-bar"></i></div>
+      </div>
+    </div>
+    <div class="sec-head"><h3>为你推荐</h3><button class="more" id="rec-more">更多 ›</button></div>
+    <div id="rec-list"></div>
+    <div id="home-empty" class="empty hidden">
       <div class="empty-icon">📚</div><p>书架还是空的</p>
       <p class="sub">导入 PDF / EPUB / DOCX / TXT，把书听成故事</p>
-      <button id="btn-import-empty" class="btn-primary">导入第一本书</button>
+    </div>
+  </main>
+
+  <!-- 书架 -->
+  <main id="view-library" class="view hidden">
+    <header class="topbar">
+      <div class="brand"><img src="icon-192.png" alt="">书架</div>
+      <button id="btn-import-top" class="btn-ghost">＋ 导入</button>
+    </header>
+    <div id="view-shelf">
+      <div class="sec-head" style="margin-top:14px"><h3 id="lib-count"></h3></div>
+      <div id="shelf"></div>
+      <div id="shelf-empty" class="empty hidden">
+        <div class="empty-icon">📚</div><p>书架还是空的</p>
+        <p class="sub">导入 PDF / EPUB / DOCX / TXT，把书听成故事</p>
+        <button id="btn-import-empty" class="btn-primary">导入第一本书</button>
+      </div>
     </div>
     <input type="file" id="file-input" accept=".pdf,.epub,.txt,.docx,.md,.html,.htm,.fb2" multiple hidden>
   </main>
 
   <!-- 搜书（正版来源） -->
   <main id="view-search" class="view hidden">
-    <div class="lib-head"><h2>搜书</h2>
-      <p class="sub">Open Library 借阅 · Project Gutenberg 公版免费下载</p></div>
-    <div class="search-bar">
-      <input id="search-q" placeholder="书名 / 作者，如：三体 刘慈欣 / Pride and Prejudice">
-      <select id="search-src">
-        <option value="ol">Open Library</option>
-        <option value="gb">Gutenberg</option>
-      </select>
-      <button id="btn-search" class="btn-primary sm">搜索</button>
+    <header class="topbar"><div class="brand"><img src="icon-192.png" alt="">搜书</div></header>
+    <div id="view-search-body" style="padding:6px 18px 20px">
+      <p class="sub" style="margin:8px 0 14px">Open Library 借阅 · Project Gutenberg 公版免费下载</p>
+      <div class="search-bar">
+        <input id="search-q" placeholder="书名 / 作者，如：三体 刘慈欣">
+        <select id="search-src">
+          <option value="ol">Open Library</option>
+          <option value="gb">Gutenberg</option>
+        </select>
+        <button id="btn-search" class="btn-primary sm">搜索</button>
+      </div>
+      <div id="search-results"></div>
     </div>
-    <div id="search-results"></div>
+  </main>
+
+  <!-- 书籍详情 -->
+  <main id="view-detail" class="view hidden">
+    <div class="dt-nav">
+      <button id="dt-back" class="icon-btn">‹</button>
+      <span style="font-weight:700">书籍详情</span>
+      <span style="width:34px"></span>
+    </div>
+    <div class="dt-hero">
+      <div class="cover lg" id="dt-cover"></div>
+      <h2 id="dt-title"></h2>
+      <p class="sub" id="dt-sub"></p>
+      <div class="dt-tags" id="dt-tags"></div>
+    </div>
+    <p class="dt-desc" id="dt-desc"></p>
+    <div class="dt-actions">
+      <button class="btn-primary" id="btn-read-now">📖 开始阅读</button>
+      <button class="btn-soft" id="btn-listen-now">🎧 开始听书</button>
+    </div>
+    <div class="toc-head"><span>目录</span><span id="dt-toc-count"></span></div>
+    <div class="toc" id="dt-toc"></div>
   </main>
 
   <!-- 阅读器 -->
   <main id="view-reader" class="view hidden">
     <header id="reader-bar">
-      <button id="btn-back" class="btn-ghost">‹ 书架</button>
+      <button id="btn-back" class="icon-btn">‹</button>
       <div id="reader-title" class="reader-title"></div>
       <button id="btn-chapters" class="btn-ghost">目录</button>
     </header>
@@ -79,42 +140,94 @@ if ('serviceWorker' in navigator) {
         <div class="player-meta"><div id="player-pos">0%</div><div id="player-chapter" class="sub"></div></div>
         <button id="btn-ai" class="pbtn" title="AI 助手">✦</button>
         <button id="btn-type" class="pbtn" title="排版">Aa</button>
-        <button id="btn-settings" class="pbtn" title="设置">⚙</button>
       </div>
     </footer>
   </main>
 
-  <!-- 朗读/AI 设置 -->
-  <div id="settings" class="sheet hidden">
-    <div class="sheet-head">设置 <button id="btn-settings-close" class="btn-ghost">✕</button></div>
-    <div class="sec">朗读引擎</div>
-    <label>引擎 <select id="sel-engine"><option value="system">系统语音（免费/离线）</option><option value="custom">自定义 TTS API（含克隆音色）</option></select></label>
-    <div id="engine-custom" class="hidden">
-      <label>API 地址 <input id="tts-endpoint" class="txt" placeholder="https://api.xxx.com/v1/text-to-speech"></label>
-      <label>API Key <input id="tts-key" type="password" class="txt" placeholder="只存本机"></label>
-      <label>Voice ID <input id="tts-voice" class="txt" placeholder="克隆/预置音色的 ID"></label>
-      <p class="hint">按 {text} 发送 POST JSON，返回音频流。音色克隆在你自己的服务商侧完成（如 ElevenLabs / MiniMax），本应用只负责调用。</p>
+  <!-- 我的 -->
+  <main id="view-mine" class="view hidden">
+    <header class="topbar"><div class="brand"><img src="icon-192.png" alt="">我的</div></header>
+    <div id="view-mine-body" style="padding:6px 18px 20px">
+      <div class="mine-head">
+        <img src="icon-192.png" alt="">
+        <div><div class="t">Deepreading</div><div class="d">本地听书 · 数据只存本机</div></div>
+      </div>
+      <div class="set-group">
+        <div class="sec">朗读引擎</div>
+        <label><span class="k">引擎</span><select id="sel-engine"><option value="system">系统语音（免费/离线）</option><option value="custom">自定义 TTS API（含克隆音色）</option></select></label>
+        <div id="engine-custom" class="hidden">
+          <label><span class="k">API 地址</span><input id="tts-endpoint" class="txt" placeholder="https://api.xxx.com/v1/text-to-speech"></label>
+          <label><span class="k">API Key</span><input id="tts-key" type="password" class="txt" placeholder="只存本机"></label>
+          <label><span class="k">Voice ID</span><input id="tts-voice" class="txt" placeholder="克隆/预置音色的 ID"></label>
+          <p class="hint">按 {text} 发送 POST JSON，返回音频流。音色克隆在你自己的服务商侧完成（如 ElevenLabs / MiniMax），本应用只负责调用。</p>
+        </div>
+        <label><span class="k">音色</span><select id="sel-voice"></select></label>
+        <label><span class="k">语速</span><input type="range" id="rng-rate" min="50" max="200" value="100"><span id="rate-val">1.0x</span></label>
+        <label><input type="checkbox" id="chk-dialog"><span class="k">对白音色</span><select id="sel-voice2"></select></label>
+      </div>
+      <div class="set-group">
+        <div class="sec">背景音</div>
+        <label><span class="k">背景音</span><select id="sel-amb"><option value="">关闭</option><option value="rain">雨声</option><option value="cafe">咖啡馆</option><option value="white">白噪音</option><option value="forest">森林夜晚</option></select></label>
+        <label><span class="k">音量</span><input type="range" id="rng-amb" min="0" max="100" value="30"></label>
+      </div>
+      <div class="set-group">
+        <div class="sec">排版</div>
+        <label><span class="k">字号</span><input type="range" id="ts-size" min="14" max="26" value="18"><span id="ts-size-v">18</span></label>
+        <label><span class="k">字体</span><select id="ts-font"><option value="serif">衬线（宋体）</option><option value="sans">无衬线（黑体）</option></select></label>
+        <label><span class="k">行高</span><input type="range" id="ts-lh" min="16" max="28" value="20"><span id="ts-lh-v">2.0</span></label>
+        <label><span class="k">主题</span><select id="ts-theme"><option value="day">白天</option><option value="sepia">护眼</option><option value="ink">墨黑</option><option value="night">夜间</option></select></label>
+      </div>
+      <div class="set-group">
+        <div class="sec">Gemini 辅助阅读</div>
+        <label><span class="k">API Key</span><input id="gemini-key" type="password" class="txt" placeholder="Google AI Studio 获取，只存本机"></label>
+        <label><span class="k">模型</span><input id="gemini-model" class="txt" value="gemini-2.5-flash"></label>
+        <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
+        <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
+      </div>
+      <div class="ver">Deepreading v3.0</div>
     </div>
-    <label>音色 <select id="sel-voice"></select></label>
-    <label>语速 <input type="range" id="rng-rate" min="50" max="200" value="100"> <span id="rate-val">1.0x</span></label>
-    <label class="row"><input type="checkbox" id="chk-dialog"> 对话用第二个音色 <select id="sel-voice2"></select></label>
-    <div class="sec">背景音</div>
-    <label>背景音 <select id="sel-amb"><option value="">关闭</option><option value="rain">雨声</option><option value="cafe">咖啡馆</option><option value="white">白噪音</option><option value="forest">森林夜晚</option></select>
-    音量 <input type="range" id="rng-amb" min="0" max="100" value="30"></label>
-    <div class="sec">Gemini 辅助阅读</div>
-    <label>API Key <input id="gemini-key" type="password" class="txt" placeholder="Google AI Studio 获取，只存本机"></label>
-    <label>模型 <input id="gemini-model" class="txt" value="gemini-2.5-flash"></label>
-    <label class="row"><input type="checkbox" id="chk-wakelock" checked> 播放时保持屏幕常亮</label>
-    <p class="hint">书籍、进度、Key 只存本机，不上传。选中正文文字后点"AI 讲解"，或点播放条上的 ✦。</p>
+  </main>
+
+  <!-- 迷你播放器 -->
+  <div id="mini-player" class="hidden">
+    <div class="cover sm" id="mp-cover"></div>
+    <div style="flex:1;min-width:0"><div id="mp-title"></div><div id="mp-pos"></div></div>
+    <button id="mp-play">▶</button>
+  </div>
+
+  <!-- 完整播放器 -->
+  <div id="player-full" class="hidden">
+    <div class="fp-nav">
+      <button id="fp-close" class="icon-btn">‹</button>
+      <span style="font-weight:700">正在播放</span>
+      <span style="width:34px"></span>
+    </div>
+    <div class="fp-hero">
+      <div class="cover lg" id="fp-cover"></div>
+      <h2 id="fp-title"></h2>
+      <p class="sub" id="fp-sub"></p>
+      <div class="fp-progress">
+        <input type="range" id="fp-seek" min="0" max="1000" value="0">
+        <div class="fp-times"><span id="fp-cur"></span><span id="fp-total"></span></div>
+      </div>
+    </div>
+    <div class="fp-controls">
+      <button class="fp-skip" id="fp-back15"><b>↺</b>15秒</button>
+      <button id="fp-play">▶</button>
+      <button class="fp-skip" id="fp-fwd15"><b>↻</b>15秒</button>
+    </div>
+    <div class="fp-tools">
+      <button class="fp-tool" id="fp-speed"><b>⟳</b><span>倍速</span></button>
+      <button class="fp-tool" id="fp-timer"><b>◷</b><span>定时</span></button>
+      <button class="fp-tool" id="fp-chapters"><b>☰</b><span>章节</span></button>
+    </div>
   </div>
 
   <!-- 排版 -->
   <div id="typeset" class="sheet hidden">
     <div class="sheet-head">排版 <button id="btn-type-close" class="btn-ghost">✕</button></div>
-    <label>字号 <input type="range" id="ts-size" min="14" max="26" value="18"> <span id="ts-size-v">18</span></label>
-    <label>字体 <select id="ts-font"><option value="serif">衬线（宋体）</option><option value="sans">无衬线（黑体）</option></select></label>
-    <label>行高 <input type="range" id="ts-lh" min="16" max="28" value="20"> <span id="ts-lh-v">2.0</span></label>
-    <label>主题 <select id="ts-theme"><option value="night">夜间</option><option value="day">白天</option><option value="sepia">护眼</option><option value="ink">墨黑</option></select></label>
+    <p class="hint" style="padding:0">详细排版选项已移到「我的」页面，这里保留快捷入口。</p>
+    <label>主题 <select id="ts-theme2"><option value="day">白天</option><option value="sepia">护眼</option><option value="ink">墨黑</option><option value="night">夜间</option></select></label>
   </div>
 
   <!-- AI 助手 -->
@@ -133,6 +246,14 @@ if ('serviceWorker' in navigator) {
       <button id="btn-ai-story" class="btn-ghost hidden">▶ 播放分镜</button>
     </div>
   </div>
+
+  <!-- 底部导航 -->
+  <nav id="tabbar">
+    <button class="tab cur" data-v="home"><span class="ti">🏠</span>首页</button>
+    <button class="tab" data-v="library"><span class="ti">📚</span>书架</button>
+    <button class="tab" data-v="search"><span class="ti">🔍</span>搜书</button>
+    <button class="tab" data-v="mine"><span class="ti">👤</span>我的</button>
+  </nav>
 
   <div id="toast" class="toast hidden"></div>
   <div id="loading" class="loading hidden"><div class="spin"></div><p id="loading-text">解析中…</p></div>

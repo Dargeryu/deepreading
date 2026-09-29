@@ -217,32 +217,38 @@ async function importFile(file){
 const COVERS=[['#3b2f4a','#7a5fa0'],['#1f3a4d','#3f7fae'],['#4a2f2b','#a06a5f'],
   ['#2b4a35','#5fa07a'],['#4d4420','#ae9a3f'],['#333','#777']];
 let books=[];
-async function renderShelf(){
+function coverBG(b){ const [c1,c2]=COVERS[(b.title||'').length%COVERS.length];
+  return `linear-gradient(135deg,${c1},${c2})`; }
+const coverHTML=(b,cls)=>`<div class="cover ${cls}" style="background:${coverBG(b)}">${esc((b.title||'?').slice(0,12))}</div>`;
+async function loadBooks(){
   books=await idb.all();
   const pm={}; try{ (await idb.allProgress()).forEach(p=>pm[p.bookId]=p); }catch(e){}
   books.forEach(b=>{ b.progress = pm[b.id]
     ? {idx:pm[b.id].idx, updatedAt:pm[b.id].updatedAt}
     : {idx:0, updatedAt:b.addedAt}; });
   books.sort((a,b)=>b.progress.updatedAt-a.progress.updatedAt);
-  $('#lib-count').textContent = books.length?`共 ${books.length} 本`:'';
+}
+async function renderShelf(){
+  await loadBooks();
+  $('#lib-count').textContent = books.length?`共 ${books.length} 本`:'我的书架';
   const shelf=$('#shelf'); shelf.innerHTML='';
   $('#shelf-empty').classList.toggle('hidden', books.length>0);
-  books.forEach((b,i)=>{
+  books.forEach((b)=>{
     const pct=Math.round(100*b.progress.idx/Math.max(1,b.total));
-    const [c1,c2]=COVERS[b.title.length%COVERS.length];
-    const el=document.createElement('div'); el.className='book';
-    el.innerHTML=`<div class="cover" style="background:linear-gradient(135deg,${c1},${c2})">${esc(b.title.slice(0,12))}</div>
+    const el=document.createElement('div'); el.className='book-row';
+    el.innerHTML=`${coverHTML(b,'sm')}
       <div class="info"><div class="title">${esc(b.title)}</div>
-      <div class="prog"><i style="width:${pct}%"></i></div>
-      <div class="meta"><span class="pct">${pct}% · ${b.total}句</span>
-      <span class="ops">${b.hasFile?`<button class="dl" title="下载原文件">⏬</button>`:''}<button class="del" data-id="${b.id}" title="删除">🗑</button></span></div></div>`;
-    el.onclick=e=>{ if(e.target.closest('.del,.dl'))return; openBook(b.id); };
+      <div class="meta">${esc(b.format||'')} · ${b.total}句 · 已读${pct}%</div>
+      <div class="prog"><i style="width:${pct}%"></i></div></div>
+      <div class="ops">${b.hasFile?`<button class="dl icon-btn" title="下载原文件" style="font-size:18px">⏬</button>`:''}<button class="del icon-btn" title="删除" style="font-size:18px">🗑</button></div>`;
+    el.onclick=e=>{ if(e.target.closest('.del,.dl'))return; openDetail(b.id); };
     el.querySelector('.del').onclick=async e=>{ e.stopPropagation();
-      if(confirm(`删除《${b.title}》？`)){ await idb.del(b.id); renderShelf(); } };
+      if(confirm(`删除《${b.title}》？`)){ await idb.del(b.id); if(cur&&cur.id===b.id){cur=null;stopSpeak();} renderShelf(); } };
     const dl=el.querySelector('.dl');
     if(dl) dl.onclick=e=>{ e.stopPropagation(); downloadBook(b); };
     shelf.appendChild(el);
   });
+  updateMiniPlayer();
 }
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 async function downloadBook(b){
@@ -256,11 +262,22 @@ async function downloadBook(b){
 
 /* ---------- 阅读器 ---------- */
 let cur=null, sentEls=[];
-function showView(name){
-  $('#view-library').classList.toggle('hidden', name!=='library');
-  $('#view-reader').classList.toggle('hidden', name!=='reader');
+/* ---------- v3 导航 ---------- */
+const VIEWS=['splash','home','library','search','detail','reader','mine'];
+let curView='home', returnView='library';
+function go(name){
+  curView=name;
+  VIEWS.forEach(v=>{ const el=$('#view-'+v); if(el) el.classList.toggle('hidden', v!==name); });
+  document.body.classList.toggle('in-reader', name==='reader');
+  document.body.classList.toggle('in-splash', name==='splash');
+  document.querySelectorAll('#tabbar .tab').forEach(t=>t.classList.toggle('cur', t.dataset.v===name));
   if(name==='library'){ stopSpeak(); renderShelf(); }
+  else if(name==='home'){ stopSpeak(); renderHome(); }
+  else if(name==='search'||name==='mine'){ stopSpeak(); }
+  updateMiniPlayer();
+  window.scrollTo(0,0);
 }
+function showView(name){ go(name); } // 兼容旧调用
 async function openBook(id){
   cur=books.find(b=>b.id===id); if(!cur) return;
   $('#reader-title').textContent=cur.title;
@@ -275,8 +292,8 @@ async function openBook(id){
     sp.onclick=()=>{ seekTo(i); };
     c.appendChild(sp); c.appendChild(document.createTextNode(' ')); sentEls.push(sp);
   });
-  renderChapters(); showView('reader'); updatePlayer(); scrollToActive(false);
-  applyBookVoice();
+  renderChapters(); go('reader'); updatePlayer(); scrollToActive(false);
+  applyBookVoice(); updateMiniPlayer();
 }
 function renderChapters(){
   const l=$('#chapter-list'); l.innerHTML='';
@@ -389,7 +406,8 @@ async function speakCustom(s){
   if(cur.progress.idx<cur.total-1){ cur.progress.idx++; markActive(); saveProgress(); speakCurrent(); }
   else { wantPlay=false; setPlayUI(); saveProgress(); toast('播完'); }
 }
-function setPlayUI(){ $('#btn-play').textContent=wantPlay?'⏸':'▶'; playing=wantPlay; }
+function setPlayUI(){ $('#btn-play').textContent=wantPlay?'⏸':'▶'; playing=wantPlay;
+  try{ updateMiniPlayer(); syncFullPlayer(); }catch(e){} }
 async function ensureWakeLock(){
   try{
     if($('#chk-wakelock').checked && 'wakeLock' in navigator && wantPlay && !wakeLock)
@@ -421,11 +439,9 @@ function applyBookVoice(){
 $('#btn-play').onclick=()=>{ if(!cur)return; wantPlay?stopSpeak():(scrollToActive(),play()); };
 $('#btn-prev').onclick=()=>{ if(cur) seekTo(cur.progress.idx-1); };
 $('#btn-next').onclick=()=>{ if(cur) seekTo(cur.progress.idx+1); };
-$('#btn-back').onclick=()=>showView('library');
+$('#btn-back').onclick=()=>go(returnView);
 $('#btn-chapters').onclick=()=>{ renderChapters(); $('#chapter-drawer').classList.remove('hidden'); };
 $('#btn-chapters-close').onclick=()=>$('#chapter-drawer').classList.add('hidden');
-$('#btn-settings').onclick=()=>$('#settings').classList.remove('hidden');
-$('#btn-settings-close').onclick=()=>$('#settings').classList.add('hidden');
 $('#sel-voice').onchange=e=>{ if(cur){cur.voiceURI=e.target.value;saveBook();} };
 $('#sel-voice2').onchange=e=>{ if(cur){cur.voiceURI2=e.target.value;saveBook();} };
 $('#rng-rate').oninput=e=>{ const r=+e.target.value;
@@ -450,16 +466,14 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden) releaseWa
   if(!('speechSynthesis' in window)) toast('当前浏览器不支持语音朗读，换 Chrome / Edge / Safari 试试',4000);
   await openDB().catch(()=>toast('本地数据库不可用'));
   await migrateV1();
-  renderShelf(); showView('library');
+  try{ await loadBooks(); }catch(e){}
+  if(store.get('splash_done')) go('home'); else go('splash');
 })();
 
 /* ================= v2：搜书 / 排版 / 背景音 / AI 助手 ================= */
 
-/* ---------- 顶部 Tab ---------- */
-$('#tab-library').onclick=()=>{ $('#tab-library').classList.add('cur'); $('#tab-search').classList.remove('cur'); showView('library');};
-$('#tab-search').onclick=()=>{ $('#tab-search').classList.add('cur'); $('#tab-library').classList.remove('cur');
-$('#view-library').classList.add('hidden'); $('#view-reader').classList.add('hidden');
-$('#view-search').classList.remove('hidden'); stopSpeak();};
+/* ---------- 底部导航 ---------- */
+document.querySelectorAll('#tabbar .tab').forEach(t=>{ t.onclick=()=>go(t.dataset.v); });
 
 /* ---------- 正版搜书 ---------- */
 $('#btn-search').onclick=async()=>{
@@ -488,7 +502,7 @@ box.appendChild(d);
 function applyType(){
 const c=$('#content'); if(!c) return;
 const size=store.get('ts_size','18'), lh=store.get('ts_lh','20'),
-font=store.get('ts_font','serif'), theme=store.get('ts_theme','night');
+font=store.get('ts_font','serif'), theme=store.get('ts_theme','day');
 c.style.fontSize=size+'px'; c.style.lineHeight=(lh/10);
 c.style.fontFamily=font==='serif'?'Georgia,"Songti SC","Noto Serif CJK SC",serif':'-apple-system,"PingFang SC","Microsoft YaHei",sans-serif';
 c.dataset.theme=theme;
@@ -502,6 +516,7 @@ $('#ts-size').addEventListener('input',e=>{store.set('ts_size',e.target.value);a
 $('#ts-lh').addEventListener('input',e=>{store.set('ts_lh',e.target.value);applyType();});
 $('#ts-font').addEventListener('change',e=>{store.set('ts_font',e.target.value);applyType();});
 $('#ts-theme').addEventListener('change',e=>{store.set('ts_theme',e.target.value);applyType();});
+$('#ts-theme2').addEventListener('change',e=>{store.set('ts_theme',e.target.value);applyType();});
 
 /* ---------- 设置持久化 ---------- */
 function initSettings(){
@@ -590,3 +605,166 @@ document.addEventListener('touchend',handleSel);
 (async()=>{
 try{ initSettings(); applyType();}catch(e){}
 })();
+
+/* ================= v3：DeepRead 风格 UI ================= */
+
+/* ---------- 启动页 ---------- */
+$('#btn-start').onclick=()=>{ try{store.set('splash_done','1');}catch(e){} go('home'); };
+
+/* ---------- 首页 ---------- */
+function greetWord(){
+  const h=new Date().getHours();
+  if(h<6) return '夜深了，';
+  if(h<12) return '早上好，';
+  if(h<14) return '中午好，';
+  if(h<18) return '下午好，';
+  return '晚上好，';
+}
+async function renderHome(){
+  if(!books.length){ try{ await loadBooks(); }catch(e){} }
+  $('#greet').textContent=greetWord();
+  const has=books.length>0;
+  $('#home-empty').classList.toggle('hidden', has);
+  $('#rec-list').innerHTML='';
+  // 继续阅读：进度最大的未读完的书
+  const cont=books.find(b=>b.progress.idx>0 && b.progress.idx<b.total-1);
+  $('#continue-wrap').classList.toggle('hidden', !cont);
+  if(cont){
+    const pct=Math.round(100*cont.progress.idx/Math.max(1,cont.total));
+    $('#cont-title').textContent=cont.title;
+    $('#cont-meta').textContent=`已读 ${pct}% · ${cur&&cur.id===cont.id&&wantPlay?'正在播放':'上次读到第 '+(cont.progress.idx+1)+' 句'}`;
+    $('#cont-bar').style.width=pct+'%';
+    $('#continue-card').onclick=()=>{ returnView='home'; openDetail(cont.id); };
+  }
+  books.slice(0,3).forEach(b=>{
+    const pct=Math.round(100*b.progress.idx/Math.max(1,b.total));
+    const d=document.createElement('div'); d.className='rec-card';
+    d.innerHTML=`${coverHTML(b,'sm')}<div class="meta"><div class="t">${esc(b.title)}</div>
+      <div class="d">${esc(b.format||'')} · ${b.total}句${pct?` · 已读${pct}%`:''}</div>
+      ${pct?'':'<span class="tag">新书</span>'}</div><span class="chev">›</span>`;
+    d.onclick=()=>openDetail(b.id);
+    $('#rec-list').appendChild(d);
+  });
+  updateMiniPlayer();
+}
+const lastBook=()=>books.length?books[0]:null;
+$('#qa-read').onclick=async()=>{ const b=lastBook(); if(!b){toast('先导入一本书');return;} returnView='home'; await openBook(b.id); };
+$('#qa-listen').onclick=async()=>{ const b=lastBook(); if(!b){toast('先导入一本书');return;} returnView='home'; await openBook(b.id); play(); };
+$('#qa-shelf').onclick=()=>go('library');
+$('#qa-import').onclick=doImport;
+$('#btn-import-home').onclick=doImport;
+$('#rec-more').onclick=()=>go('library');
+$('#home-search').onclick=()=>{ go('search'); setTimeout(()=>$('#search-q').focus(),80); };
+
+/* ---------- 书籍详情 ---------- */
+let detailId=null;
+function openDetail(id){ detailId=id; renderDetail(); go('detail'); }
+function renderDetail(){
+  const b=books.find(x=>x.id===detailId); if(!b){ go('library'); return; }
+  $('#dt-cover').style.background=coverBG(b);
+  $('#dt-cover').textContent=b.title.slice(0,12);
+  $('#dt-title').textContent=b.title;
+  const pct=Math.round(100*b.progress.idx/Math.max(1,b.total));
+  $('#dt-sub').textContent=`${b.format?b.format.toUpperCase()+' · ':''}${b.total} 句${pct?` · 已读 ${pct}%`:''}`;
+  $('#dt-tags').innerHTML=[b.format?b.format.toUpperCase():null, b.lang==='zh'?'中文':'英文', b.hasFile?'原文件已保存':null]
+    .filter(Boolean).map(t=>`<span>${esc(t)}</span>`).join('');
+  $('#dt-desc').textContent=(b.sentences.slice(0,2).map(s=>s.t).join('')).slice(0,160)+'…';
+  $('#dt-toc-count').textContent=`共 ${b.chapters.length} 章`;
+  const toc=$('#dt-toc'); toc.innerHTML='';
+  b.chapters.forEach((c,i)=>{
+    const next=b.chapters[i+1];
+    const n=(next?next.start:b.total)-c.start;
+    const d=document.createElement('div'); d.className='toc-item';
+    d.innerHTML=`<span class="n">${i+1}</span><span class="t">${esc(c.title)}</span><span class="c">${n}句</span><span class="go">›</span>`;
+    d.onclick=async()=>{ returnView='detail'; await openBook(b.id); seekTo(c.start); };
+    toc.appendChild(d);
+  });
+}
+$('#dt-back').onclick=()=>go('library');
+$('#btn-read-now').onclick=async()=>{ returnView='detail'; await openBook(detailId); };
+$('#btn-listen-now').onclick=async()=>{ returnView='detail'; await openBook(detailId); play(); };
+
+/* ---------- 迷你播放器 ---------- */
+function updateMiniPlayer(){
+  const mp=$('#mini-player'); if(!mp) return;
+  const fullOpen=!$('#player-full').classList.contains('hidden');
+  const show=!!(cur && curView!=='reader' && curView!=='splash' && !fullOpen);
+  mp.classList.toggle('hidden', !show);
+  if(!show) return;
+  $('#mp-cover').style.background=coverBG(cur);
+  $('#mp-cover').textContent=(cur.title||'?').slice(0,6);
+  $('#mp-title').textContent=cur.title;
+  $('#mp-pos').textContent=Math.round(100*cur.progress.idx/Math.max(1,cur.total))+'%';
+  $('#mp-play').textContent=wantPlay?'⏸':'▶';
+}
+$('#mini-player').onclick=e=>{
+  if(e.target.closest('#mp-play')){ if(!cur)return; wantPlay?stopSpeak():play(); return; }
+  openFullPlayer();
+};
+
+/* ---------- 完整播放器 ---------- */
+const SPEEDS=[1.0,1.25,1.5,1.75,2.0,0.5,0.75];
+const SLEEPS=[0,15,30,60];
+let sleepTimer=null, sleepMin=0, sleepEnd=0;
+function renderFullPlayer(){
+  if(!cur) return;
+  $('#fp-cover').style.background=coverBG(cur);
+  $('#fp-cover').textContent=(cur.title||'?').slice(0,12);
+  $('#fp-title').textContent=cur.title;
+  const ch=cur.chapters[chapterOf(cur.progress.idx)];
+  $('#fp-sub').textContent=ch?ch.title:'';
+  syncFullPlayer();
+}
+function syncFullPlayer(){
+  if(!cur||$('#player-full').classList.contains('hidden')) return;
+  const pct=Math.round(1000*cur.progress.idx/Math.max(1,cur.total));
+  $('#fp-seek').value=pct;
+  $('#fp-play').textContent=wantPlay?'⏸':'▶';
+  $('#fp-cur').textContent=`第 ${cur.progress.idx+1} 句`;
+  $('#fp-total').textContent=`共 ${cur.total} 句`;
+  $('#fp-speed').classList.toggle('on', (cur.rate/100)!==1);
+  $('#fp-speed').querySelector('span').textContent=(cur.rate/100).toFixed(2).replace(/0+$/,'').replace(/\.$/,'')+'x';
+  const t=$('#fp-timer');
+  t.classList.toggle('on', sleepMin>0);
+  t.querySelector('span').textContent=sleepMin>0?`定时${sleepMin}′`:'定时';
+}
+function openFullPlayer(){ if(!cur){toast('先选一本书');return;} renderFullPlayer(); $('#player-full').classList.remove('hidden'); updateMiniPlayer(); }
+$('#fp-close').onclick=()=>{ $('#player-full').classList.add('hidden'); updateMiniPlayer(); };
+$('#fp-play').onclick=()=>{ if(!cur)return; wantPlay?stopSpeak():play(); syncFullPlayer(); };
+$('#fp-seek').addEventListener('change',e=>{ if(!cur)return; seekTo(Math.round(e.target.value/1000*(cur.total-1))); });
+$('#fp-back15').onclick=()=>skipSeconds(-15);
+$('#fp-fwd15').onclick=()=>skipSeconds(15);
+function skipSeconds(sec){
+  if(!cur) return;
+  const cps=4.2*(cur.rate/100); // 每秒约读字数
+  let chars=Math.abs(sec)*cps, i=cur.progress.idx;
+  if(sec>0){ while(chars>0&&i<cur.total-1){ chars-=cur.sentences[i].t.length; i++; } }
+  else { while(chars>0&&i>0){ i--; chars-=cur.sentences[i].t.length; } }
+  seekTo(i); toast(sec>0?'快进 15 秒':'快退 15 秒');
+}
+$('#fp-speed').onclick=()=>{
+  if(!cur) return;
+  const now=cur.rate/100;
+  let ni=SPEEDS.findIndex(s=>s>now+0.01); if(ni<0) ni=0;
+  cur.rate=Math.round(SPEEDS[ni]*100);
+  $('#rng-rate').value=cur.rate; $('#rate-val').textContent=SPEEDS[ni].toFixed(2).replace(/0+$/,'').replace(/\.$/,'')+'x';
+  saveBook(); if(wantPlay) speakCurrent(); syncFullPlayer();
+};
+$('#fp-timer').onclick=()=>{
+  let ni=SLEEPS.indexOf(sleepMin)+1; if(ni>=SLEEPS.length) ni=0;
+  setSleep(SLEEPS[ni]);
+};
+function setSleep(min){
+  clearTimeout(sleepTimer); sleepTimer=null; sleepMin=min;
+  if(min>0){
+    sleepEnd=Date.now()+min*60000;
+    sleepTimer=setTimeout(()=>{ sleepMin=0; stopSpeak(); syncFullPlayer(); toast('定时到了，已暂停'); }, min*60000);
+    toast(`将在 ${min} 分钟后停止播放`);
+  } else toast('已取消定时');
+  syncFullPlayer();
+}
+$('#fp-chapters').onclick=()=>{ $('#player-full').classList.add('hidden'); if(cur){ returnView=curView==='detail'?'detail':'library'; go('reader'); } };
+
+/* 同步迷你/完整播放器状态 */
+const _markActive=markActive;
+markActive=function(){ _markActive(); updateMiniPlayer(); syncFullPlayer(); };
