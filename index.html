@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#14101d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Deepreading v2.1 · 把书听成故事</title>
+<link rel="stylesheet" href="css/styles.css">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+}
+</script>
+</head>
+<body>
+<div id="app">
+
+  <header id="topbar">
+    <div class="brand"><span class="logo">◐</span> Deepreading</div>
+    <nav class="tabs">
+      <button id="tab-library" class="tab cur">书架</button>
+      <button id="tab-search" class="tab">搜书</button>
+    </nav>
+    <button id="btn-import-top" class="btn-ghost">＋ 导入</button>
+  </header>
+
+  <!-- 书架 -->
+  <main id="view-library" class="view">
+    <div class="lib-head"><h2>书架</h2><p class="sub" id="lib-count"></p></div>
+    <div id="shelf" class="shelf"></div>
+    <div id="shelf-empty" class="empty">
+      <div class="empty-icon">📚</div><p>书架还是空的</p>
+      <p class="sub">导入 PDF / EPUB / DOCX / TXT，把书听成故事</p>
+      <button id="btn-import-empty" class="btn-primary">导入第一本书</button>
+    </div>
+    <input type="file" id="file-input" accept=".pdf,.epub,.txt,.docx,.md,.html,.htm,.fb2" multiple hidden>
+  </main>
+
+  <!-- 搜书（正版来源） -->
+  <main id="view-search" class="view hidden">
+    <div class="lib-head"><h2>搜书</h2>
+      <p class="sub">Open Library 借阅 · Project Gutenberg 公版免费下载</p></div>
+    <div class="search-bar">
+      <input id="search-q" placeholder="书名 / 作者，如：三体 刘慈欣 / Pride and Prejudice">
+      <select id="search-src">
+        <option value="ol">Open Library</option>
+        <option value="gb">Gutenberg</option>
+      </select>
+      <button id="btn-search" class="btn-primary sm">搜索</button>
+    </div>
+    <div id="search-results"></div>
+  </main>
+
+  <!-- 阅读器 -->
+  <main id="view-reader" class="view hidden">
+    <header id="reader-bar">
+      <button id="btn-back" class="btn-ghost">‹ 书架</button>
+      <div id="reader-title" class="reader-title"></div>
+      <button id="btn-chapters" class="btn-ghost">目录</button>
+    </header>
+    <div id="chapter-drawer" class="drawer hidden">
+      <div class="drawer-head">目录 <button id="btn-chapters-close" class="btn-ghost">✕</button></div>
+      <div id="chapter-list"></div>
+    </div>
+    <article id="content"></article>
+    <div id="sel-tip" class="sel-tip hidden">已选中 <button id="btn-ai-ask" class="btn-primary sm">AI 讲解</button></div>
+    <footer id="player">
+      <input type="range" id="seek" min="0" max="1000" value="0">
+      <div class="player-row">
+        <button id="btn-prev" class="pbtn" title="上一句">⏮</button>
+        <button id="btn-play" class="pbtn big" title="播放/暂停">▶</button>
+        <button id="btn-next" class="pbtn" title="下一句">⏭</button>
+        <div class="player-meta"><div id="player-pos">0%</div><div id="player-chapter" class="sub"></div></div>
+        <button id="btn-ai" class="pbtn" title="AI 助手">✦</button>
+        <button id="btn-type" class="pbtn" title="排版">Aa</button>
+        <button id="btn-settings" class="pbtn" title="设置">⚙</button>
+      </div>
+    </footer>
+  </main>
+
+  <!-- 朗读/AI 设置 -->
+  <div id="settings" class="sheet hidden">
+    <div class="sheet-head">设置 <button id="btn-settings-close" class="btn-ghost">✕</button></div>
+    <div class="sec">朗读引擎</div>
+    <label>引擎 <select id="sel-engine"><option value="system">系统语音（免费/离线）</option><option value="custom">自定义 TTS API（含克隆音色）</option></select></label>
+    <div id="engine-custom" class="hidden">
+      <label>API 地址 <input id="tts-endpoint" class="txt" placeholder="https://api.xxx.com/v1/text-to-speech"></label>
+      <label>API Key <input id="tts-key" type="password" class="txt" placeholder="只存本机"></label>
+      <label>Voice ID <input id="tts-voice" class="txt" placeholder="克隆/预置音色的 ID"></label>
+      <p class="hint">按 {text} 发送 POST JSON，返回音频流。音色克隆在你自己的服务商侧完成（如 ElevenLabs / MiniMax），本应用只负责调用。</p>
+    </div>
+    <label>音色 <select id="sel-voice"></select></label>
+    <label>语速 <input type="range" id="rng-rate" min="50" max="200" value="100"> <span id="rate-val">1.0x</span></label>
+    <label class="row"><input type="checkbox" id="chk-dialog"> 对话用第二个音色 <select id="sel-voice2"></select></label>
+    <div class="sec">背景音</div>
+    <label>背景音 <select id="sel-amb"><option value="">关闭</option><option value="rain">雨声</option><option value="cafe">咖啡馆</option><option value="white">白噪音</option><option value="forest">森林夜晚</option></select>
+    音量 <input type="range" id="rng-amb" min="0" max="100" value="30"></label>
+    <div class="sec">Gemini 辅助阅读</div>
+    <label>API Key <input id="gemini-key" type="password" class="txt" placeholder="Google AI Studio 获取，只存本机"></label>
+    <label>模型 <input id="gemini-model" class="txt" value="gemini-2.5-flash"></label>
+    <label class="row"><input type="checkbox" id="chk-wakelock" checked> 播放时保持屏幕常亮</label>
+    <p class="hint">书籍、进度、Key 只存本机，不上传。选中正文文字后点"AI 讲解"，或点播放条上的 ✦。</p>
+  </div>
+
+  <!-- 排版 -->
+  <div id="typeset" class="sheet hidden">
+    <div class="sheet-head">排版 <button id="btn-type-close" class="btn-ghost">✕</button></div>
+    <label>字号 <input type="range" id="ts-size" min="14" max="26" value="18"> <span id="ts-size-v">18</span></label>
+    <label>字体 <select id="ts-font"><option value="serif">衬线（宋体）</option><option value="sans">无衬线（黑体）</option></select></label>
+    <label>行高 <input type="range" id="ts-lh" min="16" max="28" value="20"> <span id="ts-lh-v">2.0</span></label>
+    <label>主题 <select id="ts-theme"><option value="night">夜间</option><option value="day">白天</option><option value="sepia">护眼</option><option value="ink">墨黑</option></select></label>
+  </div>
+
+  <!-- AI 助手 -->
+  <div id="aisheet" class="sheet hidden tall">
+    <div class="sheet-head">✦ AI 助手 <button id="btn-ai-close" class="btn-ghost">✕</button></div>
+    <div class="ai-tabs">
+      <button class="ai-tab cur" data-m="explain">讲解</button>
+      <button class="ai-tab" data-m="feynman">费曼模式</button>
+      <button class="ai-tab" data-m="analogy">类比·动态</button>
+    </div>
+    <textarea id="ai-input" rows="3" placeholder="粘贴或选中正文文字…"></textarea>
+    <button id="btn-ai-go" class="btn-primary sm">开始</button>
+    <div id="ai-out"></div>
+    <div class="ai-foot hidden" id="ai-foot">
+      <button id="btn-ai-speak" class="btn-ghost">🔊 朗读讲解</button>
+      <button id="btn-ai-story" class="btn-ghost hidden">▶ 播放分镜</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <div id="loading" class="loading hidden"><div class="spin"></div><p id="loading-text">解析中…</p></div>
+</div>
+
+<script src="lib/jszip.min.js"></script>
+<script src="lib/mammoth.min.js"></script>
+<script src="lib/pdf.min.js"></script>
+<script>if (window.pdfjsLib) { pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js'; }</script>
+<script src="js/ambience.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
