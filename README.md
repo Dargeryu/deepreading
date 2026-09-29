@@ -1,4 +1,4 @@
-# Deepreading · 把书听成故事
+# DeepRead · 把书听成故事
 
 参考 Readify（Deepreads LLC）的本地版听书应用：**无服务器、无上传**，
 所有书籍、进度、Key 只保存在本机浏览器。
