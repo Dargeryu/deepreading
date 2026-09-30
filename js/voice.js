@@ -715,3 +715,98 @@ $('#btn-cloud-refresh').onclick=async()=>{
   try{ await elevenVoices(true); }catch(e){ toast('刷新失败：'+e.message, 2500); }
   renderCloud();
 };
+
+/* ================= 阅读器音色小组件 =================
+   悬浮 🎙 按钮 → 底部弹窗：系统语音 / 广场精选 / 云端 / 我的克隆，试听 + 选用 */
+function currentVoiceKey(){
+  const eng=store.get('tts_engine');
+  if(eng==='elevenlabs') return 'el:'+(store.get('eleven_voice')||'');
+  if(eng==='custom') return 'cu:'+(store.get('tts_voice')||'');
+  try{ const d=JSON.parse(store.get('voice_default','null')); if(d&&d.voiceURI) return 'sys:'+d.voiceURI; }catch(e){}
+  return 'sys:';
+}
+function useSystemVoice(v){
+  store.set('tts_engine','system');
+  store.set('voice_default', JSON.stringify({kind:'system', name:v.name, voiceURI:v.voiceURI}));
+  try{ $('#sel-engine').value='system'; }catch(e){}
+  if(typeof cur!=='undefined'&&cur){ cur.voiceURI=v.voiceURI; saveBook(); applyBookVoice(); }
+  toast(`已选用「${v.name}」为朗读音色`);
+  renderVoiceSheet();
+}
+function previewSystemVoice(v){
+  speakSample(`大家好，我是${v.name}，接下来的故事由我为你讲述。`, v, 1, 1);
+}
+function useCloudVoice(v){
+  store.set('tts_engine','elevenlabs'); store.set('eleven_voice',v.id);
+  try{ $('#sel-engine').value='elevenlabs'; }catch(e){}
+  toast(`已选用云端音色「${v.name}」朗读`);
+  renderVoiceSheet();
+}
+async function previewCloudVoice(v){
+  loading(true,'试听合成中…');
+  try{ await ElevenTTS.speak(`大家好，我是${v.name}，这是云端音色试听。`, v.id); }
+  catch(e){ toast('试听失败：'+e.message, 3000); }
+  finally{ loading(false); }
+}
+function vsRowHTML(name, sub, active){
+  return `<div class="v-ava" style="background:${avaBG(name)}">${esc(name[0]||'?')}</div>
+    <div class="v-info"><div class="v-name">${esc(name)}${active?'<span class="v-cur">使用中</span>':''}</div>
+    ${sub?`<div class="v-tags"><span>${esc(sub)}</span></div>`:''}</div>
+    <div class="v-ops"><button class="v-btn play" title="试听">▶</button><button class="v-btn use">使用</button></div>`;
+}
+function vsBindRow(d, onPlay, onUse){
+  d.querySelector('.play').onclick=onPlay;
+  d.querySelector('.use').onclick=onUse;
+}
+async function renderVoiceSheet(){
+  const box=$('#voice-sheet-list'); if(!box) return;
+  const key=currentVoiceKey();
+  box.innerHTML='';
+  const sec=(t)=>{ const h=document.createElement('div'); h.className='vs-sec'; h.textContent=t; box.appendChild(h); };
+  const row=(name,sub,active,onPlay,onUse)=>{
+    const d=document.createElement('div'); d.className='vs-row v-card'; d.innerHTML=vsRowHTML(name,sub,active);
+    vsBindRow(d,onPlay,onUse); box.appendChild(d);
+  };
+  // 1. 本机系统语音
+  const zhVs=(typeof voices!=='undefined')?voices.filter(v=>v.lang&&v.lang.toLowerCase().startsWith('zh')):[];
+  if(zhVs.length){
+    sec('本机系统语音');
+    zhVs.slice(0,8).forEach(v=>{
+      row(v.name.replace(/[^a-zA-Z\u4e00-\u9fa5]+/g,' ').trim()||v.name, v.lang, key==='sys:'+v.voiceURI,
+        ()=>previewSystemVoice(v), ()=>useSystemVoice(v));
+    });
+  }
+  // 2. 广场精选
+  sec('广场精选');
+  const defName=(function(){ try{ const d=JSON.parse(store.get('voice_default','null')); return d&&d.name||''; }catch(e){ return ''; } })();
+  VOICE_CATALOG.forEach(e=>{
+    row(e.name, e.tags.slice(0,2).join(' / '), store.get('tts_engine')!=='elevenlabs'&&store.get('tts_engine')!=='custom'&&defName===e.name,
+      ()=>previewCatalog(e), ()=>{ useCatalogVoice(e); renderVoiceSheet(); });
+  });
+  // 3. 云端音色
+  if(store.get('eleven_key')){
+    sec('云端音色');
+    try{
+      const vs=await elevenVoices(false);
+      vs.slice(0,30).forEach(v=>{
+        row(v.name, ((v.labels||{}).description||'').slice(0,12), key==='el:'+v.id,
+          ()=>previewCloudVoice(v), ()=>useCloudVoice(v));
+      });
+      if(!vs.length) box.insertAdjacentHTML('beforeend','<p class="sub" style="padding:8px 0">暂无云端音色</p>');
+    }catch(e){
+      box.insertAdjacentHTML('beforeend',`<p class="sub" style="padding:8px 0">云端加载失败：${esc(e.message)}</p>`);
+    }
+  }
+  // 4. 我的克隆
+  try{
+    const clones=await idb.allVoices();
+    if(clones.length){
+      sec('我的克隆');
+      clones.forEach(v=>{
+        const kid=v.provider==='elevenlabs'?'el:'+v.voiceId:'cu:'+v.voiceId;
+        row(v.name, '克隆', key===kid, ()=>previewCloned(v), ()=>{ useCloned(v); renderVoiceSheet(); });
+      });
+    }
+  }catch(e){}
+  if(!box.children.length) box.innerHTML='<p class="sub" style="padding:20px;text-align:center">暂无可用音色</p>';
+}

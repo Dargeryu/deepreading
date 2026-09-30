@@ -147,24 +147,36 @@ if ('serviceWorker' in navigator) {
   <main id="view-reader" class="view hidden">
     <header id="reader-bar">
       <button id="btn-back" class="icon-btn">‹</button>
-      <div id="reader-title" class="reader-title"></div>
-      <button id="btn-chapters" class="btn-ghost">目录</button>
+      <div id="reader-chapter" class="reader-ch" title="目录"></div>
+      <div id="reader-count" class="reader-count"></div>
     </header>
     <div id="chapter-drawer" class="drawer hidden">
       <div class="drawer-head"><span class="serif">目录</span> <button id="btn-chapters-close" class="btn-ghost">✕</button></div>
+      <div class="drawer-tools">
+        <button id="dr-ai" class="btn-ghost sm">✦ AI 助手</button>
+        <button id="dr-type" class="btn-ghost sm">Aa 排版</button>
+      </div>
       <div id="chapter-list"></div>
     </div>
-    <article id="content"></article>
+    <div id="reader-pages"><article id="content"></article></div>
     <div id="sel-tip" class="sel-tip hidden">已选中 <button id="btn-ai-ask" class="btn-primary sm">AI 讲解</button></div>
-    <footer id="player">
-      <input type="range" id="seek" min="0" max="1000" value="0">
-      <div class="player-row">
-        <button id="btn-prev" class="pbtn" title="上一句">⏮</button>
-        <button id="btn-play" class="pbtn big" title="播放/暂停">▶</button>
-        <button id="btn-next" class="pbtn" title="下一句">⏭</button>
-        <div class="player-meta"><div id="player-pos">0%</div><div id="player-chapter" class="sub"></div></div>
-        <button id="btn-ai" class="pbtn" title="AI 助手">✦</button>
-        <button id="btn-type" class="pbtn" title="排版">Aa</button>
+    <button id="voice-fab" title="挑选音色">🎙</button>
+    <div id="voice-sheet" class="sheet hidden">
+      <div class="sheet-head"><span class="serif">🎙 挑选朗读音色</span> <button id="voice-sheet-close" class="btn-ghost">✕</button></div>
+      <div id="voice-sheet-list"></div>
+      <p class="hint" style="padding:0 18px 18px">选用后整本书都用这个音色朗读。云端音色按字符计费。</p>
+    </div>
+    <footer id="reader-player">
+      <div id="rp-progress"><div id="rp-fill"></div></div>
+      <div class="rp-row">
+        <div class="cover sm rp-cover" id="rp-cover"></div>
+        <button id="rp-back" class="rp-btn" title="快退15秒">↺</button>
+        <button id="rp-play" class="rp-play" title="播放/暂停">▶</button>
+        <button id="rp-fwd" class="rp-btn" title="快进15秒">↻</button>
+        <button id="rp-speed" class="rp-speed" title="倍速">1.0x</button>
+        <span style="flex:1"></span>
+        <button id="rp-full" class="rp-btn" title="更多控制"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2.2" fill="#fff"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2.2" fill="#fff"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="7" cy="17" r="2.2" fill="#fff"/></svg></button>
+        <button id="rp-close" class="rp-btn" title="关闭">✕</button>
       </div>
     </footer>
   </main>
@@ -270,7 +282,7 @@ if ('serviceWorker' in navigator) {
         <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
         <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
       </div>
-      <div class="ver">DeepRead v3.15</div>
+      <div class="ver">DeepRead v3.16</div>
     </div>
   </main>
 

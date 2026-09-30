@@ -319,7 +319,7 @@ function go(name){
 function showView(name){ go(name); } // 兼容旧调用
 async function openBook(id){
   cur=books.find(b=>b.id===id); if(!cur) return;
-  $('#reader-title').textContent=cur.title;
+  document.title='DeepRead · '+cur.title;
   const c=$('#content'); c.innerHTML=''; sentEls=[];
   let ci=-1;
   cur.sentences.forEach((s,i)=>{
@@ -328,11 +328,50 @@ async function openBook(id){
       h.textContent=cur.chapters[ci]?cur.chapters[ci].title:`第${ci+1}章`; c.appendChild(h);
     }
     const sp=document.createElement('span'); sp.className='sent'; sp.textContent=s.t; sp.dataset.i=i;
-    sp.onclick=()=>{ seekTo(i); };
+    sp.onclick=()=>{ if(pageTouchMoved) return; seekTo(i); };
     c.appendChild(sp); c.appendChild(document.createTextNode(' ')); sentEls.push(sp);
   });
-  renderChapters(); go('reader'); updatePlayer(); scrollToActive(false);
+  renderChapters(); go('reader'); updatePlayer();
+  requestAnimationFrame(()=>{ layoutPages(); scrollToActive(false); });
   applyBookVoice(); updateMiniPlayer();
+}
+/* ---------- 横向分页（v3.16）：CSS columns 一列一页，左右滑动翻页 ---------- */
+let curPage=0, pageCount=1, progScroll=false, pageTouchMoved=false;
+const pagesEl=()=>$('#reader-pages');
+function layoutPages(){
+  const el=pagesEl(), c=$('#content'); if(!el||!c||!cur) return;
+  const w=el.clientWidth||1;
+  c.style.columnWidth=Math.max(200, w-44)+'px'; // 一列 = 一页（留 22px 边距）
+  pageCount=Math.max(1, Math.ceil(c.scrollWidth/w));
+  curPage=Math.max(0, Math.min(pageCount-1, curPage));
+}
+function goPage(n, smooth=true){
+  const el=pagesEl(); if(!el||!cur) return;
+  curPage=Math.max(0, Math.min(pageCount-1, n));
+  progScroll=true;
+  el.scrollTo({left:curPage*el.clientWidth, behavior:smooth?'smooth':'auto'});
+  setTimeout(()=>{ progScroll=false; }, smooth?380:60);
+}
+function pageOfEl(elm){
+  const el=pagesEl(); if(!el||!elm||!cur) return 0;
+  const r=elm.getBoundingClientRect(), cr=el.getBoundingClientRect();
+  return Math.max(0, Math.min(pageCount-1, Math.round((r.left-cr.left+el.scrollLeft)/el.clientWidth)));
+}
+function bindPageSwipe(){
+  const el=pagesEl(); if(!el||el._swipeBound) return; el._swipeBound=true;
+  el.addEventListener('touchstart', ()=>{ pageTouchMoved=false; }, {passive:true});
+  el.addEventListener('touchmove', ()=>{ pageTouchMoved=true; }, {passive:true});
+  let snapT=null;
+  el.addEventListener('scroll', ()=>{
+    if(progScroll) return;
+    clearTimeout(snapT);
+    snapT=setTimeout(()=>{
+      const p=Math.max(0, Math.min(pageCount-1, Math.round(el.scrollLeft/el.clientWidth)));
+      curPage=p; goPage(p, true);
+    }, 140);
+  }, {passive:true});
+  window.addEventListener('resize', ()=>{ layoutPages(); goPage(curPage, false); });
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ layoutPages(); });
 }
 function renderChapters(){
   const l=$('#chapter-list'); l.innerHTML='';
@@ -345,11 +384,12 @@ function renderChapters(){
 }
 const chapterOf=i=>{ let r=0; cur.chapters.forEach((c,ci)=>{ if(c.start<=i) r=ci; }); return r; };
 function scrollToActive(smooth=true){
-  const el=sentEls[cur.progress.idx];
-  if(el) el.scrollIntoView({block:'center', behavior:smooth?'smooth':'auto'});
+  const el=sentEls[cur.progress.idx]; if(!el||!cur) return;
+  goPage(pageOfEl(el), smooth);
 }
 function markActive(){
   sentEls.forEach((el,i)=>el.classList.toggle('active', i===cur.progress.idx));
+  if(wantPlay&&cur){ const el=sentEls[cur.progress.idx]; if(el){ const p=pageOfEl(el); if(p!==curPage) goPage(p, true); } }
   updatePlayer();
 }
 async function saveProgress(){
@@ -370,16 +410,16 @@ function seekTo(i){
 }
 function updatePlayer(){
   if(!cur) return;
-  const pct=Math.round(100*cur.progress.idx/Math.max(1,cur.total));
-  $('#player-pos').textContent=pct+'%';
-  $('#seek').value=Math.round(1000*cur.progress.idx/Math.max(1,cur.total));
+  const pct=100*cur.progress.idx/Math.max(1,cur.total);
+  const rc=$('#reader-count'); if(rc) rc.textContent=`${cur.progress.idx+1} / ${cur.total}`;
+  const fill=$('#rp-fill'); if(fill) fill.style.width=pct+'%';
   const ch=cur.chapters[chapterOf(cur.progress.idx)];
-  $('#player-chapter').textContent=ch?ch.title:'';
+  const rh=$('#reader-chapter'); if(rh) rh.textContent=ch?ch.title:cur.title;
+  const sp=cur.rate/100, spt=$('#rp-speed');
+  if(spt) spt.textContent=sp.toFixed(2).replace(/0+$/,'').replace(/\.$/,'')+'x';
+  const cv=$('#rp-cover'); if(cv) cv.style.background=coverBG(cur);
 }
-$('#seek').addEventListener('change',e=>{
-  if(!cur) return;
-  seekTo(Math.round(e.target.value/1000*(cur.total-1)));
-});
+/* 进度条已并入 #rp-progress（点击跳转），旧 #seek 已移除 */
 
 /* ---------- 语音引擎（Web Speech API） ---------- */
 const synth=window.speechSynthesis;
@@ -464,7 +504,7 @@ async function speakCustom(s, voiceId){
   if(cur.progress.idx<cur.total-1){ cur.progress.idx++; markActive(); saveProgress(); speakCurrent(); }
   else { wantPlay=false; setPlayUI(); saveProgress(); toast('播完'); }
 }
-function setPlayUI(){ $('#btn-play').textContent=wantPlay?'⏸':'▶'; playing=wantPlay;
+function setPlayUI(){ const t=wantPlay?'⏸':'▶'; const b=$('#rp-play'); if(b) b.textContent=t; playing=wantPlay;
   try{ updateMiniPlayer(); syncFullPlayer(); }catch(e){} }
 async function ensureWakeLock(){
   try{
@@ -496,12 +536,35 @@ function applyBookVoice(){
 }
 
 /* ---------- 事件 ---------- */
-$('#btn-play').onclick=()=>{ if(!cur)return; wantPlay?stopSpeak():(scrollToActive(),play()); };
-$('#btn-prev').onclick=()=>{ if(cur) seekTo(cur.progress.idx-1); };
-$('#btn-next').onclick=()=>{ if(cur) seekTo(cur.progress.idx+1); };
+function cycleSpeed(){
+  if(!cur) return;
+  const now=cur.rate/100;
+  let ni=SPEEDS.findIndex(s=>s>now+0.01); if(ni<0) ni=0;
+  cur.rate=Math.round(SPEEDS[ni]*100);
+  $('#rng-rate').value=cur.rate; $('#rate-val').textContent=SPEEDS[ni].toFixed(2).replace(/0+$/,'').replace(/\.$/,'')+'x';
+  saveBook(); if(wantPlay) speakCurrent(); syncFullPlayer(); updatePlayer();
+}
+$('#rp-play').onclick=()=>{ if(!cur)return; wantPlay?stopSpeak():play(); };
+$('#rp-back').onclick=()=>skipSeconds(-15);
+$('#rp-fwd').onclick=()=>skipSeconds(15);
+$('#rp-speed').onclick=cycleSpeed;
+$('#rp-full').onclick=()=>openFullPlayer();
+$('#rp-cover').onclick=()=>openFullPlayer();
+$('#rp-close').onclick=()=>go(returnView);
+$('#rp-progress').addEventListener('click',e=>{
+  if(!cur) return;
+  const r=e.currentTarget.getBoundingClientRect();
+  const p=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));
+  seekTo(Math.round(p*(cur.total-1)));
+});
 $('#btn-back').onclick=()=>go(returnView);
-$('#btn-chapters').onclick=()=>{ renderChapters(); $('#chapter-drawer').classList.remove('hidden'); };
+$('#reader-chapter').onclick=()=>{ renderChapters(); $('#chapter-drawer').classList.remove('hidden'); };
 $('#btn-chapters-close').onclick=()=>$('#chapter-drawer').classList.add('hidden');
+$('#dr-ai').onclick=()=>{ $('#chapter-drawer').classList.add('hidden'); $('#aisheet').classList.remove('hidden'); };
+$('#dr-type').onclick=()=>{ $('#chapter-drawer').classList.add('hidden'); $('#typeset').classList.remove('hidden'); };
+$('#voice-fab').onclick=()=>{ renderVoiceSheet(); $('#voice-sheet').classList.remove('hidden'); $('#scrim').classList.remove('hidden'); };
+$('#voice-sheet-close').onclick=()=>{ $('#voice-sheet').classList.add('hidden'); $('#scrim').classList.add('hidden'); };
+bindPageSwipe();
 $('#sel-voice').onchange=e=>{ if(cur){cur.voiceURI=e.target.value;saveBook();} };
 $('#sel-voice2').onchange=e=>{ if(cur){cur.voiceURI2=e.target.value;saveBook();} };
 $('#rng-rate').oninput=e=>{ const r=+e.target.value;
@@ -582,7 +645,7 @@ setInterval(()=>{ if(typeof wantPlay!=='undefined' && wantPlay && !document.hidd
 /* ================= v3.5：导入弹窗 ================= */
 function openSheet(id){ $('#scrim').classList.remove('hidden'); $('#'+id).classList.remove('hidden'); }
 function closeSheets(){ $('#scrim').classList.add('hidden');
-  ['import-sheet','url-sheet','text-sheet','clone-sheet','cast-sheet'].forEach(id=>{const el=$('#'+id); if(el) el.classList.add('hidden');});
+  ['import-sheet','url-sheet','text-sheet','clone-sheet','cast-sheet','voice-sheet'].forEach(id=>{const el=$('#'+id); if(el) el.classList.add('hidden');});
   if(typeof stopRecord==='function'){ try{stopRecord();}catch(e){} } }
 function openImportSheet(){ openSheet('import-sheet'); }
 $('#scrim').onclick=closeSheets;
@@ -642,7 +705,7 @@ $('#ts-size').value=size; $('#ts-size-v').textContent=size;
 $('#ts-lh').value=lh; $('#ts-lh-v').textContent=(lh/10).toFixed(1);
 $('#ts-font').value=font; $('#ts-theme').value=theme;
 }
-$('#btn-type').onclick=()=>$('#typeset').classList.remove('hidden');
+/* 排版按钮已并入目录抽屉（#dr-type） */
 $('#btn-type-close').onclick=()=>$('#typeset').classList.add('hidden');
 $('#ts-size').addEventListener('input',e=>{store.set('ts_size',e.target.value);applyType();});
 $('#ts-lh').addEventListener('input',e=>{store.set('ts_lh',e.target.value);applyType();});
@@ -684,7 +747,7 @@ document.querySelectorAll('.ai-tab').forEach(x=>x.classList.remove('cur'));
 t.classList.add('cur'); aiMode=t.dataset.m;
 $('#btn-ai-story').classList.add('hidden'); $('#btn-ai-story').textContent='▶ 播放分镜';
 });
-$('#btn-ai').onclick=()=>$('#aisheet').classList.remove('hidden');
+/* AI 助手按钮已并入目录抽屉（#dr-ai），选中文字仍可用 #btn-ai-ask */
 $('#btn-ai-close').onclick=()=>{ $('#aisheet').classList.add('hidden'); stopStory();};
 const getSelText=()=>{ const s=window.getSelection(); return s?s.toString().trim():'';};
 $('#btn-ai-ask').onclick=()=>{ const t=getSelText(); if(t) $('#ai-input').value=t;
@@ -910,14 +973,7 @@ function skipSeconds(sec){
   else { while(chars>0&&i>0){ i--; chars-=cur.sentences[i].t.length; } }
   seekTo(i); toast(sec>0?'快进 15 秒':'快退 15 秒');
 }
-$('#fp-speed').onclick=()=>{
-  if(!cur) return;
-  const now=cur.rate/100;
-  let ni=SPEEDS.findIndex(s=>s>now+0.01); if(ni<0) ni=0;
-  cur.rate=Math.round(SPEEDS[ni]*100);
-  $('#rng-rate').value=cur.rate; $('#rate-val').textContent=SPEEDS[ni].toFixed(2).replace(/0+$/,'').replace(/\.$/,'')+'x';
-  saveBook(); if(wantPlay) speakCurrent(); syncFullPlayer();
-};
+$('#fp-speed').onclick=()=>{ cycleSpeed(); };
 $('#fp-timer').onclick=()=>{
   let ni=SLEEPS.indexOf(sleepMin)+1; if(ni>=SLEEPS.length) ni=0;
   setSleep(SLEEPS[ni]);
