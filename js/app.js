@@ -339,10 +339,10 @@ async function openBook(id){
 let curPage=0, pageCount=1, progScroll=false, pageTouchMoved=false;
 const pagesEl=()=>$('#reader-pages');
 function layoutPages(){
-  const el=pagesEl(), c=$('#content'); if(!el||!c||!cur) return;
+  const el=pagesEl(); if(!el||!cur) return;
   const w=el.clientWidth||1;
-  c.style.columnWidth=Math.max(200, w-44)+'px'; // 一列 = 一页（留 22px 边距）
-  pageCount=Math.max(1, Math.ceil(c.scrollWidth/w));
+  el.style.columnWidth=Math.max(200, w-44)+'px'; // 多列直接建在滚动容器上（一列一页）
+  pageCount=Math.max(1, Math.ceil(el.scrollWidth/w));
   curPage=Math.max(0, Math.min(pageCount-1, curPage));
 }
 function goPage(n, smooth=true){

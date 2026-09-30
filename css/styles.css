@@ -1,4 +1,4 @@
-/* DeepRead v3.17 — 纯白 */
+/* DeepRead v3.18 — 纯白 */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
   --bg:#ffffff; --card:#ffffff; --ink:#1d1d1f; --sub:#86868b; --line:#e8e8ec;
@@ -118,10 +118,10 @@ button{font-family:inherit}
 #reader-bar .icon-btn{flex:none}
 .reader-ch{flex:1;min-width:0;font-size:13px;color:#8e8e93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
 .reader-count{flex:none;font-size:13px;color:#8e8e93;font-variant-numeric:tabular-nums}
-#reader-pages{flex:1;min-height:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+#reader-pages{flex:1;min-height:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  box-sizing:border-box;padding:22px;column-gap:44px;column-fill:auto}
 #reader-pages::-webkit-scrollbar{display:none}
-#content{height:100%;box-sizing:border-box;padding:22px;column-gap:44px;column-fill:auto;
-  font-size:18px;line-height:2.0;color:#1d1d1f;text-align:justify}
+#content{font-size:18px;line-height:2.0;color:#1d1d1f;text-align:justify}
 #content .ch-title{display:block;break-inside:avoid;font-family:Georgia,'Songti SC','STSong',serif;
   font-size:23px;font-weight:700;margin:0 0 1em;line-height:1.5}
 #content .sent{border-radius:6px;transition:background .25s;cursor:pointer}
