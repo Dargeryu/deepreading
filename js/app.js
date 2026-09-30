@@ -663,6 +663,12 @@ bind('#clone-field-file','clone_field_file'); bind('#clone-id-path','clone_id_pa
 const tog=()=>$('#engine-custom').classList.toggle('hidden',$('#sel-engine').value!=='custom');
 const etog=()=>$('#engine-eleven').classList.toggle('hidden',$('#sel-engine').value!=='elevenlabs');
 $('#sel-engine').addEventListener('change',()=>{ tog(); etog(); }); tog(); etog();
+const et11=$('#btn-eleven-test');
+if(et11) et11.onclick=async()=>{
+  const out=$('#eleven-test-out'); out.textContent='测试中…';
+  try{ const d=await elevenDiag(); out.textContent=d.msg; }
+  catch(e){ out.textContent='测试异常：'+e.message; }
+};
 const ctog=()=>$('#clone-custom').classList.toggle('hidden',$('#sel-clone-provider').value!=='custom');
 $('#sel-clone-provider').addEventListener('change',()=>{ ctog();
   const n=$('#clone-provider-note'); if(n) n.textContent=(CLONE_PROVIDERS[$('#sel-clone-provider').value]||{}).hint||''; });

@@ -243,6 +243,10 @@ if ('serviceWorker' in navigator) {
         <div class="sec">ElevenLabs 云端语音</div>
         <label><span class="k">API Key</span><input id="eleven-key" type="password" class="txt" placeholder="elevenlabs.io 获取，只存本机"></label>
         <p class="hint">免费版每月 1 万字符（约半小时中文朗读），超出后需付费。Key 只存本机。云端音色去「声音 → 云端」试听选用；你在 ElevenLabs 克隆的音色会自动出现在云端列表里。</p>
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn-ghost sm" id="btn-eleven-test">测试连接</button>
+          <span class="sub" id="eleven-test-out"></span>
+        </div>
       </div>
       <div class="set-group">
         <div class="sec">声音克隆服务</div>
@@ -266,7 +270,7 @@ if ('serviceWorker' in navigator) {
         <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
         <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
       </div>
-      <div class="ver">DeepRead v3.10</div>
+      <div class="ver">DeepRead v3.11</div>
     </div>
   </main>
 

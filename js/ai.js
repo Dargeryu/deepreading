@@ -41,11 +41,31 @@ author:(b.authors||[]).map(a=>a.name).join(', '), year:'',
 url:'', dl:(b.formats||{})['application/epub+zip']||''}));
 }
 
+/* ---------- ElevenLabs 连接诊断 ---------- */
+async function elevenDiag(){
+  const key=(store.get('eleven_key')||'').trim();
+  if(!key) return {ok:false,msg:'还没填 Key，先把 Key 粘贴进去'};
+  let r;
+  try{ r=await fetch('https://api.elevenlabs.com/v1/user',{headers:{'xi-api-key':key}}); }
+  catch(e){ return {ok:false,msg:'请求发不出去（'+e.message+'）：检查手机网络，或切换 WiFi/移动数据重试'}; }
+  const ct=r.headers.get('content-type')||'';
+  const txt=await r.text();
+  if(r.status===401) return {ok:false,msg:'Key 无效（401）：请检查是否复制完整（首尾空格已自动忽略）'};
+  if(!r.ok) return {ok:false,msg:'HTTP '+r.status+'：'+txt.slice(0,100)};
+  if(ct.indexOf('json')>=0){
+    try{ const j=JSON.parse(txt), s=j.subscription||{};
+      return {ok:true,msg:'连接正常！套餐 '+(s.tier||'?')+'，剩余额度 '+(s.character_count!=null?s.character_count:'?')+' / '+(s.character_limit!=null?s.character_limit:'?')+' 字符'};
+    }catch(e){ return {ok:false,msg:'返回异常，稍后重试'}; }
+  }
+  const m=txt.match(/<title[^>]*>([^<]{0,80})/i);
+  return {ok:false,msg:'被网络拦截（HTTP '+r.status+' 却返回网页，标题「'+(m?m[1].trim():'未知')+'」）：试试切换 WiFi/移动数据后重试'};
+}
+
 /* ---------- ElevenLabs 云端语音 ---------- */
 const ElevenTTS=(()=>{
 let audio=null, stopped=false;
 async function speak(text, voiceId){
-  const key=store.get('eleven_key');
+  const key=(store.get('eleven_key')||'').trim();
   if(!key) throw new Error('请先在「我的 → ElevenLabs」里填写 API Key');
   const voice=voiceId||store.get('eleven_voice');
   if(!voice) throw new Error('请先去声音广场云端页选一个音色');
@@ -55,7 +75,12 @@ async function speak(text, voiceId){
     headers:{'Content-Type':'application/json','xi-api-key':key},
     body:JSON.stringify({text:text, model_id:'eleven_multilingual_v2'})
   });
-  if(!r.ok){ const t=await r.text().catch(()=> ''); throw new Error('ElevenLabs '+r.status+' '+t.slice(0,120)); }
+  const ct=r.headers.get('content-type')||'';
+  if(!r.ok||ct.indexOf('audio')<0){
+    const t=await r.text().catch(()=> '');
+    const m=t.match(/<title[^>]*>([^<]{0,80})/i);
+    throw new Error('ElevenLabs HTTP '+r.status+(m?'（被网络拦截，页面标题「'+m[1].trim()+'」）':'')+t.slice(0,80));
+  }
   const blob=await r.blob();
   const url=URL.createObjectURL(blob);
   await new Promise((res,rej)=>{

@@ -636,7 +636,7 @@ document.querySelectorAll('.vt').forEach(t=>t.onclick=()=>{
 
 /* ================= ElevenLabs 云端广场 ================= */
 async function elevenVoices(force){
-  const key=store.get('eleven_key');
+  const key=(store.get('eleven_key')||'').trim();
   if(!key){ const e=new Error('请先在「我的 → ElevenLabs」里填写 API Key'); e.code='no-key'; throw e; }
   if(!force){
     try{
@@ -644,9 +644,18 @@ async function elevenVoices(force){
       if(j&&j.voices&&Date.now()-j.ts<24*3600*1000) return j.voices;
     }catch(e){}
   }
-  const r=await fetch('https://api.elevenlabs.com/v1/voices',{headers:{'xi-api-key':key}});
-  if(!r.ok){ const t=await r.text().catch(()=> ''); throw new Error('ElevenLabs '+r.status+' '+t.slice(0,120)); }
-  const j=await r.json();
+  let r;
+  try{ r=await fetch('https://api.elevenlabs.com/v1/voices',{headers:{'xi-api-key':key}}); }
+  catch(e){ throw new Error('请求发不出去（'+e.message+'）：检查手机网络，或切换 WiFi/移动数据重试'); }
+  const ct=r.headers.get('content-type')||'';
+  const txt=await r.text();
+  if(r.status===401) throw new Error('Key 无效（401）：请检查是否复制完整（首尾空格已自动忽略）');
+  if(!r.ok) throw new Error('ElevenLabs HTTP '+r.status+' '+txt.slice(0,100));
+  if(ct.indexOf('json')<0){
+    const m=txt.match(/<title[^>]*>([^<]{0,80})/i);
+    throw new Error('被网络拦截（HTTP '+r.status+' 却返回网页，标题「'+(m?m[1].trim():'未知')+'」）：试试切换 WiFi/移动数据后点刷新');
+  }
+  const j=JSON.parse(txt);
   const vs=(j.voices||[]).map(v=>({
     id:v.voice_id, name:v.name||'未命名', category:v.category||'',
     labels:v.labels||{}, preview:v.preview_url||''
