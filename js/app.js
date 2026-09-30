@@ -456,6 +456,14 @@ function bindReaderGestures(){
   let rT=null;
   window.addEventListener('resize',()=>{ clearTimeout(rT); rT=setTimeout(()=>{ if(!Flip.active) repaginate(); },280); });
   if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ scheduleRepaginate(); });
+  // 桌面端：左右方向键翻页（移动端走触屏手势）
+  window.addEventListener('keydown',e=>{
+    if(curView!=='reader'||!cur||!PG.ready||Flip.active) return;
+    const tag=(document.activeElement&&document.activeElement.tagName)||'';
+    if(/INPUT|TEXTAREA|SELECT/.test(tag)) return;
+    if(e.key==='ArrowRight') setPage(PG.page+1,{animate:true});
+    else if(e.key==='ArrowLeft') setPage(PG.page-1,{animate:true});
+  });
 }
 function renderChapters(){
   const l=$('#chapter-list'); l.innerHTML='';
