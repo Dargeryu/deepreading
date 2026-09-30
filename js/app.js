@@ -49,7 +49,7 @@ function splitChapters(fullText){
 }
 
 /* ---------- IndexedDB ---------- */
-const DB='deepreading', VS=3;
+const DB='deepreading', VS=4;
 let db=null;
 function openDB(){
   return new Promise((res,rej)=>{
@@ -60,6 +60,7 @@ function openDB(){
       if(!d.objectStoreNames.contains('files')) d.createObjectStore('files',{keyPath:'id'});
       if(!d.objectStoreNames.contains('progress')) d.createObjectStore('progress',{keyPath:'bookId'});
       if(!d.objectStoreNames.contains('voices')) d.createObjectStore('voices',{keyPath:'id'});
+      if(!d.objectStoreNames.contains('pagecache')) d.createObjectStore('pagecache',{keyPath:'key'});
     };
     r.onsuccess=()=>{db=r.result;res();}; r.onerror=()=>rej(r.error);
   });
@@ -70,11 +71,21 @@ const idb={
   all:()=>new Promise((res,rej)=>{const t=_tx('books').getAll();t.onsuccess=()=>res(t.result||[]);t.onerror=()=>rej(t.error);}),
   putFile:(id,data,name)=>new Promise((res,rej)=>{const t=_tx('files','readwrite').put({id,data,name});t.onsuccess=res;t.onerror=()=>rej(t.error);}),
   getFile:id=>new Promise((res,rej)=>{const t=_tx('files').get(id);t.onsuccess=()=>res(t.result||null);t.onerror=()=>rej(t.error);}),
-  putProgress:(id,idx)=>new Promise((res,rej)=>{const t=_tx('progress','readwrite').put({bookId:id,idx,updatedAt:Date.now()});t.onsuccess=res;t.onerror=()=>rej(t.error);}),
+  putProgress:(id,idx,page)=>new Promise((res,rej)=>{const t=_tx('progress','readwrite').put({bookId:id,idx,page:page==null?0:page,updatedAt:Date.now()});t.onsuccess=res;t.onerror=()=>rej(t.error);}),
+  getProgress:id=>new Promise((res,rej)=>{const t=_tx('progress').get(id);t.onsuccess=()=>res(t.result||null);t.onerror=()=>rej(t.error);}),
+  getPageCache:key=>new Promise((res,rej)=>{const t=_tx('pagecache').get(key);t.onsuccess=()=>res(t.result||null);t.onerror=()=>rej(t.error);}),
+  putPageCache:rec=>new Promise((res,rej)=>{const t=_tx('pagecache','readwrite').put(rec);t.onsuccess=res;t.onerror=()=>rej(t.error);}),
+  delPageCacheByBook:bookId=>new Promise((res,rej)=>{
+    const t=_tx('pagecache','readwrite'); const keys=[];
+    const cur=t.openCursor();
+    cur.onsuccess=()=>{ const c=cur.result; if(c){ if(c.value&&c.value.bookId===bookId) keys.push(c.primaryKey); c.continue(); }
+      else { keys.forEach(k=>t.delete(k)); res(); } };
+    cur.onerror=()=>rej(cur.error);
+  }),
   allProgress:()=>new Promise((res,rej)=>{const t=_tx('progress').getAll();t.onsuccess=()=>res(t.result||[]);t.onerror=()=>rej(t.error);}),
   del:id=>Promise.all(['books','files','progress'].map(s=>new Promise((res,rej)=>{
     const t=db.transaction(s,'readwrite').objectStore(s).delete(id);
-    t.onsuccess=()=>res();t.onerror=()=>rej(t.error);}))),
+    t.onsuccess=()=>res();t.onerror=()=>rej(t.error);}))).concat([idb.delPageCacheByBook(id).catch(()=>{})]),
   putVoice:v=>new Promise((res,rej)=>{const t=_tx('voices','readwrite').put(v);t.onsuccess=res;t.onerror=()=>rej(t.error);}),
   allVoices:()=>new Promise((res,rej)=>{const t=_tx('voices').getAll();t.onsuccess=()=>res(t.result||[]);t.onerror=()=>rej(t.error);}),
   delVoice:id=>new Promise((res,rej)=>{const t=_tx('voices','readwrite').delete(id);t.onsuccess=()=>res();t.onerror=()=>rej(t.error);}),
@@ -322,7 +333,7 @@ async function openBook(id){
   document.title='DeepRead · '+cur.title;
   renderWindow(cur.progress.idx);
   renderChapters(); go('reader'); updatePlayer();
-  requestAnimationFrame(()=>{ layoutPages(); scrollToActive(false); });
+  requestAnimationFrame(()=>{ bootPagination(); });
   applyBookVoice(); updateMiniPlayer();
 }
 /* ---------- 分窗渲染（v3.19）：长书只渲染当前窗口句子，避免多列一次性排几千句卡死 ---------- */
@@ -346,46 +357,105 @@ function renderWindow(centerIdx){
     sp.onclick=(()=>{ const g=i; return ()=>{ if(pageTouchMoved) return; seekTo(g); }; })();
     c.appendChild(sp); c.appendChild(document.createTextNode(' ')); sentEls.push(sp);
   }
-  curPage=0;
   layoutPages();
 }
-/* ---------- 横向分页（v3.16）：CSS columns 一列一页，左右滑动翻页 ---------- */
-let curPage=0, pageCount=1, progScroll=false, pageTouchMoved=false;
+/* ---------- 独立分页 + 仿真翻页（v3.21） ----------
+ * 每本书独立的页码体系（见 js/paginate.js），一列即一页；
+ * 手势与翻页动画见 js/flip.js，本文件负责页状态与渲染窗口的衔接。 */
+let pageTouchMoved=false;
 const pagesEl=()=>$('#reader-pages');
 function layoutPages(){
   const el=pagesEl(); if(!el||!cur) return;
   const w=el.clientWidth||1;
   el.style.columnWidth=Math.max(200, w-44)+'px'; // 多列直接建在滚动容器上（一列一页）
-  pageCount=Math.max(1, Math.ceil(el.scrollWidth/w));
-  curPage=Math.max(0, Math.min(pageCount-1, curPage));
 }
-function goPage(n, smooth=true){
-  const el=pagesEl(); if(!el||!cur) return;
-  curPage=Math.max(0, Math.min(pageCount-1, n));
-  progScroll=true;
-  el.scrollTo({left:curPage*el.clientWidth, behavior:smooth?'smooth':'auto'});
-  setTimeout(()=>{ progScroll=false; }, smooth?380:60);
+/* 全局页 -> 当前渲染窗口内的列号 */
+function localPageOffset(){ return (PG.ready&&PG.starts.length)?pageOfSentence(winStart):0; }
+function localPageOf(gp){ return gp-localPageOffset(); }
+function ensureWindowForPage(gp){
+  const s0=sentenceOfPage(gp);
+  if(s0<winStart||s0>=winStart+sentEls.length) renderWindow(s0);
 }
-function pageOfEl(elm){
-  const el=pagesEl(); if(!el||!elm||!cur) return 0;
-  const r=elm.getBoundingClientRect(), cr=el.getBoundingClientRect();
-  return Math.max(0, Math.min(pageCount-1, Math.round((r.left-cr.left+el.scrollLeft)/el.clientWidth)));
+function showPageInstant(gp){
+  if(!cur) return;
+  gp=PG.ready?Math.max(0,Math.min(PG.total-1,gp)):0;
+  ensureWindowForPage(gp);
+  const el=pagesEl(), W=el.clientWidth||1;
+  el.scrollTo({left:localPageOf(gp)*W, behavior:'auto'});
+  PG.page=gp; commitPageState();
 }
-function bindPageSwipe(){
-  const el=pagesEl(); if(!el||el._swipeBound) return; el._swipeBound=true;
-  el.addEventListener('touchstart', ()=>{ pageTouchMoved=false; }, {passive:true});
-  el.addEventListener('touchmove', ()=>{ pageTouchMoved=true; }, {passive:true});
-  let snapT=null;
-  el.addEventListener('scroll', ()=>{
-    if(progScroll) return;
-    clearTimeout(snapT);
-    snapT=setTimeout(()=>{
-      const p=Math.max(0, Math.min(pageCount-1, Math.round(el.scrollLeft/el.clientWidth)));
-      curPage=p; goPage(p, true);
-    }, 140);
-  }, {passive:true});
-  window.addEventListener('resize', ()=>{ layoutPages(); goPage(curPage, false); });
-  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ layoutPages(); });
+function commitPage(gp){ PG.page=gp; commitPageState(); }
+function commitPageState(){ updateCount(); saveProgress(); }
+/* 对外翻页入口：相邻页走仿真翻页动画，跨页直接切换 */
+function setPage(gp, opts){
+  opts=opts||{};
+  if(!cur||!PG.ready) return;
+  gp=Math.max(0,Math.min(PG.total-1,gp));
+  const rm=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(opts.animate!==false&&!rm&&Math.abs(gp-PG.page)===1) Flip.animateTo(gp);
+  else showPageInstant(gp);
+}
+function updateCount(){
+  const rc=$('#reader-count');
+  if(rc) rc.textContent=(PG.ready&&PG.total>0)?('第 '+(PG.page+1)+' 页 / 共 '+PG.total+' 页'):'';
+}
+/* ---------- 分页启动 / 重排 ---------- */
+async function bootPagination(){
+  applyType();
+  const h=pageHash();
+  PG.bookId=cur.id; PG.hash=h; PG.ready=false; PG.starts=[]; PG.total=1; PG.page=0;
+  updateCount();
+  layoutPages();
+  let rec=null; try{ rec=await idb.getProgress(cur.id); }catch(e){}
+  const hit=await idb.getPageCache(cur.id+'|'+h).catch(()=>null);
+  if(hit&&hit.starts&&hit.starts.length){
+    PG.starts=hit.starts; PG.total=hit.total; PG.ready=true;
+    const p=(rec&&rec.page!=null)?Math.max(0,Math.min(PG.total-1,rec.page)):pageOfSentence(rec?rec.idx:0);
+    showPageInstant(p);
+  }else{
+    positionNearSentence(rec?rec.idx:0);      // 缓存未命中：先就近显示，后台再算
+    paginateInBackground(h, rec?rec.idx:0);
+  }
+}
+/* 分页就绪前，把静态层定位到句子 gi 所在的窗口列（旧 pageOfEl 逻辑） */
+function positionNearSentence(gi){
+  gi=Math.max(0,Math.min(cur.total-1,gi));
+  const el=sentEls[gi-winStart]; if(!el) return;
+  const r=el.getBoundingClientRect(), cr=pagesEl().getBoundingClientRect(), W=pagesEl().clientWidth||1;
+  const lp=Math.max(0,Math.round((r.left-cr.left+pagesEl().scrollLeft)/W));
+  pagesEl().scrollTo({left:lp*W, behavior:'auto'});
+}
+async function paginateInBackground(h, idx){
+  let res=null;
+  try{ res=await paginateBook(cur, h); }catch(e){ res=null; }
+  if(!res) return;                                        // 中途已失效
+  if(!cur||PG.bookId!==cur.id||pageHash()!==h) return;    // 书已切换或排版已变
+  PG.starts=res.starts; PG.total=res.total; PG.ready=true;
+  try{ await idb.putPageCache({key:cur.id+'|'+h, bookId:cur.id, hash:h, starts:res.starts, total:res.total, updatedAt:Date.now()}); }catch(e){}
+  const target=pageOfSentence(Math.max(0,Math.min(cur.total-1,idx||0)));
+  if(target!==PG.page) showPageInstant(target); else updateCount();
+}
+let _pgT=null;
+function scheduleRepaginate(){ clearTimeout(_pgT); _pgT=setTimeout(()=>{ repaginate(); },300); }
+async function repaginate(){
+  if(!cur||curView!=='reader'||Flip.active){ if(cur&&curView==='reader'&&Flip.active) scheduleRepaginate(); return; }
+  const h=pageHash();
+  if(h===PG.hash&&PG.ready){ layoutPages(); showPageInstant(PG.page); return; }
+  const keepIdx=cur.progress.idx;
+  PG.hash=h; PG.ready=false; PG.starts=[]; PG.total=1; updateCount();
+  layoutPages();
+  const hit=await idb.getPageCache(cur.id+'|'+h).catch(()=>null);
+  if(hit&&hit.starts&&hit.starts.length){
+    PG.starts=hit.starts; PG.total=hit.total; PG.ready=true;
+    showPageInstant(pageOfSentence(keepIdx));
+  }else paginateInBackground(h, keepIdx);
+}
+/* 手势绑定（替代旧的 scroll-snap） */
+function bindReaderGestures(){
+  bindFlip();
+  let rT=null;
+  window.addEventListener('resize',()=>{ clearTimeout(rT); rT=setTimeout(()=>{ if(!Flip.active) repaginate(); },280); });
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ scheduleRepaginate(); });
 }
 function renderChapters(){
   const l=$('#chapter-list'); l.innerHTML='';
@@ -398,22 +468,21 @@ function renderChapters(){
 }
 const chapterOf=i=>{ let r=0; cur.chapters.forEach((c,ci)=>{ if(c.start<=i) r=ci; }); return r; };
 function scrollToActive(smooth=true){
-  if(!cur) return;
-  const el=sentEls[cur.progress.idx-winStart]; if(!el) return;
-  goPage(pageOfEl(el), smooth);
+  if(!cur||!PG.ready) return;
+  setPage(pageOfSentence(cur.progress.idx), {animate:smooth});
 }
 function markActive(){
   if(!cur) return;
   let gi=cur.progress.idx-winStart;
   if(gi<0||gi>=sentEls.length){ renderWindow(cur.progress.idx); gi=cur.progress.idx-winStart; }
   sentEls.forEach((el,i)=>el.classList.toggle('active', i===gi));
-  if(wantPlay){ const el=sentEls[gi]; if(el){ const p=pageOfEl(el); if(p!==curPage) goPage(p, true); } }
+  if(wantPlay&&PG.ready){ const gp=pageOfSentence(winStart+gi); if(gp!==PG.page) setPage(gp,{animate:true}); }
   updatePlayer();
 }
 async function saveProgress(){
   if(!cur) return;
   cur.progress.updatedAt=Date.now();
-  try{ await idb.putProgress(cur.id, cur.progress.idx); }catch(e){}
+  try{ await idb.putProgress(cur.id, cur.progress.idx, PG.page); }catch(e){}
 }
 /* 书籍元信息（音色/语速/对白开关）变更时才写整本 */
 async function saveBook(){
@@ -430,7 +499,7 @@ const fmtRate=sp=>{ let s=sp.toFixed(2).replace(/0+$/,''); if(s.endsWith('.')) s
 function updatePlayer(){
   if(!cur) return;
   const pct=100*cur.progress.idx/Math.max(1,cur.total);
-  const rc=$('#reader-count'); if(rc) rc.textContent=`${cur.progress.idx+1} / ${cur.total}`;
+  updateCount();
   const fill=$('#rp-fill'); if(fill) fill.style.width=pct+'%';
   const ch=cur.chapters[chapterOf(cur.progress.idx)];
   const rh=$('#reader-chapter'); if(rh) rh.textContent=ch?ch.title:cur.title;
@@ -583,7 +652,7 @@ $('#dr-ai').onclick=()=>{ $('#chapter-drawer').classList.add('hidden'); $('#aish
 $('#dr-type').onclick=()=>{ $('#chapter-drawer').classList.add('hidden'); $('#typeset').classList.remove('hidden'); };
 $('#voice-fab').onclick=()=>{ renderVoiceSheet(); $('#voice-sheet').classList.remove('hidden'); $('#scrim').classList.remove('hidden'); };
 $('#voice-sheet-close').onclick=()=>{ $('#voice-sheet').classList.add('hidden'); $('#scrim').classList.add('hidden'); };
-bindPageSwipe();
+bindReaderGestures();
 $('#sel-voice').onchange=e=>{ if(cur){cur.voiceURI=e.target.value;saveBook();} };
 $('#sel-voice2').onchange=e=>{ if(cur){cur.voiceURI2=e.target.value;saveBook();} };
 $('#rng-rate').oninput=e=>{ const r=+e.target.value;
@@ -726,11 +795,11 @@ $('#ts-font').value=font; $('#ts-theme').value=theme;
 }
 /* 排版按钮已并入目录抽屉（#dr-type） */
 $('#btn-type-close').onclick=()=>$('#typeset').classList.add('hidden');
-$('#ts-size').addEventListener('input',e=>{store.set('ts_size',e.target.value);applyType();});
-$('#ts-lh').addEventListener('input',e=>{store.set('ts_lh',e.target.value);applyType();});
-$('#ts-font').addEventListener('change',e=>{store.set('ts_font',e.target.value);applyType();});
-$('#ts-theme').addEventListener('change',e=>{store.set('ts_theme',e.target.value);applyType();});
-$('#ts-theme2').addEventListener('change',e=>{store.set('ts_theme',e.target.value);applyType();});
+$('#ts-size').addEventListener('input',e=>{store.set('ts_size',e.target.value);applyType();scheduleRepaginate();});
+$('#ts-lh').addEventListener('input',e=>{store.set('ts_lh',e.target.value);applyType();scheduleRepaginate();});
+$('#ts-font').addEventListener('change',e=>{store.set('ts_font',e.target.value);applyType();scheduleRepaginate();});
+$('#ts-theme').addEventListener('change',e=>{store.set('ts_theme',e.target.value);applyType();scheduleRepaginate();});
+$('#ts-theme2').addEventListener('change',e=>{store.set('ts_theme',e.target.value);applyType();scheduleRepaginate();});
 
 /* ---------- 设置持久化 ---------- */
 function initSettings(){

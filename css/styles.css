@@ -463,3 +463,15 @@ textarea.txt.big{resize:vertical;min-height:150px;line-height:1.7}
 /* 底部导航 4 键适配 */
 #tabbar .tab{font-size:10.5px}
 #tabbar .tab .ti{font-size:20px}
+
+/* ===== v3.21 仿真翻页：真书触感 ===== */
+#reader-pages{position:relative;overflow-x:hidden;touch-action:pan-y}
+.flip-leaf{position:absolute;left:0;top:0;width:100%;height:100%;z-index:20;pointer-events:none;
+  transform-style:preserve-3d;will-change:transform}
+.flip-src{width:100%;height:100%;box-sizing:border-box;padding:22px;
+  column-gap:44px;column-fill:auto;overflow:hidden}
+.flip-shade{position:absolute;inset:0;pointer-events:none;opacity:0;
+  background:linear-gradient(100deg,rgba(0,0,0,0) 28%,rgba(0,0,0,.30) 76%,rgba(0,0,0,.46) 100%)}
+.flip-spine{position:absolute;top:0;bottom:0;width:44px;z-index:19;pointer-events:none;opacity:0}
+.flip-spine.l{left:0;background:linear-gradient(90deg,rgba(0,0,0,.30),rgba(0,0,0,0))}
+.flip-spine.r{right:0;background:linear-gradient(270deg,rgba(0,0,0,.30),rgba(0,0,0,0))}

@@ -1,10 +1,11 @@
 /* Deepreading service worker：应用壳离线缓存 */
-const CACHE = 'deepreading-v3.20';
+const CACHE = 'deepreading-v3.21';
 const CORE = [
   './', './index.html', './manifest.json',
   './icon-192.png', './icon-512.png', './banner-ink.jpg',
   './css/styles.css',
   './js/util.js', './js/app.js', './js/ai.js', './js/ambience.js', './js/voice.js',
+  './js/paginate.js', './js/flip.js',
   './lib/pdf.min.js', './lib/pdf.worker.min.js',
   './lib/jszip.min.js', './lib/mammoth.min.js',
 ];
