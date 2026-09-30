@@ -41,6 +41,34 @@ author:(b.authors||[]).map(a=>a.name).join(', '), year:'',
 url:'', dl:(b.formats||{})['application/epub+zip']||''}));
 }
 
+/* ---------- ElevenLabs 云端语音 ---------- */
+const ElevenTTS=(()=>{
+let audio=null, stopped=false;
+async function speak(text, voiceId){
+  const key=store.get('eleven_key');
+  if(!key) throw new Error('请先在「我的 → ElevenLabs」里填写 API Key');
+  const voice=voiceId||store.get('eleven_voice');
+  if(!voice) throw new Error('请先去声音广场云端页选一个音色');
+  stopped=false;
+  const r=await fetch('https://api.elevenlabs.com/v1/text-to-speech/'+encodeURIComponent(voice),{
+    method:'POST',
+    headers:{'Content-Type':'application/json','xi-api-key':key},
+    body:JSON.stringify({text:text, model_id:'eleven_multilingual_v2'})
+  });
+  if(!r.ok){ const t=await r.text().catch(()=> ''); throw new Error('ElevenLabs '+r.status+' '+t.slice(0,120)); }
+  const blob=await r.blob();
+  const url=URL.createObjectURL(blob);
+  await new Promise((res,rej)=>{
+    audio=new Audio(url);
+    audio.onended=()=>{URL.revokeObjectURL(url);res();};
+    audio.onerror=()=>rej(new Error('音频播放失败'));
+    if(stopped){URL.revokeObjectURL(url);res();} else audio.play().catch(rej);
+  });
+}
+function stop(){ stopped=true; if(audio){try{audio.pause();}catch(e){} audio=null;} }
+return {speak, stop};
+})();
+
 /* ---------- 自定义 TTS API（含克隆音色） ---------- */
 const CustomTTS=(()=>{
 let audio=null, stopped=false;

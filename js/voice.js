@@ -183,15 +183,25 @@ async function renderCloneList(){
 }
 function CLoneLabel(p){ return (CLONE_PROVIDERS[p]||{}).label||p||''; }
 async function previewCloned(v){
-  if(store.get('tts_engine')!=='custom'||!store.get('tts_ep')){
-    toast('克隆音色走自定义 TTS 引擎：先在「我的」里配好 API 地址'); return;
+  const viaEleven=v.provider==='elevenlabs'&&store.get('eleven_key');
+  if(!viaEleven&&(store.get('tts_engine')!=='custom'||!store.get('tts_ep'))){
+    toast('试听克隆音色：ElevenLabs 请先填 Key，或自定义 TTS 配好 API 地址'); return;
   }
   loading(true,'试听合成中…');
-  try{ await CustomTTS.speakWith(`大家好，我是${v.name}。这是我的克隆音色试听。`, v.voiceId); }
+  try{
+    if(viaEleven) await ElevenTTS.speak(`大家好，我是${v.name}。这是我的克隆音色试听。`, v.voiceId);
+    else await CustomTTS.speakWith(`大家好，我是${v.name}。这是我的克隆音色试听。`, v.voiceId);
+  }
   catch(e){ toast('试听失败：'+e.message, 3000); }
   finally{ loading(false); }
 }
 function useCloned(v){
+  if(v.provider==='elevenlabs'&&store.get('eleven_key')){
+    store.set('tts_engine','elevenlabs'); store.set('eleven_voice',v.voiceId);
+    try{ $('#sel-engine').value='elevenlabs'; $('#engine-eleven').classList.remove('hidden'); $('#engine-custom').classList.add('hidden'); }catch(e){}
+    toast(`已选用克隆音色「${v.name}」朗读`);
+    return;
+  }
   if(!store.get('tts_ep')){ toast('先在「我的 → 朗读引擎」里填写自定义 TTS API 地址'); go('mine'); return; }
   store.set('tts_engine','custom'); store.set('tts_voice',v.voiceId);
   try{ $('#sel-engine').value='custom'; }catch(e){}
@@ -608,13 +618,109 @@ async function renderCastBooks(){
 
 /* ---------- 声音视图 ---------- */
 function renderVoice(){
-  document.querySelectorAll('.vt').forEach(t=>{
-    const on=t.classList.contains('cur');
-    $('#vt-'+t.dataset.t).classList.toggle('hidden', !on);
+  const cur=document.querySelector('.vt.cur');
+  const name=cur?cur.dataset.t:'plaza';
+  ['plaza','cloud','clone','multi'].forEach(k=>{
+    const el=document.getElementById('vt-'+k);
+    if(el) el.classList.toggle('hidden', k!==name);
   });
-  renderPlaza(); renderCloneList(); renderCastBooks();
+  if(name==='plaza') renderPlaza();
+  else if(name==='cloud') renderCloud();
+  else if(name==='clone') renderCloneList();
+  else renderCastBooks();
 }
 document.querySelectorAll('.vt').forEach(t=>t.onclick=()=>{
   document.querySelectorAll('.vt').forEach(x=>x.classList.remove('cur'));
   t.classList.add('cur'); renderVoice();
 });
+
+/* ================= ElevenLabs 云端广场 ================= */
+async function elevenVoices(force){
+  const key=store.get('eleven_key');
+  if(!key){ const e=new Error('请先在「我的 → ElevenLabs」里填写 API Key'); e.code='no-key'; throw e; }
+  if(!force){
+    try{
+      const j=JSON.parse(store.get('eleven_voices_cache','null'));
+      if(j&&j.voices&&Date.now()-j.ts<24*3600*1000) return j.voices;
+    }catch(e){}
+  }
+  const r=await fetch('https://api.elevenlabs.com/v1/voices',{headers:{'xi-api-key':key}});
+  if(!r.ok){ const t=await r.text().catch(()=> ''); throw new Error('ElevenLabs '+r.status+' '+t.slice(0,120)); }
+  const j=await r.json();
+  const vs=(j.voices||[]).map(v=>({
+    id:v.voice_id, name:v.name||'未命名', category:v.category||'',
+    labels:v.labels||{}, preview:v.preview_url||''
+  }));
+  try{ store.set('eleven_voices_cache', JSON.stringify({ts:Date.now(),voices:vs})); }catch(e){}
+  return vs;
+}
+const EL_G={masculine:'男',feminine:'女'};
+const EL_A={young:'青年',middle_aged:'中年',old:'老年','middle-aged':'中年'};
+const EL_C={premade:'预置',cloned:'克隆',generated:'AI生成',professional:'专业'};
+function cloudTags(v){
+  const L=v.labels||{}, out=[];
+  if(EL_C[v.category]) out.push(EL_C[v.category]);
+  if(EL_G[L.gender]) out.push(EL_G[L.gender]);
+  if(EL_A[L.age]) out.push(EL_A[L.age]);
+  if(L.accent) out.push(String(L.accent).slice(0,8));
+  return out.slice(0,4);
+}
+async function renderCloud(){
+  const box=$('#cloud-list'); if(!box) return;
+  const key=store.get('eleven_key');
+  $('#cloud-count').textContent='云端';
+  if(!key){
+    box.innerHTML=`<div class="empty" style="padding:36px 20px">
+      <div class="empty-icon">☁️</div><p class="serif">连接 ElevenLabs 解锁百变音色</p>
+      <p class="sub">去 elevenlabs.io 注册获取 API Key<br>（免费版每月约可听半小时）<br>填到「我的 → ElevenLabs」里</p>
+      <button class="btn-primary sm" id="btn-cloud-setup" style="margin-top:12px">去填写 Key</button></div>`;
+    $('#btn-cloud-setup').onclick=()=>go('mine');
+    return;
+  }
+  box.innerHTML='<p class="sub" style="padding:24px;text-align:center">正在拉取云端音色…</p>';
+  try{
+    const vs=await elevenVoices(false);
+    $('#cloud-count').textContent=`云端 ${vs.length}`;
+    if(!vs.length){ box.innerHTML='<p class="sub" style="padding:24px;text-align:center">没有可用音色</p>'; return; }
+    box.innerHTML='';
+    const curId=store.get('eleven_voice');
+    vs.forEach(v=>{
+      const d=document.createElement('div'); d.className='v-card';
+      const desc=(v.labels||{}).description||'';
+      d.innerHTML=`
+        <div class="v-ava" style="background:${avaBG(v.name+v.id)}">${esc((v.name||'?')[0])}</div>
+        <div class="v-info">
+          <div class="v-name">${esc(v.name)}${curId===v.id?'<span class="v-cur">使用中</span>':''}</div>
+          <div class="v-tags">${cloudTags(v).map(t=>`<span>${esc(t)}</span>`).join('')}</div>
+          ${desc?`<div class="v-desc">${esc(String(desc).slice(0,40))}</div>`:''}
+        </div>
+        <div class="v-ops">
+          <button class="v-btn play" title="试听">▶</button>
+          <button class="v-btn use">使用</button>
+        </div>`;
+      d.querySelector('.play').onclick=async()=>{
+        loading(true,'试听合成中…');
+        try{ await ElevenTTS.speak(`大家好，我是${v.name}，这是云端音色试听。`, v.id); }
+        catch(e){ toast('试听失败：'+e.message, 3000); }
+        finally{ loading(false); }
+      };
+      d.querySelector('.use').onclick=()=>{
+        store.set('tts_engine','elevenlabs'); store.set('eleven_voice',v.id);
+        try{ $('#sel-engine').value='elevenlabs'; }catch(e){}
+        try{ $('#engine-eleven').classList.remove('hidden'); $('#engine-custom').classList.add('hidden'); }catch(e){}
+        toast(`已选用云端音色「${v.name}」朗读`);
+        renderCloud();
+      };
+      box.appendChild(d);
+    });
+  }catch(e){
+    box.innerHTML=`<div class="empty" style="padding:30px 20px">
+      <p class="serif">拉取失败</p><p class="sub">${esc(e.message)}</p>
+      <button class="btn-ghost sm" id="btn-cloud-retry" style="margin-top:10px">重试</button></div>`;
+    $('#btn-cloud-retry').onclick=()=>renderCloud();
+  }
+}
+$('#btn-cloud-refresh').onclick=async()=>{
+  try{ await elevenVoices(true); }catch(e){ toast('刷新失败：'+e.message, 2500); }
+  renderCloud();
+};

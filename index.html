@@ -174,6 +174,7 @@ if ('serviceWorker' in navigator) {
     <header class="topbar"><div class="brand serif">声音</div><span style="width:34px"></span></header>
     <div class="voice-tabs">
       <button class="vt cur" data-t="plaza">广场</button>
+      <button class="vt" data-t="cloud">云端</button>
       <button class="vt" data-t="clone">克隆</button>
       <button class="vt" data-t="multi">多角色</button>
     </div>
@@ -182,6 +183,12 @@ if ('serviceWorker' in navigator) {
       <div id="plaza-note"></div>
       <div id="plaza-list"></div>
       <p class="hint">广场音色为本机高质量系统语音精选，离线可用。最终音质取决于设备自带的语音库（Edge / iOS 的中文语音效果最好）。</p>
+    </div>
+    <div id="vt-cloud" class="hidden">
+      <div class="sec-head" style="margin-top:2px"><h3 class="serif" id="cloud-count">云端</h3>
+        <button class="btn-ghost sm" id="btn-cloud-refresh">↻ 刷新</button></div>
+      <div id="cloud-list"></div>
+      <p class="hint">ElevenLabs 云端音色：每个都是独立训练的嗓音，千奇百怪。试听与朗读按字符计费，免费版每月约可听半小时。你在 ElevenLabs 克隆的音色会自动出现在这里。</p>
     </div>
     <div id="vt-clone" class="hidden">
       <div class="sec-head" style="margin-top:2px"><h3 class="serif" id="clone-count">我的音色</h3>
@@ -209,7 +216,7 @@ if ('serviceWorker' in navigator) {
       </div>
       <div class="set-group">
         <div class="sec">朗读引擎</div>
-        <label><span class="k">引擎</span><select id="sel-engine"><option value="system">系统语音（免费/离线）</option><option value="custom">自定义 TTS API（含克隆音色）</option></select></label>
+        <label><span class="k">引擎</span><select id="sel-engine"><option value="system">系统语音（免费/离线）</option><option value="elevenlabs">ElevenLabs 云端（百变音色）</option><option value="custom">自定义 TTS API（含克隆音色）</option></select></label>
         <div id="engine-custom" class="hidden">
           <label><span class="k">API 地址</span><input id="tts-endpoint" class="txt" placeholder="https://api.xxx.com/v1/text-to-speech"></label>
           <label><span class="k">API Key</span><input id="tts-key" type="password" class="txt" placeholder="只存本机"></label>
@@ -231,6 +238,11 @@ if ('serviceWorker' in navigator) {
         <label><span class="k">字体</span><select id="ts-font"><option value="serif">衬线（宋体）</option><option value="sans">无衬线（黑体）</option></select></label>
         <label><span class="k">行高</span><input type="range" id="ts-lh" min="16" max="28" value="20"><span id="ts-lh-v">2.0</span></label>
         <label><span class="k">主题</span><select id="ts-theme"><option value="day">白天</option><option value="sepia">护眼</option><option value="ink">墨黑</option><option value="night">夜间</option></select></label>
+      </div>
+      <div class="set-group hidden" id="engine-eleven">
+        <div class="sec">ElevenLabs 云端语音</div>
+        <label><span class="k">API Key</span><input id="eleven-key" type="password" class="txt" placeholder="elevenlabs.io 获取，只存本机"></label>
+        <p class="hint">免费版每月 1 万字符（约半小时中文朗读），超出后需付费。Key 只存本机。云端音色去「声音 → 云端」试听选用；你在 ElevenLabs 克隆的音色会自动出现在云端列表里。</p>
       </div>
       <div class="set-group">
         <div class="sec">声音克隆服务</div>
@@ -254,7 +266,7 @@ if ('serviceWorker' in navigator) {
         <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
         <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
       </div>
-      <div class="ver">DeepRead v3.8</div>
+      <div class="ver">DeepRead v3.9</div>
     </div>
   </main>
 

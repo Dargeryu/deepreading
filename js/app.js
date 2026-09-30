@@ -423,7 +423,8 @@ function speakCurrent(){
   const s=cur.sentences[cur.progress.idx]; if(!s){return;}
   // v3.6 多角色：按说话人选音色（启发式识别）
   const castT=(typeof castVoiceFor==='function')?castVoiceFor(s.t,cur):null;
-  if(store.get('tts_engine')==='custom'){ speakCustom(s, castT&&castT.kind==='custom'?castT.voiceId:null); return; }
+  const _eng=store.get('tts_engine');
+  if(_eng==='custom'||_eng==='elevenlabs'){ speakCustom(s, castT&&castT.kind==='custom'?castT.voiceId:null); return; }
   if(!synth){ toast('当前浏览器不支持语音朗读'); return; }
   synth.cancel();
   const u=new SpeechSynthesisUtterance(s.t);
@@ -454,7 +455,10 @@ function speakCurrent(){
 async function speakCustom(s, voiceId){
   if(synth) synth.cancel();
   markActive();
-  try{ await CustomTTS.speak(s.t, voiceId); }
+  try{
+    if(store.get('tts_engine')==='elevenlabs') await ElevenTTS.speak(s.t, voiceId);
+    else await CustomTTS.speak(s.t, voiceId);
+  }
   catch(e){ if(!wantPlay) return; toast('自定义TTS失败：'+e.message); stopSpeak(); return; }
   if(!wantPlay) return;
   if(cur.progress.idx<cur.total-1){ cur.progress.idx++; markActive(); saveProgress(); speakCurrent(); }
@@ -474,7 +478,9 @@ function play(){
   wantPlay=true; setPlayUI(); ensureWakeLock(); startAmbience(); speakCurrent(); scrollToActive();
 }
 function stopSpeak(){ wantPlay=false; setPlayUI(); clearInterval(resumeTimer); releaseWakeLock();
-  Ambience.stop(); CustomTTS.stop(); if(synth) synth.cancel(); }
+  Ambience.stop(); CustomTTS.stop();
+  if(typeof ElevenTTS!=='undefined'){ try{ElevenTTS.stop();}catch(e){} }
+  if(synth) synth.cancel(); }
 function startAmbience(){
   const t=$('#sel-amb').value; if(!t) return;
   try{ Ambience.start(t,(+$('#rng-amb').value)/100*0.6); }catch(e){}
@@ -651,14 +657,16 @@ el.addEventListener('change',()=>store.set(k,el.value));};
 bind('#sel-engine','tts_engine'); bind('#tts-endpoint','tts_ep'); bind('#tts-key','tts_key');
 bind('#tts-voice','tts_voice'); bind('#gemini-key','gemini_key'); bind('#gemini-model','gemini_model');
 bind('#sel-clone-provider','clone_provider'); bind('#clone-key','clone_key');
+bind('#eleven-key','eleven_key');
 bind('#clone-ep','clone_ep'); bind('#clone-field-name','clone_field_name');
 bind('#clone-field-file','clone_field_file'); bind('#clone-id-path','clone_id_path');
+const tog=()=>$('#engine-custom').classList.toggle('hidden',$('#sel-engine').value!=='custom');
+const etog=()=>$('#engine-eleven').classList.toggle('hidden',$('#sel-engine').value!=='elevenlabs');
+$('#sel-engine').addEventListener('change',()=>{ tog(); etog(); }); tog(); etog();
 const ctog=()=>$('#clone-custom').classList.toggle('hidden',$('#sel-clone-provider').value!=='custom');
 $('#sel-clone-provider').addEventListener('change',()=>{ ctog();
   const n=$('#clone-provider-note'); if(n) n.textContent=(CLONE_PROVIDERS[$('#sel-clone-provider').value]||{}).hint||''; });
 ctog();
-const tog=()=>$('#engine-custom').classList.toggle('hidden',$('#sel-engine').value!=='custom');
-$('#sel-engine').addEventListener('change',tog); tog();
 const amb=$('#sel-amb'); amb.value=store.get('amb_type','');
 amb.addEventListener('change',()=>{store.set('amb_type',amb.value); wantPlay?startAmbience():Ambience.stop();});
 const amv=$('#rng-amb'); amv.value=store.get('amb_vol','30');
