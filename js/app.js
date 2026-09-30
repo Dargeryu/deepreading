@@ -408,6 +408,7 @@ function seekTo(i){
   cur._lastSpk=null; // 多角色说话人追踪重置
   markActive(); scrollToActive(); saveProgress(); play();
 }
+const fmtRate=sp=>{ let s=sp.toFixed(2).replace(/0+$/,''); if(s.endsWith('.')) s+='0'; return s+'x'; };
 function updatePlayer(){
   if(!cur) return;
   const pct=100*cur.progress.idx/Math.max(1,cur.total);
@@ -415,8 +416,8 @@ function updatePlayer(){
   const fill=$('#rp-fill'); if(fill) fill.style.width=pct+'%';
   const ch=cur.chapters[chapterOf(cur.progress.idx)];
   const rh=$('#reader-chapter'); if(rh) rh.textContent=ch?ch.title:cur.title;
-  const sp=cur.rate/100, spt=$('#rp-speed');
-  if(spt) spt.textContent=sp.toFixed(2).replace(/0+$/,'').replace(/\.$/,'')+'x';
+  const spt=$('#rp-speed');
+  if(spt) spt.textContent=fmtRate(cur.rate/100);
   const cv=$('#rp-cover'); if(cv) cv.style.background=coverBG(cur);
 }
 /* 进度条已并入 #rp-progress（点击跳转），旧 #seek 已移除 */
@@ -541,7 +542,7 @@ function cycleSpeed(){
   const now=cur.rate/100;
   let ni=SPEEDS.findIndex(s=>s>now+0.01); if(ni<0) ni=0;
   cur.rate=Math.round(SPEEDS[ni]*100);
-  $('#rng-rate').value=cur.rate; $('#rate-val').textContent=SPEEDS[ni].toFixed(2).replace(/0+$/,'').replace(/\.$/,'')+'x';
+  $('#rng-rate').value=cur.rate; $('#rate-val').textContent=fmtRate(SPEEDS[ni]);
   saveBook(); if(wantPlay) speakCurrent(); syncFullPlayer(); updatePlayer();
 }
 $('#rp-play').onclick=()=>{ if(!cur)return; wantPlay?stopSpeak():play(); };
@@ -954,7 +955,7 @@ function syncFullPlayer(){
   $('#fp-cur').textContent=`第 ${cur.progress.idx+1} 句`;
   $('#fp-total').textContent=`共 ${cur.total} 句`;
   $('#fp-speed').classList.toggle('on', (cur.rate/100)!==1);
-  $('#fp-speed').querySelector('span').textContent=(cur.rate/100).toFixed(2).replace(/0+$/,'').replace(/\.$/,'')+'x';
+  $('#fp-speed').querySelector('span').textContent=fmtRate(cur.rate/100);
   const t=$('#fp-timer');
   t.classList.toggle('on', sleepMin>0);
   t.querySelector('span').textContent=sleepMin>0?`定时${sleepMin}′`:'定时';
