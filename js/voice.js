@@ -325,7 +325,7 @@ $('#btn-clone-do').onclick=async()=>{
       const fd=new FormData();
       fd.append('name', name);
       fd.append('files', cloneBlob, 'sample.webm');
-      const r=await fetch('https://api.elevenlabs.com/v1/voices/add',{
+      const r=await fetch('https://api.elevenlabs.io/v1/voices/add',{
         method:'POST', headers:{'xi-api-key':key}, body:fd});
       if(!r.ok){ const t=await r.text().catch(()=> ''); throw new Error('ElevenLabs '+r.status+' '+t.slice(0,100)); }
       voiceId=(await r.json()).voice_id;
@@ -645,7 +645,7 @@ async function elevenVoices(force){
     }catch(e){}
   }
   let r;
-  try{ r=await fetch('https://api.elevenlabs.com/v1/voices',{headers:{'xi-api-key':key}}); }
+  try{ r=await fetch('https://api.elevenlabs.io/v1/voices',{headers:{'xi-api-key':key}}); }
   catch(e){ throw new Error('请求发不出去（'+e.message+'）：检查手机网络，或切换 WiFi/移动数据重试'); }
   const ct=r.headers.get('content-type')||'';
   const txt=await r.text();

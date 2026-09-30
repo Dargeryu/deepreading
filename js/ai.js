@@ -46,7 +46,7 @@ async function elevenDiag(){
   const key=(store.get('eleven_key')||'').trim();
   if(!key) return {ok:false,msg:'还没填 Key，先把 Key 粘贴进去'};
   let r;
-  try{ r=await fetch('https://api.elevenlabs.com/v1/user',{headers:{'xi-api-key':key}}); }
+  try{ r=await fetch('https://api.elevenlabs.io/v1/user',{headers:{'xi-api-key':key}}); }
   catch(e){ return {ok:false,msg:'请求发不出去（'+e.message+'）：检查手机网络，或切换 WiFi/移动数据重试'}; }
   const ct=r.headers.get('content-type')||'';
   const txt=await r.text();
@@ -70,7 +70,7 @@ async function speak(text, voiceId){
   const voice=voiceId||store.get('eleven_voice');
   if(!voice) throw new Error('请先去声音广场云端页选一个音色');
   stopped=false;
-  const r=await fetch('https://api.elevenlabs.com/v1/text-to-speech/'+encodeURIComponent(voice),{
+  const r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+encodeURIComponent(voice),{
     method:'POST',
     headers:{'Content-Type':'application/json','xi-api-key':key},
     body:JSON.stringify({text:text, model_id:'eleven_multilingual_v2'})
