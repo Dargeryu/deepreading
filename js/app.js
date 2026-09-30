@@ -320,20 +320,34 @@ function showView(name){ go(name); } // 兼容旧调用
 async function openBook(id){
   cur=books.find(b=>b.id===id); if(!cur) return;
   document.title='DeepRead · '+cur.title;
-  const c=$('#content'); c.innerHTML=''; sentEls=[];
-  let ci=-1;
-  cur.sentences.forEach((s,i)=>{
-    if(s.c!==ci){ ci=s.c;
-      const h=document.createElement('span'); h.className='ch-title';
-      h.textContent=cur.chapters[ci]?cur.chapters[ci].title:`第${ci+1}章`; c.appendChild(h);
-    }
-    const sp=document.createElement('span'); sp.className='sent'; sp.textContent=s.t; sp.dataset.i=i;
-    sp.onclick=()=>{ if(pageTouchMoved) return; seekTo(i); };
-    c.appendChild(sp); c.appendChild(document.createTextNode(' ')); sentEls.push(sp);
-  });
+  renderWindow(cur.progress.idx);
   renderChapters(); go('reader'); updatePlayer();
   requestAnimationFrame(()=>{ layoutPages(); scrollToActive(false); });
   applyBookVoice(); updateMiniPlayer();
+}
+/* ---------- 分窗渲染（v3.19）：长书只渲染当前窗口句子，避免多列一次性排几千句卡死 ---------- */
+const WIN_SIZE=500;
+let winStart=0; // sentEls[i] 对应全局 idx = winStart+i
+function renderWindow(centerIdx){
+  const c=$('#content'); if(!c||!cur) return;
+  const total=cur.total, ci0=Math.max(0,Math.min(total-1,centerIdx));
+  let s=Math.max(0, Math.floor(ci0/WIN_SIZE)*WIN_SIZE - WIN_SIZE);
+  const e=Math.min(total, s+WIN_SIZE*3);
+  winStart=s;
+  c.innerHTML=''; sentEls=[];
+  let ci=-1;
+  for(let i=s;i<e;i++){
+    const sn=cur.sentences[i];
+    if(sn.c!==ci){ ci=sn.c;
+      const h=document.createElement('span'); h.className='ch-title';
+      h.textContent=cur.chapters[ci]?cur.chapters[ci].title:`第${ci+1}章`; c.appendChild(h);
+    }
+    const sp=document.createElement('span'); sp.className='sent'; sp.textContent=sn.t; sp.dataset.g=i;
+    sp.onclick=(()=>{ const g=i; return ()=>{ if(pageTouchMoved) return; seekTo(g); }; })();
+    c.appendChild(sp); c.appendChild(document.createTextNode(' ')); sentEls.push(sp);
+  }
+  curPage=0;
+  layoutPages();
 }
 /* ---------- 横向分页（v3.16）：CSS columns 一列一页，左右滑动翻页 ---------- */
 let curPage=0, pageCount=1, progScroll=false, pageTouchMoved=false;
@@ -384,12 +398,16 @@ function renderChapters(){
 }
 const chapterOf=i=>{ let r=0; cur.chapters.forEach((c,ci)=>{ if(c.start<=i) r=ci; }); return r; };
 function scrollToActive(smooth=true){
-  const el=sentEls[cur.progress.idx]; if(!el||!cur) return;
+  if(!cur) return;
+  const el=sentEls[cur.progress.idx-winStart]; if(!el) return;
   goPage(pageOfEl(el), smooth);
 }
 function markActive(){
-  sentEls.forEach((el,i)=>el.classList.toggle('active', i===cur.progress.idx));
-  if(wantPlay&&cur){ const el=sentEls[cur.progress.idx]; if(el){ const p=pageOfEl(el); if(p!==curPage) goPage(p, true); } }
+  if(!cur) return;
+  let gi=cur.progress.idx-winStart;
+  if(gi<0||gi>=sentEls.length){ renderWindow(cur.progress.idx); gi=cur.progress.idx-winStart; }
+  sentEls.forEach((el,i)=>el.classList.toggle('active', i===gi));
+  if(wantPlay){ const el=sentEls[gi]; if(el){ const p=pageOfEl(el); if(p!==curPage) goPage(p, true); } }
   updatePlayer();
 }
 async function saveProgress(){
