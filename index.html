@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#f5f6f8">
+<meta name="theme-color" content="#f7f4ec">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>DeepRead v3.0 · 把书听成故事</title>
+<title>DeepRead · 把书听成故事</title>
 <link rel="stylesheet" href="css/styles.css">
 <script>
 if ('serviceWorker' in navigator) {
@@ -24,64 +24,87 @@ if ('serviceWorker' in navigator) {
   <!-- 启动页 -->
   <main id="view-splash" class="view hidden">
     <div class="splash-logo"><img src="icon-192.png" alt="DeepRead"></div>
-    <h1>DeepRead</h1>
+    <h1 class="serif">DeepRead</h1>
     <p class="slogan">在阅读与聆听中，<br>遇见更大的世界</p>
     <button id="btn-start" class="btn-primary">开始使用</button>
   </main>
 
   <!-- 首页 -->
   <main id="view-home" class="view hidden">
-    <header class="topbar">
-      <div class="brand"><img src="icon-192.png" alt="">DeepRead</div>
-      <button id="btn-import-home" class="btn-ghost">＋ 导入</button>
+    <header class="home-top">
+      <div class="brand serif">DeepRead</div>
+      <button id="btn-mine" class="avatar-btn" title="我的">读</button>
     </header>
-    <div class="greet" id="greet">你好，</div>
-    <p class="greet-sub">今天想读点什么？</p>
-    <div class="search-entry" id="home-search">🔍<span>搜索书籍、作者或主题</span></div>
-    <div class="qa-grid">
-      <button class="qa" id="qa-read"><span class="qi">📖</span>阅读</button>
-      <button class="qa" id="qa-listen"><span class="qi">🎧</span>听书</button>
-      <button class="qa" id="qa-shelf"><span class="qi">📚</span>书单</button>
-      <button class="qa" id="qa-import"><span class="qi">＋</span>导入</button>
+
+    <div class="search-pill" id="home-search"><span class="sp-ic">✦</span><span>搜索书名、作者</span></div>
+
+    <div class="banner" id="banner">
+      <div class="slides" id="banner-slides">
+        <div class="slide" style="background-image:url('banner-ink.jpg')">
+          <div class="s-t serif">把书听成故事</div>
+          <div class="s-d">本地解析 · 断点续听 · AI 讲解</div>
+        </div>
+        <div class="slide grad2">
+          <div class="s-t serif">✦ AI 助手已上线</div>
+          <div class="s-d">讲解 · 费曼模式 · 类比四格分镜</div>
+        </div>
+      </div>
+      <div class="dots" id="banner-dots"><i class="on"></i><i></i></div>
     </div>
+
     <div id="continue-wrap" class="hidden">
-      <div class="sec-head"><h3>继续阅读</h3></div>
-      <div class="cont-card" id="continue-card">
-        <div class="lb">上次读到</div>
-        <div class="t" id="cont-title"></div>
-        <div class="d" id="cont-meta" style="font-size:13px;opacity:.75"></div>
-        <div class="bar"><i id="cont-bar"></i></div>
+      <div class="sec-head"><h3 class="serif">继续阅读</h3></div>
+      <div class="h-scroll" id="cont-list"></div>
+    </div>
+
+    <div class="sec-head"><h3 class="serif">经典必读</h3><button class="more" id="classic-more">更多 ›</button></div>
+    <div class="h-scroll" id="classic-list"></div>
+
+    <div class="sec-head"><h3 class="serif">阅读统计</h3></div>
+    <div class="stat-card">
+      <div class="ring-wrap">
+        <svg viewBox="0 0 120 120" class="ring">
+          <circle cx="60" cy="60" r="52" class="ring-bg"/>
+          <circle cx="60" cy="60" r="52" class="ring-fg" id="stat-ring-fg"/>
+        </svg>
+        <div class="ring-center"><div class="lb">今日听读</div><div class="tm serif" id="stat-time">0:00</div></div>
+      </div>
+      <div class="stat-side">
+        <button class="goal-pill" id="stat-goal">目标 <b id="stat-target">30分钟</b> ▾</button>
+        <div class="streak">已连续达标 <span id="stat-streak">🔥0天</span></div>
       </div>
     </div>
-    <div class="sec-head"><h3>为你推荐</h3><button class="more" id="rec-more">更多 ›</button></div>
-    <div id="rec-list"></div>
+
     <div id="home-empty" class="empty hidden">
-      <div class="empty-icon">📚</div><p>书架还是空的</p>
-      <p class="sub">导入 PDF / EPUB / DOCX / TXT，把书听成故事</p>
+      <div class="empty-icon">📚</div><p class="serif">书架还是空的</p>
+      <p class="sub">点下方 ＋ 导入 PDF / EPUB / TXT，把书听成故事</p>
     </div>
   </main>
 
   <!-- 书架 -->
   <main id="view-library" class="view hidden">
-    <header class="topbar">
-      <div class="brand"><img src="icon-192.png" alt="">书架</div>
-      <button id="btn-import-top" class="btn-ghost">＋ 导入</button>
+    <header class="lib-top">
+      <div class="lib-title serif">书架</div>
+      <div class="lib-icons">
+        <button id="btn-lib-search" class="icon-btn" title="搜书">🔍</button>
+        <button id="btn-lib-sort" class="icon-btn" title="排序">⇅</button>
+      </div>
     </header>
     <div id="view-shelf">
-      <div class="sec-head" style="margin-top:14px"><h3 id="lib-count"></h3></div>
+      <div class="sec-head" style="margin-top:6px"><h3 id="lib-count" class="serif"></h3></div>
       <div id="shelf"></div>
       <div id="shelf-empty" class="empty hidden">
-        <div class="empty-icon">📚</div><p>书架还是空的</p>
+        <div class="empty-icon">📚</div><p class="serif">书架还是空的</p>
         <p class="sub">导入 PDF / EPUB / DOCX / TXT，把书听成故事</p>
         <button id="btn-import-empty" class="btn-primary">导入第一本书</button>
       </div>
     </div>
-    <input type="file" id="file-input" accept=".pdf,.epub,.txt,.docx,.md,.html,.htm,.fb2" multiple hidden>
+    <input type="file" id="file-input" accept=".pdf,.epub,.txt,.docx,.md,.html,.htm,.fb2,.mobi,.azw" multiple hidden>
   </main>
 
   <!-- 搜书（正版来源） -->
   <main id="view-search" class="view hidden">
-    <header class="topbar"><div class="brand"><img src="icon-192.png" alt="">搜书</div></header>
+    <header class="topbar"><div class="brand serif">搜书</div></header>
     <div id="view-search-body" style="padding:6px 18px 20px">
       <p class="sub" style="margin:8px 0 14px">Open Library 借阅 · Project Gutenberg 公版免费下载</p>
       <div class="search-bar">
@@ -101,12 +124,12 @@ if ('serviceWorker' in navigator) {
   <main id="view-detail" class="view hidden">
     <div class="dt-nav">
       <button id="dt-back" class="icon-btn">‹</button>
-      <span style="font-weight:700">书籍详情</span>
+      <span class="serif" style="font-weight:700">书籍详情</span>
       <span style="width:34px"></span>
     </div>
     <div class="dt-hero">
       <div class="cover lg" id="dt-cover"></div>
-      <h2 id="dt-title"></h2>
+      <h2 id="dt-title" class="serif"></h2>
       <p class="sub" id="dt-sub"></p>
       <div class="dt-tags" id="dt-tags"></div>
     </div>
@@ -115,7 +138,7 @@ if ('serviceWorker' in navigator) {
       <button class="btn-primary" id="btn-read-now">📖 开始阅读</button>
       <button class="btn-soft" id="btn-listen-now">🎧 开始听书</button>
     </div>
-    <div class="toc-head"><span>目录</span><span id="dt-toc-count"></span></div>
+    <div class="toc-head"><span class="serif">目录</span><span id="dt-toc-count"></span></div>
     <div class="toc" id="dt-toc"></div>
   </main>
 
@@ -127,7 +150,7 @@ if ('serviceWorker' in navigator) {
       <button id="btn-chapters" class="btn-ghost">目录</button>
     </header>
     <div id="chapter-drawer" class="drawer hidden">
-      <div class="drawer-head">目录 <button id="btn-chapters-close" class="btn-ghost">✕</button></div>
+      <div class="drawer-head"><span class="serif">目录</span> <button id="btn-chapters-close" class="btn-ghost">✕</button></div>
       <div id="chapter-list"></div>
     </div>
     <article id="content"></article>
@@ -147,11 +170,15 @@ if ('serviceWorker' in navigator) {
 
   <!-- 我的 -->
   <main id="view-mine" class="view hidden">
-    <header class="topbar"><div class="brand"><img src="icon-192.png" alt="">我的</div></header>
+    <header class="topbar">
+      <button id="mine-back" class="icon-btn">‹</button>
+      <div class="brand serif">我的</div>
+      <span style="width:34px"></span>
+    </header>
     <div id="view-mine-body" style="padding:6px 18px 20px">
       <div class="mine-head">
-        <img src="icon-192.png" alt="">
-        <div><div class="t">DeepRead</div><div class="d">本地听书 · 数据只存本机</div></div>
+        <div class="avatar-btn lg">读</div>
+        <div><div class="t serif">DeepRead</div><div class="d">本地听书 · 数据只存本机</div></div>
       </div>
       <div class="set-group">
         <div class="sec">朗读引擎</div>
@@ -185,7 +212,7 @@ if ('serviceWorker' in navigator) {
         <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
         <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
       </div>
-      <div class="ver">DeepRead v3.0</div>
+      <div class="ver">DeepRead v3.5</div>
     </div>
   </main>
 
@@ -200,12 +227,12 @@ if ('serviceWorker' in navigator) {
   <div id="player-full" class="hidden">
     <div class="fp-nav">
       <button id="fp-close" class="icon-btn">‹</button>
-      <span style="font-weight:700">正在播放</span>
+      <span class="serif" style="font-weight:700">正在播放</span>
       <span style="width:34px"></span>
     </div>
     <div class="fp-hero">
       <div class="cover lg" id="fp-cover"></div>
-      <h2 id="fp-title"></h2>
+      <h2 id="fp-title" class="serif"></h2>
       <p class="sub" id="fp-sub"></p>
       <div class="fp-progress">
         <input type="range" id="fp-seek" min="0" max="1000" value="0">
@@ -226,14 +253,14 @@ if ('serviceWorker' in navigator) {
 
   <!-- 排版 -->
   <div id="typeset" class="sheet hidden">
-    <div class="sheet-head">排版 <button id="btn-type-close" class="btn-ghost">✕</button></div>
+    <div class="sheet-head"><span class="serif">排版</span> <button id="btn-type-close" class="btn-ghost">✕</button></div>
     <p class="hint" style="padding:0">详细排版选项已移到「我的」页面，这里保留快捷入口。</p>
     <label>主题 <select id="ts-theme2"><option value="day">白天</option><option value="sepia">护眼</option><option value="ink">墨黑</option><option value="night">夜间</option></select></label>
   </div>
 
   <!-- AI 助手 -->
   <div id="aisheet" class="sheet hidden tall">
-    <div class="sheet-head">✦ AI 助手 <button id="btn-ai-close" class="btn-ghost">✕</button></div>
+    <div class="sheet-head"><span class="serif">✦ AI 助手</span> <button id="btn-ai-close" class="btn-ghost">✕</button></div>
     <div class="ai-tabs">
       <button class="ai-tab cur" data-m="explain">讲解</button>
       <button class="ai-tab" data-m="feynman">费曼模式</button>
@@ -251,12 +278,42 @@ if ('serviceWorker' in navigator) {
     </div>
   </div>
 
+  <!-- 导入底部弹窗 -->
+  <div id="import-sheet" class="sheet bottom hidden">
+    <div class="grab"></div>
+    <div class="sheet-title serif">导入</div>
+    <p class="sheet-sub">支持txt/pdf/epub/mobi/azw/docx/fb2/md</p>
+    <button class="imp-opt" id="imp-ai"><span class="io-ic">📚</span><span class="io-t">AI搜书</span><i>›</i></button>
+    <button class="imp-opt" id="imp-file"><span class="io-ic">📁</span><span class="io-t">从文件导入</span><i>›</i></button>
+    <button class="imp-opt" id="imp-url"><span class="io-ic">🌐</span><span class="io-t">从网页导入</span><i>›</i></button>
+    <button class="imp-opt" id="imp-text"><span class="io-ic">📝</span><span class="io-t">输入或粘贴文本</span><i>›</i></button>
+  </div>
+
+  <!-- 网页导入 -->
+  <div id="url-sheet" class="sheet bottom hidden">
+    <div class="grab"></div>
+    <div class="sheet-title serif">从网页导入</div>
+    <p class="sheet-sub">粘贴文章链接，自动抓取正文</p>
+    <input id="url-input" class="txt big" placeholder="https://…" inputmode="url">
+    <button id="btn-url-do" class="btn-primary" style="width:100%;margin-top:12px">抓取并导入</button>
+  </div>
+
+  <!-- 粘贴文本导入 -->
+  <div id="text-sheet" class="sheet bottom tall hidden">
+    <div class="grab"></div>
+    <div class="sheet-title serif">粘贴文本</div>
+    <input id="text-title" class="txt big" placeholder="书名（可选，默认取首行）" style="margin-bottom:10px">
+    <textarea id="text-input" rows="8" class="txt big" placeholder="把文章正文粘贴到这里…"></textarea>
+    <button id="btn-text-do" class="btn-primary" style="width:100%;margin-top:12px">导入这本书</button>
+  </div>
+
+  <div id="scrim" class="scrim hidden"></div>
+
   <!-- 底部导航 -->
   <nav id="tabbar">
     <button class="tab cur" data-v="home"><span class="ti">🏠</span>首页</button>
+    <button id="tab-add" class="tab-add" title="导入">＋</button>
     <button class="tab" data-v="library"><span class="ti">📚</span>书架</button>
-    <button class="tab" data-v="search"><span class="ti">🔍</span>搜书</button>
-    <button class="tab" data-v="mine"><span class="ti">👤</span>我的</button>
   </nav>
 
   <div id="toast" class="toast hidden"></div>

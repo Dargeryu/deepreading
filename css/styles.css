@@ -1,14 +1,17 @@
-/* Deepreading v3 — DeepRead 风格浅色 UI */
+/* DeepRead v3.5 — 宣纸墨色 · 文化气质 */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
-  --bg:#f5f6f8; --card:#fff; --ink:#1b2436; --sub:#8b91a1; --line:#eceef3;
-  --primary:#202b45; --primary-ink:#fff; --accent:#7a5fa0; --gold:#e8c86a;
-  --r:18px; --shadow:0 6px 24px rgba(27,36,54,.07);
+  --bg:#f7f4ec; --card:#fffdf8; --ink:#2b2620; --sub:#8a8175; --line:#e9e2d2;
+  --primary:#2b2620; --primary-ink:#f7f4ec; --accent:#b5493a; --gold:#c9a86a;
+  --seal:#b5493a;
+  --serif:"Noto Serif SC","Songti SC","STSong","SimSun",serif;
+  --r:18px; --shadow:0 6px 24px rgba(43,38,32,.06);
 }
 html,body{margin:0;padding:0;height:100%}
 body{background:var(--bg);color:var(--ink);
   font-family:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
   font-size:16px;line-height:1.6;}
+.serif{font-family:var(--serif);}
 #app{max-width:520px;margin:0 auto;min-height:100vh;position:relative;background:var(--bg);
   padding-bottom:calc(76px + env(safe-area-inset-bottom));}
 body.in-reader #app,body.in-splash #app{padding-bottom:0}
@@ -245,3 +248,135 @@ body.in-reader #tabbar,body.in-splash #tabbar{display:none}
 .btn-ghost.recording{background:#ffe9e9;border-color:#e5484d;color:#e5484d;animation:pulse 1.2s infinite}
 @keyframes pulse{50%{opacity:.6}}
 .search-bar .btn-ghost{flex:none}
+
+/* ================= v3.5 新增：Readify 式布局 · 文化气质 ================= */
+
+/* ---------- 首页顶栏 ---------- */
+.home-top{position:sticky;top:0;z-index:20;background:rgba(247,244,236,.94);
+  backdrop-filter:blur(12px);padding:16px 20px 6px;display:flex;align-items:center;justify-content:space-between}
+.home-top .brand{font-size:26px;font-weight:700;letter-spacing:2px}
+.avatar-btn{width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;
+  background:var(--seal);color:#fff;font-family:var(--serif);font-size:18px;font-weight:700;
+  box-shadow:var(--shadow)}
+.avatar-btn.lg{width:56px;height:56px;font-size:24px;border-radius:16px}
+
+/* ---------- 搜索 pill ---------- */
+.search-pill{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:999px;
+  padding:13px 20px;color:var(--sub);font-size:15px;box-shadow:var(--shadow);cursor:pointer;
+  margin:12px 20px 16px;border:1px solid var(--line)}
+.search-pill .sp-ic{color:var(--gold);font-size:16px}
+
+/* ---------- 横幅轮播 ---------- */
+.banner{position:relative;margin:0 20px 22px;border-radius:var(--r);overflow:hidden;
+  box-shadow:var(--shadow);cursor:pointer}
+.banner .slides{display:flex;transition:transform .5s ease}
+.banner .slide{flex:0 0 100%;height:150px;background-size:cover;background-position:center;
+  display:flex;flex-direction:column;justify-content:center;padding:0 24px;position:relative}
+.banner .slide .s-t{font-size:24px;font-weight:700;letter-spacing:3px;color:var(--ink);margin-bottom:8px;
+  text-shadow:0 1px 8px rgba(247,244,236,.9)}
+.banner .slide .s-d{font-size:13px;color:#5c554a;letter-spacing:1px;
+  text-shadow:0 1px 6px rgba(247,244,236,.9)}
+.banner .slide.grad2{background:linear-gradient(135deg,#2b2620 0%,#4a3f30 60%,#6b5a3e 100%)}
+.banner .slide.grad2 .s-t{color:#f2e8d5;text-shadow:none}
+.banner .slide.grad2 .s-d{color:#c9bfa8;text-shadow:none}
+.banner .dots{position:absolute;bottom:10px;left:0;right:0;display:flex;gap:6px;justify-content:center}
+.banner .dots i{width:14px;height:4px;border-radius:2px;background:rgba(43,38,32,.18);transition:all .3s}
+.banner .dots i.on{width:24px;background:var(--seal)}
+
+/* ---------- 横向滚动 ---------- */
+.h-scroll{display:flex;gap:14px;overflow-x:auto;padding:2px 20px 8px;margin:0 -20px;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.h-scroll::-webkit-scrollbar{display:none}
+
+/* 继续阅读卡片 */
+.cont-item{flex:0 0 auto;width:118px;cursor:pointer}
+.cont-item .cov-wrap{position:relative;width:118px;height:156px}
+.cont-item .cover{width:118px;height:156px;border-radius:12px}
+.pct-badge{position:absolute;right:6px;bottom:6px;background:rgba(20,16,12,.78);color:#fff;
+  font-size:11px;padding:2px 8px;border-radius:8px;font-weight:700}
+.cont-item .t{font-family:var(--serif);font-size:14px;font-weight:700;margin-top:8px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cont-item .d{font-size:12px;color:var(--sub);margin-top:2px}
+
+/* 经典必读 · 书脊风封面 */
+.classic-item{flex:0 0 auto;width:96px;cursor:pointer}
+.spine{width:96px;height:128px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+  box-shadow:var(--shadow);position:relative;overflow:hidden}
+.spine::before{content:"";position:absolute;left:10px;top:0;bottom:0;width:1px;background:rgba(255,255,255,.25)}
+.spine span{writing-mode:vertical-rl;font-family:var(--serif);font-size:17px;font-weight:700;
+  letter-spacing:6px;color:#f2e8d5;text-shadow:0 1px 4px rgba(0,0,0,.3)}
+.classic-item .t{font-family:var(--serif);font-size:13px;text-align:center;margin-top:8px;color:var(--ink)}
+
+/* ---------- 阅读统计 ---------- */
+.stat-card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);
+  margin:0 20px 20px;padding:22px;display:flex;align-items:center;gap:22px;border:1px solid var(--line)}
+.ring-wrap{position:relative;width:120px;height:120px;flex:none}
+.ring{width:120px;height:120px;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:9;stroke-linecap:round}
+.ring .ring-bg{stroke:var(--line)}
+.ring .ring-fg{stroke:var(--seal);stroke-dasharray:327;stroke-dashoffset:327;transition:stroke-dashoffset .8s ease}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-center .lb{font-size:12px;color:var(--sub);margin-bottom:2px}
+.ring-center .tm{font-size:26px;font-weight:700}
+.stat-side{flex:1}
+.goal-pill{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:9px 18px;
+  font-size:14px;color:var(--sub);cursor:pointer}
+.goal-pill b{color:var(--ink);font-size:15px}
+.stat-side .streak{margin-top:12px;font-size:14px;color:var(--sub)}
+.stat-side .streak span{color:var(--ink);font-weight:700}
+
+/* ---------- 书架顶栏 ---------- */
+.lib-top{position:sticky;top:0;z-index:20;background:rgba(247,244,236,.94);
+  backdrop-filter:blur(12px);padding:16px 20px 8px;display:flex;align-items:center;justify-content:space-between}
+.lib-title{font-size:24px;font-weight:700;letter-spacing:2px}
+.lib-icons{display:flex;gap:4px}
+#view-library{padding-bottom:8px}
+
+/* 书架行 · Readify 式 */
+.book-row .cov-wrap{position:relative;flex:none}
+.book-row .title{font-family:var(--serif)}
+.book-row .fmt{display:inline-block;font-size:11px;color:var(--sub);border:1px solid var(--line);
+  border-radius:6px;padding:1px 8px;margin-top:8px;letter-spacing:1px}
+
+/* ---------- 底部导航（3键） ---------- */
+#tabbar{justify-content:space-around;align-items:flex-end;background:rgba(255,253,248,.97)}
+.tab-add{width:58px;height:58px;border-radius:50%;border:none;background:var(--ink);color:#f7f4ec;
+  font-size:30px;line-height:1;cursor:pointer;margin-top:-26px;
+  box-shadow:0 8px 22px rgba(43,38,32,.28)}
+.tab-add:active{transform:scale(.94)}
+
+/* ---------- 底部弹窗 ---------- */
+.scrim{position:fixed;inset:0;background:rgba(30,25,18,.45);z-index:60;backdrop-filter:blur(2px)}
+.sheet.bottom{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:520px;
+  z-index:61;background:var(--card);border-radius:22px 22px 0 0;padding:10px 22px calc(26px + env(safe-area-inset-bottom));
+  box-shadow:0 -8px 40px rgba(43,38,32,.16);max-height:82vh;overflow-y:auto}
+.sheet .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 14px}
+.sheet-title{font-size:20px;font-weight:700;letter-spacing:2px;text-align:left}
+.sheet-sub{color:var(--sub);font-size:13px;margin:6px 0 16px}
+.imp-opt{display:flex;align-items:center;gap:16px;width:100%;border:none;background:var(--bg);
+  border-radius:14px;padding:16px;margin-bottom:12px;cursor:pointer;font-size:16px;color:var(--ink)}
+.imp-opt:active{background:var(--line)}
+.imp-opt .io-ic{font-size:24px}
+.imp-opt .io-t{flex:1;text-align:left;font-weight:500}
+.imp-opt i{font-style:normal;color:var(--sub)}
+.txt.big{width:100%;border:1px solid var(--line);border-radius:12px;padding:13px 15px;font-size:15px;
+  background:var(--bg);color:var(--ink);font-family:inherit}
+textarea.txt.big{resize:vertical;min-height:150px;line-height:1.7}
+
+/* ---------- 首页区块 ---------- */
+#view-home{padding-bottom:8px}
+#view-home .sec-head{padding:0 20px}
+#view-home .sec-head h3{font-size:19px;letter-spacing:2px}
+#view-library .sec-head{padding:0 20px}
+
+/* 顶栏品牌衬线化 */
+.topbar .brand{font-family:var(--serif);letter-spacing:1px}
+.sec-head h3{font-family:var(--serif)}
+.book-row .title{font-family:var(--serif)}
+#dt-title{font-family:var(--serif)}
+
+/* 空状态 */
+.empty .serif{font-size:17px}
+
+/* mini 播放器圆角适配 */
+#mini-player{border:1px solid var(--line)}
