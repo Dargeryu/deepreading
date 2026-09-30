@@ -3,7 +3,7 @@
 'use strict';
 
 /* ---------- 工具 ---------- */
-const $ = s => document.querySelector(s);
+/* $ 与 $$ 定义在 js/util.js（最先加载），此处不再重复定义 */
 const toast = (msg, ms=2200) => {
   const t = $('#toast'); t.textContent = msg; t.classList.remove('hidden');
   clearTimeout(t._h); t._h = setTimeout(()=>t.classList.add('hidden'), ms);
