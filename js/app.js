@@ -49,7 +49,7 @@ function splitChapters(fullText){
 }
 
 /* ---------- IndexedDB ---------- */
-const DB='deepreading', VS=2;
+const DB='deepreading', VS=3;
 let db=null;
 function openDB(){
   return new Promise((res,rej)=>{
@@ -59,6 +59,7 @@ function openDB(){
       if(!d.objectStoreNames.contains('books')) d.createObjectStore('books',{keyPath:'id'});
       if(!d.objectStoreNames.contains('files')) d.createObjectStore('files',{keyPath:'id'});
       if(!d.objectStoreNames.contains('progress')) d.createObjectStore('progress',{keyPath:'bookId'});
+      if(!d.objectStoreNames.contains('voices')) d.createObjectStore('voices',{keyPath:'id'});
     };
     r.onsuccess=()=>{db=r.result;res();}; r.onerror=()=>rej(r.error);
   });
@@ -74,6 +75,9 @@ const idb={
   del:id=>Promise.all(['books','files','progress'].map(s=>new Promise((res,rej)=>{
     const t=db.transaction(s,'readwrite').objectStore(s).delete(id);
     t.onsuccess=()=>res();t.onerror=()=>rej(t.error);}))),
+  putVoice:v=>new Promise((res,rej)=>{const t=_tx('voices','readwrite').put(v);t.onsuccess=res;t.onerror=()=>rej(t.error);}),
+  allVoices:()=>new Promise((res,rej)=>{const t=_tx('voices').getAll();t.onsuccess=()=>res(t.result||[]);t.onerror=()=>rej(t.error);}),
+  delVoice:id=>new Promise((res,rej)=>{const t=_tx('voices','readwrite').delete(id);t.onsuccess=()=>res();t.onerror=()=>rej(t.error);}),
 };
 /* v1 → v2 迁移：原文件与进度拆到独立 store */
 async function migrateV1(){
@@ -297,7 +301,7 @@ async function downloadBook(b){
 /* ---------- 阅读器 ---------- */
 let cur=null, sentEls=[];
 /* ---------- v3 导航 ---------- */
-const VIEWS=['splash','home','library','search','detail','reader','mine'];
+const VIEWS=['splash','home','library','search','detail','reader','mine','voice'];
 let curView='home', returnView='library';
 function go(name){
   curView=name;
@@ -307,6 +311,7 @@ function go(name){
   document.querySelectorAll('#tabbar .tab').forEach(t=>t.classList.toggle('cur', t.dataset.v===name));
   if(name==='library'){ stopSpeak(); renderShelf(); }
   else if(name==='home'){ stopSpeak(); renderHome(); }
+  else if(name==='voice'){ stopSpeak(); renderVoice(); }
   else if(name==='search'||name==='mine'){ stopSpeak(); }
   updateMiniPlayer();
   window.scrollTo(0,0);
@@ -360,6 +365,7 @@ async function saveBook(){
 function seekTo(i){
   stopSpeak();
   cur.progress.idx=Math.max(0,Math.min(cur.total-1,i));
+  cur._lastSpk=null; // 多角色说话人追踪重置
   markActive(); scrollToActive(); saveProgress(); play();
 }
 function updatePlayer(){
@@ -397,6 +403,12 @@ function refreshVoices(){
 if(synth){ refreshVoices(); synth.onvoiceschanged=refreshVoices; }
 function pickVoice(book){
   let v=voices.find(v=>v.voiceURI===book.voiceURI);
+  if(!v){ // 广场选用的全局默认音色
+    try{
+      const d=JSON.parse(store.get('voice_default','null'));
+      if(d&&d.voiceURI) v=voices.find(x=>x.voiceURI===d.voiceURI);
+    }catch(e){}
+  }
   if(!v){
     const pref=book.lang==='zh'?'zh':'en';
     v=voices.find(v=>v.lang.toLowerCase().startsWith(pref)&&v.localService)
@@ -409,15 +421,21 @@ const isDialog=t=>/^\s*[“"『「]/.test(t);
 function speakCurrent(){
   if(!cur) return;
   const s=cur.sentences[cur.progress.idx]; if(!s){return;}
-  if(store.get('tts_engine')==='custom'){ speakCustom(s); return; }
+  // v3.6 多角色：按说话人选音色（启发式识别）
+  const castT=(typeof castVoiceFor==='function')?castVoiceFor(s.t,cur):null;
+  if(store.get('tts_engine')==='custom'){ speakCustom(s, castT&&castT.kind==='custom'?castT.voiceId:null); return; }
   if(!synth){ toast('当前浏览器不支持语音朗读'); return; }
   synth.cancel();
   const u=new SpeechSynthesisUtterance(s.t);
-  let v=pickVoice(cur);
-  if(cur.dialogVoice && isDialog(s.t)){
-    const v2=voices.find(v=>v.voiceURI===cur.voiceURI2);
-    if(v2&&v2!==v) v=v2;
-    else { const alt=voices.find(x=>x!==v&&x.lang===v.lang); if(alt) v=alt; }
+  let v;
+  if(castT&&castT.kind==='system'&&castT.voice) v=castT.voice;
+  else{
+    v=pickVoice(cur);
+    if(cur.dialogVoice && isDialog(s.t)){
+      const v2=voices.find(v=>v.voiceURI===cur.voiceURI2);
+      if(v2&&v2!==v) v=v2;
+      else { const alt=voices.find(x=>x!==v&&x.lang===v.lang); if(alt) v=alt; }
+    }
   }
   if(v) u.voice=v;
   u.rate=cur.rate/100; u.pitch=1;
@@ -431,10 +449,10 @@ function speakCurrent(){
   clearInterval(resumeTimer); // Chrome 长文本暂停 bug 兜底
   resumeTimer=setInterval(()=>{ if(wantPlay&&synth.paused) synth.resume(); },8000);
 }
-async function speakCustom(s){
+async function speakCustom(s, voiceId){
   if(synth) synth.cancel();
   markActive();
-  try{ await CustomTTS.speak(s.t); }
+  try{ await CustomTTS.speak(s.t, voiceId); }
   catch(e){ if(!wantPlay) return; toast('自定义TTS失败：'+e.message); stopSpeak(); return; }
   if(!wantPlay) return;
   if(cur.progress.idx<cur.total-1){ cur.progress.idx++; markActive(); saveProgress(); speakCurrent(); }
@@ -556,7 +574,8 @@ setInterval(()=>{ if(typeof wantPlay!=='undefined' && wantPlay && !document.hidd
 /* ================= v3.5：导入弹窗 ================= */
 function openSheet(id){ $('#scrim').classList.remove('hidden'); $('#'+id).classList.remove('hidden'); }
 function closeSheets(){ $('#scrim').classList.add('hidden');
-  ['import-sheet','url-sheet','text-sheet'].forEach(id=>$('#'+id).classList.add('hidden')); }
+  ['import-sheet','url-sheet','text-sheet','clone-sheet','cast-sheet'].forEach(id=>{const el=$('#'+id); if(el) el.classList.add('hidden');});
+  if(typeof stopRecord==='function'){ try{stopRecord();}catch(e){} } }
 function openImportSheet(){ openSheet('import-sheet'); }
 $('#scrim').onclick=closeSheets;
 $('#imp-ai').onclick=()=>{ closeSheets(); go('search'); };
@@ -629,6 +648,13 @@ const bind=(id,k)=>{ const el=$(id); el.value=store.get(k,el.value);
 el.addEventListener('change',()=>store.set(k,el.value));};
 bind('#sel-engine','tts_engine'); bind('#tts-endpoint','tts_ep'); bind('#tts-key','tts_key');
 bind('#tts-voice','tts_voice'); bind('#gemini-key','gemini_key'); bind('#gemini-model','gemini_model');
+bind('#sel-clone-provider','clone_provider'); bind('#clone-key','clone_key');
+bind('#clone-ep','clone_ep'); bind('#clone-field-name','clone_field_name');
+bind('#clone-field-file','clone_field_file'); bind('#clone-id-path','clone_id_path');
+const ctog=()=>$('#clone-custom').classList.toggle('hidden',$('#sel-clone-provider').value!=='custom');
+$('#sel-clone-provider').addEventListener('change',()=>{ ctog();
+  const n=$('#clone-provider-note'); if(n) n.textContent=(CLONE_PROVIDERS[$('#sel-clone-provider').value]||{}).hint||''; });
+ctog();
 const tog=()=>$('#engine-custom').classList.toggle('hidden',$('#sel-engine').value!=='custom');
 $('#sel-engine').addEventListener('change',tog); tog();
 const amb=$('#sel-amb'); amb.value=store.get('amb_type','');
@@ -810,6 +836,7 @@ function renderDetail(){
 $('#dt-back').onclick=()=>go('library');
 $('#btn-read-now').onclick=async()=>{ returnView='detail'; await openBook(detailId); };
 $('#btn-listen-now').onclick=async()=>{ returnView='detail'; await openBook(detailId); play(); };
+$('#btn-cast').onclick=()=>{ const b=books.find(x=>x.id===detailId); if(b) openCastSheet(b.id); };
 
 /* ---------- 迷你播放器 ---------- */
 function updateMiniPlayer(){

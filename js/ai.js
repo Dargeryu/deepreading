@@ -45,13 +45,13 @@ url:'', dl:(b.formats||{})['application/epub+zip']||''}));
 const CustomTTS=(()=>{
 let audio=null, stopped=false;
 function cfg(){ return {ep:store.get('tts_ep'), key:store.get('tts_key'), voice:store.get('tts_voice')};}
-async function speak(text){
+async function speak(text, voiceId){
 const {ep,key,voice}=cfg();
 if(!ep) throw new Error('请先在设置里填写自定义 TTS API 地址');
 stopped=false;
 const r=await fetch(ep,{method:'POST',
 headers:{'Content-Type':'application/json',...(key?{'Authorization':'Bearer '+key,'xi-api-key':key}:{})},
-body:JSON.stringify({text, voice_id:voice})});
+body:JSON.stringify({text, voice_id:voiceId||voice})});
 if(!r.ok) throw new Error('TTS API 失败 '+r.status);
 const blob=await r.blob();
 const url=URL.createObjectURL(blob);
@@ -62,6 +62,7 @@ audio.onerror=()=>rej(new Error('音频播放失败'));
 if(stopped){URL.revokeObjectURL(url);res();} else audio.play().catch(rej);
 });
 }
+async function speakWith(text, voiceId){ return speak(text, voiceId); }
 function stop(){ stopped=true; if(audio){audio.pause();audio=null;}}
-return {speak, stop};
+return {speak, speakWith, stop};
 })();

@@ -380,3 +380,66 @@ textarea.txt.big{resize:vertical;min-height:150px;line-height:1.7}
 
 /* mini 播放器圆角适配 */
 #mini-player{border:1px solid var(--line)}
+
+/* ================= v3.6 新增：声音中心 ================= */
+#view-voice{padding:6px 18px 20px}
+.voice-tabs{display:flex;gap:8px;margin:8px 0 16px}
+.vt{flex:1;border:1px solid var(--line);background:var(--card);border-radius:12px;
+  padding:10px;font-size:15px;cursor:pointer;color:var(--sub);font-weight:600}
+.vt.cur{background:var(--primary);color:var(--primary-ink);border-color:var(--primary)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--card);border-radius:999px;
+  padding:7px 16px;font-size:13px;color:var(--sub);cursor:pointer}
+.chip.cur{background:var(--ink);color:#f7f4ec;border-color:var(--ink);font-weight:700}
+
+/* 音色卡片 */
+.v-card{display:flex;gap:14px;align-items:center;background:var(--card);border-radius:var(--r);
+  padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.v-ava{width:52px;height:52px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+  color:#fff;font-family:var(--serif);font-size:22px;font-weight:700}
+.v-info{flex:1;min-width:0}
+.v-name{font-family:var(--serif);font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.v-cur{font-size:11px;color:var(--seal);border:1px solid var(--seal);border-radius:6px;
+  padding:1px 7px;font-family:sans-serif;font-weight:600}
+.v-src{font-size:11px;color:var(--sub);font-family:sans-serif;font-weight:400}
+.v-tags{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}
+.v-tags span{font-size:11px;color:var(--sub);background:var(--bg);border-radius:6px;padding:2px 8px}
+.v-desc{font-size:12.5px;color:var(--sub);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v-ops{display:flex;gap:6px;align-items:center;flex:none}
+.v-btn{border:1px solid var(--line);background:var(--bg);border-radius:10px;min-width:38px;height:38px;
+  font-size:15px;cursor:pointer;color:var(--ink);display:flex;align-items:center;justify-content:center;padding:0 8px}
+.v-btn.play{border-radius:50%;width:38px}
+.v-btn.fav.on{color:var(--seal);border-color:var(--seal)}
+.v-btn.use{background:var(--ink);color:#f7f4ec;border-color:var(--ink);font-size:13px;font-weight:700}
+.v-btn.del{font-size:15px}
+
+/* 克隆 */
+#clone-sheet .sec{font-size:14px;font-weight:700;margin:14px 0 10px}
+#btn-rec.recording{background:#ffe9e9;border-color:#e5484d;color:#e5484d}
+#clone-sheet label{display:flex;align-items:center;gap:10px;margin:10px 0;font-size:15px}
+#clone-sheet .k{flex:none;min-width:76px;color:#5a6274}
+#clone-sheet input.txt{flex:1;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px;background:#fbfbfc}
+
+/* 多角色 */
+.cast-start{text-align:center;padding:20px 6px}
+.cast-start .empty-icon{font-size:52px;margin-bottom:12px}
+.cast-progress{text-align:center;padding:44px 20px}
+.cast-progress .spin{margin:0 auto 18px}
+.cast-progress .serif{font-size:17px;margin:0 0 8px}
+.pbar{height:6px;background:var(--line);border-radius:3px;margin:22px 30px 0;overflow:hidden}
+.pbar i{display:block;height:100%;width:8%;background:var(--seal);border-radius:3px;transition:width 1s}
+.cast-char{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);
+  border-radius:14px;padding:12px;margin-bottom:10px}
+.cast-char .v-ava{width:44px;height:44px;font-size:19px}
+.cast-char .v-info{flex:1;min-width:0}
+.cast-sel{display:flex;gap:6px;align-items:center;flex:none}
+.cast-sel select{border:1px solid var(--line);border-radius:10px;padding:8px 6px;font-size:13px;
+  max-width:130px;background:#fbfbfc}
+.cast-narr{display:flex;justify-content:space-between;align-items:center;background:var(--bg);
+  border-radius:12px;padding:12px 16px;margin-top:6px;font-size:14px}
+#cast-body .sub{color:var(--sub);font-size:13px;line-height:1.8}
+
+/* 底部导航 4 键适配 */
+#tabbar .tab{font-size:10.5px}
+#tabbar .tab .ti{font-size:20px}

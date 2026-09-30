@@ -138,6 +138,7 @@ if ('serviceWorker' in navigator) {
       <button class="btn-primary" id="btn-read-now">📖 开始阅读</button>
       <button class="btn-soft" id="btn-listen-now">🎧 开始听书</button>
     </div>
+    <div style="padding:0 24px"><button class="btn-ghost" id="btn-cast" style="width:100%">🎭 AI 多角色配音</button></div>
     <div class="toc-head"><span class="serif">目录</span><span id="dt-toc-count"></span></div>
     <div class="toc" id="dt-toc"></div>
   </main>
@@ -166,6 +167,31 @@ if ('serviceWorker' in navigator) {
         <button id="btn-type" class="pbtn" title="排版">Aa</button>
       </div>
     </footer>
+  </main>
+
+  <!-- 声音中心 -->
+  <main id="view-voice" class="view hidden">
+    <header class="topbar"><div class="brand serif">声音</div><span style="width:34px"></span></header>
+    <div class="voice-tabs">
+      <button class="vt cur" data-t="plaza">广场</button>
+      <button class="vt" data-t="clone">克隆</button>
+      <button class="vt" data-t="multi">多角色</button>
+    </div>
+    <div id="vt-plaza">
+      <div class="chips" id="plaza-chips"></div>
+      <div id="plaza-list"></div>
+      <p class="hint">广场音色为本机高质量系统语音精选，离线可用。最终音质取决于设备自带的语音库（Edge / iOS 的中文语音效果最好）。</p>
+    </div>
+    <div id="vt-clone" class="hidden">
+      <div class="sec-head" style="margin-top:2px"><h3 class="serif" id="clone-count">我的音色</h3>
+        <button class="btn-primary sm" id="btn-clone-new">＋ 创建克隆音色</button></div>
+      <div id="clone-list"></div>
+      <p class="hint">克隆在服务商云端完成：准备一段 20 秒以上的清晰人声（录制 / 上传音频 / 上传视频自动提取），经克隆接口生成专属 voice id。Key 只存本机。</p>
+    </div>
+    <div id="vt-multi" class="hidden">
+      <div id="cast-books"></div>
+      <p class="hint">AI 通读全书解析人物角色，为每个角色分配音色，朗读时按说话人自动切换。用到「我的」里的 Gemini Key。</p>
+    </div>
   </main>
 
   <!-- 我的 -->
@@ -206,13 +232,28 @@ if ('serviceWorker' in navigator) {
         <label><span class="k">主题</span><select id="ts-theme"><option value="day">白天</option><option value="sepia">护眼</option><option value="ink">墨黑</option><option value="night">夜间</option></select></label>
       </div>
       <div class="set-group">
+        <div class="sec">声音克隆服务</div>
+        <label><span class="k">服务商</span><select id="sel-clone-provider">
+          <option value="elevenlabs">ElevenLabs</option>
+          <option value="custom">自定义接口</option>
+        </select></label>
+        <label><span class="k">API Key</span><input id="clone-key" type="password" class="txt" placeholder="只存本机"></label>
+        <div id="clone-custom" class="hidden">
+          <label><span class="k">克隆接口</span><input id="clone-ep" class="txt" placeholder="https://…/v1/voice_clone"></label>
+          <label><span class="k">名称字段</span><input id="clone-field-name" class="txt" value="name"></label>
+          <label><span class="k">文件字段</span><input id="clone-field-file" class="txt" value="file"></label>
+          <label><span class="k">ID 路径</span><input id="clone-id-path" class="txt" value="voice_id"></label>
+        </div>
+        <p class="hint">ElevenLabs：POST /v1/voices/add（multipart：name + files），Key 为 xi-api-key。自定义：按服务商文档填接口与字段，返回 JSON 中 voice id 的路径（如 data.voice_id）。克隆出的音色走「自定义 TTS API」引擎朗读。</p>
+      </div>
+      <div class="set-group">
         <div class="sec">Gemini 辅助阅读</div>
         <label><span class="k">API Key</span><input id="gemini-key" type="password" class="txt" placeholder="Google AI Studio 获取，只存本机"></label>
         <label><span class="k">模型</span><input id="gemini-model" class="txt" value="gemini-2.5-flash"></label>
         <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
         <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
       </div>
-      <div class="ver">DeepRead v3.5</div>
+      <div class="ver">DeepRead v3.6</div>
     </div>
   </main>
 
@@ -307,11 +348,40 @@ if ('serviceWorker' in navigator) {
     <button id="btn-text-do" class="btn-primary" style="width:100%;margin-top:12px">导入这本书</button>
   </div>
 
+  <!-- 克隆音色流程 -->
+  <div id="clone-sheet" class="sheet tall hidden">
+    <div class="sheet-head"><span class="serif">创建克隆音色</span> <button id="btn-clone-close" class="btn-ghost">✕</button></div>
+    <div id="clone-step1">
+      <div class="sec">第一步：准备参考音频（20 秒以上清晰人声）</div>
+      <button class="imp-opt" id="btn-rec"><span class="io-ic">🎤</span><span class="io-t">开始录制</span><i>›</i></button>
+      <button class="imp-opt" id="btn-clone-pick-audio"><span class="io-ic">🎵</span><span class="io-t">上传音频 <span class="sub">MP3 / M4A / WAV</span></span><i>›</i></button>
+      <button class="imp-opt" id="btn-clone-pick-video"><span class="io-ic">🎬</span><span class="io-t">上传视频 <span class="sub">MP4，自动提取前 60 秒音频</span></span><i>›</i></button>
+      <input type="file" id="clone-file-audio" accept="audio/*,.mp3,.m4a,.wav,.aac,.opus,.ogg" hidden>
+      <input type="file" id="clone-file-video" accept="video/*,.mp4,.mov,.webm" hidden>
+    </div>
+    <div id="clone-step2" class="hidden">
+      <div class="sec">第二步：试听确认，开始克隆</div>
+      <p class="sub" id="clone-src-name" style="margin:0 0 8px"></p>
+      <audio id="clone-file-url" controls style="width:100%"></audio>
+      <label style="margin-top:12px"><span class="k">音色名字</span><input id="clone-name" class="txt" placeholder="如：我的声音"></label>
+      <p class="hint" id="clone-provider-note" style="padding:8px 0"></p>
+      <button class="btn-primary" id="btn-clone-do" style="width:100%">开始克隆</button>
+      <button class="btn-ghost" id="btn-clone-back" style="width:100%;margin-top:10px">‹ 返回重选</button>
+    </div>
+  </div>
+
+  <!-- AI 多角色配音 -->
+  <div id="cast-sheet" class="sheet tall hidden">
+    <div class="sheet-head"><span class="serif">🎭 多角色配音</span> <button id="btn-cast-close" class="btn-ghost">✕</button></div>
+    <div id="cast-body"></div>
+  </div>
+
   <div id="scrim" class="scrim hidden"></div>
 
   <!-- 底部导航 -->
   <nav id="tabbar">
     <button class="tab cur" data-v="home"><span class="ti">🏠</span>首页</button>
+    <button class="tab" data-v="voice"><span class="ti">🎙</span>声音</button>
     <button id="tab-add" class="tab-add" title="导入">＋</button>
     <button class="tab" data-v="library"><span class="ti">📚</span>书架</button>
   </nav>
@@ -326,6 +396,7 @@ if ('serviceWorker' in navigator) {
 <script>if (window.pdfjsLib) { pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js'; }</script>
 <script src="js/ambience.js"></script>
 <script src="js/ai.js"></script>
+<script src="js/voice.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
