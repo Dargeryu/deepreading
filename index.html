@@ -91,6 +91,7 @@ if ('serviceWorker' in navigator) {
           <option value="gb">Gutenberg</option>
         </select>
         <button id="btn-search" class="btn-primary sm">搜索</button>
+        <button id="btn-search-mic" class="btn-ghost sm" title="语音输入">🎤</button>
       </div>
       <div id="search-results"></div>
     </div>
@@ -239,7 +240,10 @@ if ('serviceWorker' in navigator) {
       <button class="ai-tab" data-m="analogy">类比·动态</button>
     </div>
     <textarea id="ai-input" rows="3" placeholder="粘贴或选中正文文字…"></textarea>
-    <button id="btn-ai-go" class="btn-primary sm">开始</button>
+    <div class="ai-actions">
+      <button id="btn-ai-mic" class="btn-ghost sm" title="语音输入">🎤 语音输入</button>
+      <button id="btn-ai-go" class="btn-primary sm">开始</button>
+    </div>
     <div id="ai-out"></div>
     <div class="ai-foot hidden" id="ai-foot">
       <button id="btn-ai-speak" class="btn-ghost">🔊 朗读讲解</button>

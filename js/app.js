@@ -768,3 +768,31 @@ $('#fp-chapters').onclick=()=>{ $('#player-full').classList.add('hidden'); if(cu
 /* 同步迷你/完整播放器状态 */
 const _markActive=markActive;
 markActive=function(){ _markActive(); updateMiniPlayer(); syncFullPlayer(); };
+
+/* ===== 语音输入（SpeechRecognition）===== */
+let _rec=null, _recTarget=null, _recBase='';
+function voiceInput(target, btn){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ toast('当前浏览器不支持语音输入'); return; }
+  if(_rec){ _rec.stop(); return; } // 再次点击停止
+  const r=new SR();
+  r.lang='zh-CN'; r.interimResults=true; r.maxAlternatives=1;
+  _rec=r; _recTarget=target; _recBase=target.value?target.value+'\n':'';
+  btn.classList.add('recording'); btn.textContent='⏹ 点击停止';
+  toast('请说话…');
+  r.onresult=e=>{
+    let fin='', tmp='';
+    for(const res of e.results){ (res.isFinal?fin+=res[0].transcript:tmp+=res[0].transcript); }
+    target.value=_recBase+fin+tmp;
+  };
+  const done=()=>{ btn.classList.remove('recording'); btn.innerHTML=btn.id==='btn-ai-mic'?'🎤 语音输入':'🎤'; _rec=null; };
+  r.onend=done;
+  r.onerror=e=>{
+    done();
+    const m={'not-allowed':'麦克风被拒绝，请在浏览器设置中允许','network':'网络问题，语音识别需要联网','aborted':'已取消'}[e.error]||('识别失败：'+e.error);
+    toast(m);
+  };
+  try{ r.start(); }catch(e){ done(); toast('启动失败：'+e.message); }
+}
+$('#btn-ai-mic').onclick=e=>voiceInput($('#ai-input'), e.currentTarget);
+$('#btn-search-mic').onclick=e=>voiceInput($('#search-q'), e.currentTarget);

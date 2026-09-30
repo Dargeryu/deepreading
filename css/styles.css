@@ -239,3 +239,9 @@ body.in-reader #tabbar,body.in-splash #tabbar{display:none}
 .spin{width:38px;height:38px;border:4px solid var(--line);border-top-color:var(--primary);border-radius:50%;
   animation:sp 0.8s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
+.ai-actions{display:flex;gap:8px;margin:8px 0}
+.ai-actions .btn-ghost{flex:1}
+.ai-actions .btn-primary{flex:2}
+.btn-ghost.recording{background:#ffe9e9;border-color:#e5484d;color:#e5484d;animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.6}}
+.search-bar .btn-ghost{flex:none}
