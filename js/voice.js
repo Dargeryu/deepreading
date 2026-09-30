@@ -79,7 +79,7 @@ function useCatalogVoice(entry){
   if(typeof cur!=='undefined'&&cur){ cur.voiceURI=v.voiceURI; saveBook(); applyBookVoice(); }
   pushRecent(entry.name);
   toast(`已选用「${entry.name}」为朗读音色`);
-  renderPlaza();
+  renderPlaza(); applyVoiceNow();
 }
 function currentDefaultName(){
   try{ const d=JSON.parse(store.get('voice_default','null')); return d&&d.name||''; }catch(e){ return ''; }
@@ -194,12 +194,14 @@ function useCloned(v){
     store.set('tts_engine','elevenlabs'); store.set('eleven_voice',v.voiceId);
     try{ $('#sel-engine').value='elevenlabs'; }catch(e){}
     toast(`已选用克隆音色「${v.name}」朗读`);
+    applyVoiceNow();
     return;
   }
   if(!store.get('tts_ep')){ toast('先在「我的 → 朗读引擎」里填写自定义 TTS API 地址'); go('mine'); return; }
   store.set('tts_engine','custom'); store.set('tts_voice',v.voiceId);
   try{ $('#sel-engine').value='custom'; }catch(e){}
   toast(`已选用克隆音色「${v.name}」朗读`);
+  applyVoiceNow();
 }
 /* ---------- 克隆流程 ---------- */
 let cloneBlob=null, cloneBlobName='';
@@ -725,13 +727,20 @@ function currentVoiceKey(){
   try{ const d=JSON.parse(store.get('voice_default','null')); if(d&&d.voiceURI) return 'sys:'+d.voiceURI; }catch(e){}
   return 'sys:';
 }
+/* 换音色后若正在朗读，立即用新音色重读当前句 */
+function applyVoiceNow(){
+  try{
+    if(typeof cur!=='undefined'&&cur&&typeof wantPlay!=='undefined'&&wantPlay
+      &&typeof play==='function') play();
+  }catch(e){}
+}
 function useSystemVoice(v){
   store.set('tts_engine','system');
   store.set('voice_default', JSON.stringify({kind:'system', name:v.name, voiceURI:v.voiceURI}));
   try{ $('#sel-engine').value='system'; }catch(e){}
   if(typeof cur!=='undefined'&&cur){ cur.voiceURI=v.voiceURI; saveBook(); applyBookVoice(); }
   toast(`已选用「${v.name}」为朗读音色`);
-  renderVoiceSheet();
+  renderVoiceSheet(); applyVoiceNow();
 }
 function previewSystemVoice(v){
   speakSample(`大家好，我是${v.name}，接下来的故事由我为你讲述。`, v, 1, 1);
@@ -740,7 +749,7 @@ function useCloudVoice(v){
   store.set('tts_engine','elevenlabs'); store.set('eleven_voice',v.id);
   try{ $('#sel-engine').value='elevenlabs'; }catch(e){}
   toast(`已选用云端音色「${v.name}」朗读`);
-  renderVoiceSheet();
+  renderVoiceSheet(); applyVoiceNow();
 }
 async function previewCloudVoice(v){
   loading(true,'试听合成中…');
