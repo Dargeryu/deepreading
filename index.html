@@ -179,6 +179,7 @@ if ('serviceWorker' in navigator) {
     </div>
     <div id="vt-plaza">
       <div class="chips" id="plaza-chips"></div>
+      <div id="plaza-note"></div>
       <div id="plaza-list"></div>
       <p class="hint">广场音色为本机高质量系统语音精选，离线可用。最终音质取决于设备自带的语音库（Edge / iOS 的中文语音效果最好）。</p>
     </div>
@@ -249,11 +250,11 @@ if ('serviceWorker' in navigator) {
       <div class="set-group">
         <div class="sec">Gemini 辅助阅读</div>
         <label><span class="k">API Key</span><input id="gemini-key" type="password" class="txt" placeholder="Google AI Studio 获取，只存本机"></label>
-        <label><span class="k">模型</span><input id="gemini-model" class="txt" value="gemini-2.5-flash"></label>
+        <label><span class="k">模型</span><input id="gemini-model" class="txt" value="gemini-3.8-flash"></label>
         <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
         <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
       </div>
-      <div class="ver">DeepRead v3.7</div>
+      <div class="ver">DeepRead v3.8</div>
     </div>
   </main>
 

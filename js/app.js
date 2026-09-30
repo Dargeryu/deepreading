@@ -427,10 +427,12 @@ function speakCurrent(){
   if(!synth){ toast('当前浏览器不支持语音朗读'); return; }
   synth.cancel();
   const u=new SpeechSynthesisUtterance(s.t);
-  let v;
-  if(castT&&castT.kind==='system'&&castT.voice) v=castT.voice;
+  let v, pr={rate:1,pitch:1};
+  const prosodyOfName=n=>{ const e=VOICE_CATALOG.find(x=>x.name===n); return e?{rate:e.rate||1,pitch:e.pitch||1}:{rate:1,pitch:1}; };
+  if(castT&&castT.kind==='system'&&castT.voice){ v=castT.voice; if(castT.entry) pr={rate:castT.entry.rate||1,pitch:castT.entry.pitch||1}; }
   else{
     v=pickVoice(cur);
+    try{ const d=JSON.parse(store.get('voice_default','null')); if(d&&d.name) pr=prosodyOfName(d.name); }catch(e){}
     if(cur.dialogVoice && isDialog(s.t)){
       const v2=voices.find(v=>v.voiceURI===cur.voiceURI2);
       if(v2&&v2!==v) v=v2;
@@ -438,7 +440,7 @@ function speakCurrent(){
     }
   }
   if(v) u.voice=v;
-  u.rate=cur.rate/100; u.pitch=1;
+  u.rate=(cur.rate/100)*pr.rate; u.pitch=pr.pitch;
   u.onend=()=>{ if(!wantPlay) return;
     if(cur.progress.idx<cur.total-1){ cur.progress.idx++; markActive(); saveProgress(); speakCurrent(); }
     else { wantPlay=false; setPlayUI(); saveProgress(); toast('本章播完'); }

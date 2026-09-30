@@ -10,7 +10,7 @@ set:(k,v)=>{ try{localStorage.setItem('dr_'+k,v);}catch(e){}},
 async function geminiAsk(prompt){
 const key=store.get('gemini_key');
 if(!key) throw new Error('请先在设置里填写 Gemini API Key（Google AI Studio 获取）');
-const model=store.get('gemini_model','gemini-2.5-flash')||'gemini-2.5-flash';
+const model=store.get('gemini_model','gemini-3.8-flash')||'gemini-3.8-flash';
 const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,{
 method:'POST', headers:{'Content-Type':'application/json'},
 body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})});

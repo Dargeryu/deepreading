@@ -6,30 +6,30 @@
    精品音色 = 高质量系统语音的精选映射（离线可用）。
    同一名字在同一设备上永远对应同一个系统语音，保证稳定。 */
 const VOICE_CATALOG=[
-  {name:'庭川', gender:'m', tags:['小说类','磁性'], desc:'低沉磁性，男频小说旁白首选'},
-  {name:'子安', gender:'m', tags:['小说类','气声'], desc:'少年气声，温柔克制'},
-  {name:'观禹', gender:'m', tags:['纪实类','气声'], desc:'纪录片质感，娓娓道来'},
-  {name:'帛恒', gender:'m', tags:['纪实类','深厚'], desc:'新闻主播式沉稳，字正腔圆'},
-  {name:'崇安', gender:'m', tags:['学术类','平稳'], desc:'论文讲座风，清晰理性'},
-  {name:'沐尘', gender:'m', tags:['小说类','清透'], desc:'清透少年音，干净无杂质'},
-  {name:'田叔', gender:'m', tags:['小说类','烟嗓'], desc:'沧桑烟嗓，江湖故事味'},
-  {name:'砚秋', gender:'m', tags:['纪实类','沉稳'], desc:'中年学者音，娓娓有分量'},
-  {name:'疏影', gender:'f', tags:['纪实类','英气'], desc:'飒爽女声，人物传记绝配'},
-  {name:'惠然', gender:'f', tags:['小说类','英气'], desc:'侠女音，果断利落'},
-  {name:'素安', gender:'f', tags:['纪实类','清透'], desc:'空灵清透，散文诗歌首选'},
-  {name:'景柳', gender:'f', tags:['小说类','英气'], desc:'古风女声，温婉带韧劲'},
-  {name:'书瑶', gender:'f', tags:['小说类','气声'], desc:'软糯气声，言情氛围感'},
-  {name:'清禾', gender:'f', tags:['纪实类','气声'], desc:'知性气声，访谈播客风'},
-  {name:'昕雨', gender:'f', tags:['纪实类','亲切'], desc:'邻家姐姐音，亲切自然'},
-  {name:'晓柠', gender:'f', tags:['小说类','亲切'], desc:'元气少女音，青春感拉满'},
-  {name:'澄澄', gender:'f', tags:['小说类','甜美'], desc:'甜美治愈，睡前故事机'},
-  {name:'安稠', gender:'f', tags:['学术类','深厚'], desc:'女教授音，严谨有条理'},
-  {name:'十七', gender:'f', tags:['新势力','英气'], desc:'Z世代女声，松弛洒脱'},
-  {name:'王姐', gender:'f', tags:['新势力','磁性'], desc:'御姐音，气场两米八'},
-  {name:'华祺', gender:'x', tags:['小说类','中性'], desc:'雌雄莫辨，悬疑旁白利器'},
-  {name:'好多音', gender:'x', tags:['纪实类','松弛'], desc:'松弛播客风，像朋友聊天'},
-  {name:'白衣', gender:'x', tags:['学术类','中性'], desc:'AI感中性音，论文速听'},
-  {name:'远山', gender:'x', tags:['纪实类','苍远'], desc:'空旷苍远，历史地理类绝配'},
+  {name:'庭川', gender:'m', tags:['小说类','磁性'], desc:'低沉磁性，男频小说旁白首选', rate:0.92, pitch:0.80},
+  {name:'子安', gender:'m', tags:['小说类','气声'], desc:'少年气声，温柔克制', rate:1.00, pitch:1.15},
+  {name:'观禹', gender:'m', tags:['纪实类','气声'], desc:'纪录片质感，娓娓道来', rate:0.95, pitch:0.90},
+  {name:'帛恒', gender:'m', tags:['纪实类','深厚'], desc:'新闻主播式沉稳，字正腔圆', rate:0.90, pitch:0.75},
+  {name:'崇安', gender:'m', tags:['学术类','平稳'], desc:'论文讲座风，清晰理性', rate:1.00, pitch:0.95},
+  {name:'沐尘', gender:'m', tags:['小说类','清透'], desc:'清透少年音，干净无杂质', rate:1.02, pitch:1.20},
+  {name:'田叔', gender:'m', tags:['小说类','烟嗓'], desc:'沧桑烟嗓，江湖故事味', rate:0.85, pitch:0.65},
+  {name:'砚秋', gender:'m', tags:['纪实类','沉稳'], desc:'中年学者音，娓娓有分量', rate:0.90, pitch:0.80},
+  {name:'疏影', gender:'f', tags:['纪实类','英气'], desc:'飒爽女声，人物传记绝配', rate:1.00, pitch:1.05},
+  {name:'惠然', gender:'f', tags:['小说类','英气'], desc:'侠女音，果断利落', rate:1.05, pitch:1.10},
+  {name:'素安', gender:'f', tags:['纪实类','清透'], desc:'空灵清透，散文诗歌首选', rate:0.92, pitch:1.25},
+  {name:'景柳', gender:'f', tags:['小说类','英气'], desc:'古风女声，温婉带韧劲', rate:0.95, pitch:1.15},
+  {name:'书瑶', gender:'f', tags:['小说类','气声'], desc:'软糯气声，言情氛围感', rate:1.05, pitch:1.30},
+  {name:'清禾', gender:'f', tags:['纪实类','气声'], desc:'知性气声，访谈播客风', rate:0.98, pitch:1.10},
+  {name:'昕雨', gender:'f', tags:['纪实类','亲切'], desc:'邻家姐姐音，亲切自然', rate:1.05, pitch:1.15},
+  {name:'晓柠', gender:'f', tags:['小说类','亲切'], desc:'元气少女音，青春感拉满', rate:1.12, pitch:1.30},
+  {name:'澄澄', gender:'f', tags:['小说类','甜美'], desc:'甜美治愈，睡前故事机', rate:1.08, pitch:1.40},
+  {name:'安稠', gender:'f', tags:['学术类','深厚'], desc:'女教授音，严谨有条理', rate:0.95, pitch:0.90},
+  {name:'十七', gender:'f', tags:['新势力','英气'], desc:'Z世代女声，松弛洒脱', rate:1.10, pitch:1.20},
+  {name:'王姐', gender:'f', tags:['新势力','磁性'], desc:'御姐音，气场两米八', rate:0.95, pitch:0.85},
+  {name:'华祺', gender:'x', tags:['小说类','中性'], desc:'雌雄莫辨，悬疑旁白利器', rate:0.97, pitch:1.00},
+  {name:'好多音', gender:'x', tags:['纪实类','松弛'], desc:'松弛播客风，像朋友聊天', rate:1.00, pitch:1.05},
+  {name:'白衣', gender:'x', tags:['学术类','中性'], desc:'AI感中性音，论文速听', rate:1.05, pitch:1.10},
+  {name:'远山', gender:'x', tags:['纪实类','苍远'], desc:'空旷苍远，历史地理类绝配', rate:0.88, pitch:0.70},
 ];
 const hashStr=s=>{ let h=0; for(const c of s) h=(h*31+c.codePointAt(0))>>>0; return h; };
 /* 同一目录音色 → 同一系统语音（稳定映射） */
@@ -61,19 +61,19 @@ const pushRecent=name=>{
 };
 
 /* ---------- 试听 / 选用 ---------- */
-function speakSample(text, voice){
+function speakSample(text, voice, rate, pitch){
   if(!synth){ toast('当前浏览器不支持语音'); return; }
   try{ synth.cancel(); }catch(e){}
   const u=new SpeechSynthesisUtterance(text);
   if(voice) u.voice=voice;
-  u.rate=1; u.pitch=1;
+  u.rate=rate||1; u.pitch=(pitch===undefined||pitch===null)?1:pitch;
   synth.speak(u);
 }
 function previewCatalog(entry){
   const v=resolveCatalogVoice(entry);
   if(!v){ toast('这台设备没有可用的中文语音'); return; }
   pushRecent(entry.name);
-  speakSample(`大家好，我是${entry.name}。${entry.tags.join('、')}。接下来的故事，由我为你讲述。`, v);
+  speakSample(`大家好，我是${entry.name}。${entry.tags.join('、')}。接下来的故事，由我为你讲述。`, v, entry.rate, entry.pitch);
 }
 function useCatalogVoice(entry){
   const v=resolveCatalogVoice(entry);
@@ -93,6 +93,9 @@ let plazaFilter='全部';
 const PLAZA_FILTERS=['全部','男声','女声','小说类','纪实类','学术类','收藏'];
 function renderPlaza(){
   const chips=$('#plaza-chips'); if(!chips) return;
+  const zhN=(typeof voices!=='undefined')?voices.filter(v=>v.lang&&v.lang.toLowerCase().startsWith('zh')).length:0;
+  const pn=$('#plaza-note');
+  if(pn) pn.innerHTML=`<p class="hint" style="padding:0 0 10px">本机中文语音 ${zhN} 个${zhN<=1?'：24 个音色为同一嗓音的不同演绎（语速/音调拉开差距），真·多嗓音需接云端 TTS':''}</p>`;
   chips.innerHTML='';
   PLAZA_FILTERS.forEach(f=>{
     const b=document.createElement('button');
@@ -558,7 +561,7 @@ function castVoiceFor(text, book){
   if(cfg.kind==='sys'){
     const e=VOICE_CATALOG.find(x=>x.name===cfg.ref);
     const v=e?resolveCatalogVoice(e):null;
-    return v?{kind:'system', voice:v}:null;
+    return v?{kind:'system', voice:v, entry:e}:null;
   }
   if(cfg.kind==='clone') return {kind:'custom', voiceId:cfg.ref};
   return null;
