@@ -217,7 +217,7 @@ if ('serviceWorker' in navigator) {
       <div class="set-group">
         <div class="sec">朗读引擎</div>
         <label><span class="k">引擎</span><select id="sel-engine"><option value="system">系统语音（免费/离线）</option><option value="elevenlabs">ElevenLabs 云端（百变音色）</option><option value="custom">自定义 TTS API（含克隆音色）</option></select></label>
-        <div id="engine-custom" class="hidden">
+        <div id="engine-custom">
           <label><span class="k">API 地址</span><input id="tts-endpoint" class="txt" placeholder="https://api.xxx.com/v1/text-to-speech"></label>
           <label><span class="k">API Key</span><input id="tts-key" type="password" class="txt" placeholder="只存本机"></label>
           <label><span class="k">Voice ID</span><input id="tts-voice" class="txt" placeholder="克隆/预置音色的 ID"></label>
@@ -239,7 +239,7 @@ if ('serviceWorker' in navigator) {
         <label><span class="k">行高</span><input type="range" id="ts-lh" min="16" max="28" value="20"><span id="ts-lh-v">2.0</span></label>
         <label><span class="k">主题</span><select id="ts-theme"><option value="day">白天</option><option value="sepia">护眼</option><option value="ink">墨黑</option><option value="night">夜间</option></select></label>
       </div>
-      <div class="set-group hidden" id="engine-eleven">
+      <div class="set-group" id="engine-eleven">
         <div class="sec">ElevenLabs 云端语音</div>
         <label><span class="k">API Key</span><input id="eleven-key" type="password" class="txt" placeholder="elevenlabs.io 获取，只存本机"></label>
         <p class="hint">免费版每月 1 万字符（约半小时中文朗读），超出后需付费。Key 只存本机。云端音色去「声音 → 云端」试听选用；你在 ElevenLabs 克隆的音色会自动出现在云端列表里。</p>
@@ -270,7 +270,7 @@ if ('serviceWorker' in navigator) {
         <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
         <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
       </div>
-      <div class="ver">DeepRead v3.13</div>
+      <div class="ver">DeepRead v3.14</div>
     </div>
   </main>
 

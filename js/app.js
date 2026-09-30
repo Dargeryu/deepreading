@@ -660,9 +660,7 @@ bind('#sel-clone-provider','clone_provider'); bind('#clone-key','clone_key');
 bind('#eleven-key','eleven_key');
 bind('#clone-ep','clone_ep'); bind('#clone-field-name','clone_field_name');
 bind('#clone-field-file','clone_field_file'); bind('#clone-id-path','clone_id_path');
-const tog=()=>$('#engine-custom').classList.toggle('hidden',$('#sel-engine').value!=='custom');
-const etog=()=>$('#engine-eleven').classList.toggle('hidden',$('#sel-engine').value!=='elevenlabs');
-$('#sel-engine').addEventListener('change',()=>{ tog(); etog(); }); tog(); etog();
+/* v3.14 起：引擎参数分组常显，不再按引擎选择折叠，避免找不到 Key 输入框/测试按钮 */
 const et11=$('#btn-eleven-test');
 if(et11) et11.onclick=async()=>{
   const out=$('#eleven-test-out'); out.textContent='测试中…';

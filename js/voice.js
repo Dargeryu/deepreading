@@ -1,7 +1,6 @@
 /* DeepRead v3.6 — 声音中心：音色广场 / 声音克隆 / AI多角色配音
    数据只存本机；克隆走用户自己的服务商 API；角色解析走用户自备 Gemini Key。 */
 'use strict';
-
 /* ================= 音色目录 =================
    精品音色 = 高质量系统语音的精选映射（离线可用）。
    同一名字在同一设备上永远对应同一个系统语音，保证稳定。 */
@@ -44,7 +43,6 @@ function resolveCatalogVoice(entry){
 const AVA_GRADS=[['#3b2f4a','#7a5fa0'],['#1f3a4d','#3f7fae'],['#4a2f2b','#a06a5f'],
   ['#2b4a35','#5fa07a'],['#4d4420','#ae9a3f'],['#5a2e28','#b5493a'],['#2e3a5a','#6b7fae']];
 const avaBG=name=>{ const [a,b]=AVA_GRADS[hashStr(name)%AVA_GRADS.length]; return `linear-gradient(135deg,${a},${b})`; };
-
 /* ---------- 收藏 / 最近 ---------- */
 const getFavs=()=>{ try{return JSON.parse(store.get('voice_favs','[]'));}catch(e){return[];} };
 const setFavs=a=>store.set('voice_favs',JSON.stringify(a));
@@ -59,7 +57,6 @@ const pushRecent=name=>{
     r=[name,...r].slice(0,12); store.set('voice_recent',JSON.stringify(r));
   }catch(e){}
 };
-
 /* ---------- 试听 / 选用 ---------- */
 function speakSample(text, voice, rate, pitch){
   if(!synth){ toast('当前浏览器不支持语音'); return; }
@@ -87,7 +84,6 @@ function useCatalogVoice(entry){
 function currentDefaultName(){
   try{ const d=JSON.parse(store.get('voice_default','null')); return d&&d.name||''; }catch(e){ return ''; }
 }
-
 /* ---------- 广场渲染 ---------- */
 let plazaFilter='全部';
 const PLAZA_FILTERS=['全部','男声','女声','小说类','纪实类','学术类','收藏'];
@@ -134,7 +130,6 @@ function renderPlaza(){
     list.appendChild(d);
   });
 }
-
 /* ================= 声音克隆 =================
    真克隆发生在服务商云端：本应用负责 采集/提取/试听 → 调用克隆接口 → 存为"我的音色"。
    - ElevenLabs：内置对接（POST /v1/voices/add）
@@ -143,7 +138,6 @@ const CLONE_PROVIDERS={
   elevenlabs:{label:'ElevenLabs', hint:'国际主流克隆服务，效果好。去 elevenlabs.io 获取 API Key。'},
   custom:{label:'自定义接口', hint:'按你的服务商文档填写克隆接口地址与字段（如 MiniMax / FishAudio / 火山引擎）。'},
 };
-
 /* ---------- 我的音色（IndexedDB voices store） ---------- */
 async function renderCloneList(){
   const box=$('#clone-list'); if(!box) return;
@@ -198,7 +192,7 @@ async function previewCloned(v){
 function useCloned(v){
   if(v.provider==='elevenlabs'&&store.get('eleven_key')){
     store.set('tts_engine','elevenlabs'); store.set('eleven_voice',v.voiceId);
-    try{ $('#sel-engine').value='elevenlabs'; $('#engine-eleven').classList.remove('hidden'); $('#engine-custom').classList.add('hidden'); }catch(e){}
+    try{ $('#sel-engine').value='elevenlabs'; }catch(e){}
     toast(`已选用克隆音色「${v.name}」朗读`);
     return;
   }
@@ -207,7 +201,6 @@ function useCloned(v){
   try{ $('#sel-engine').value='custom'; }catch(e){}
   toast(`已选用克隆音色「${v.name}」朗读`);
 }
-
 /* ---------- 克隆流程 ---------- */
 let cloneBlob=null, cloneBlobName='';
 function openCloneSheet(){
@@ -220,7 +213,6 @@ function openCloneSheet(){
 }
 $('#btn-clone-new').onclick=openCloneSheet;
 $('#btn-clone-close').onclick=()=>{ closeSheets(); stopRecord(); };
-
 /* --- 来源1：录制 --- */
 let recStream=null, recer=null, recChunks=[], recTimer=null, recSecs=0;
 async function startRecord(){
@@ -254,7 +246,6 @@ function stopRecord(){
 $('#btn-rec').onclick=()=>{ (recer&&recer.state==='recording')?stopRecord():startRecord(); };
 $('#btn-clone-pick-audio').onclick=()=>$('#clone-file-audio').click();
 $('#btn-clone-pick-video').onclick=()=>$('#clone-file-video').click();
-
 /* --- 来源2/3：上传音频 / 上传视频（提取音频） --- */
 $('#clone-file-audio').onchange=e=>{
   const f=e.target.files[0]; e.target.value='';
@@ -310,7 +301,6 @@ function setCloneSource(blob, name){
   $('#clone-step2').classList.remove('hidden');
   if(!$('#clone-name').value) $('#clone-name').value='我的音色';
 }
-
 /* --- 执行克隆 --- */
 $('#btn-clone-do').onclick=async()=>{
   if(!cloneBlob){ toast('先准备参考音频'); return; }
@@ -359,12 +349,10 @@ $('#btn-clone-back').onclick=()=>{
   $('#clone-step2').classList.add('hidden');
   $('#clone-step1').classList.remove('hidden');
 };
-
 /* ================= AI多角色配音 =================
    流程：选书 → Gemini 解析全书角色 → 逐角色分配音色 → 朗读时按说话人自动切换。
    说话人识别是启发式（引号+说字/人名），旁白用默认音色。 */
 let castBookId=null;
-
 function extractJSONArray(raw){
   const a=raw.indexOf('['), b=raw.lastIndexOf(']');
   if(a<0||b<=a) throw new Error('AI 返回格式异常，换本书或重试');
@@ -411,7 +399,6 @@ function suggestVoiceFor(ch){
   }
   return (best||pool[0]||VOICE_CATALOG[0]).name;
 }
-
 /* ---------- 角色编辑器 ---------- */
 async function openCastSheet(bookId){
   const book=books.find(b=>b.id===bookId);
@@ -538,7 +525,6 @@ async function renderCastEditor(book){
     $('#cast-sheet').classList.add('hidden'); renderCastBooks(); toast('已清除');
   };
 }
-
 /* ---------- 说话人识别（启发式） ---------- */
 const SAY_WORDS='说|道|问|笑|喊|叫|答|叹|喃喃|低语|大声|冷笑|苦笑';
 function detectSpeaker(text, book){
@@ -576,7 +562,6 @@ function castVoiceFor(text, book){
   if(cfg.kind==='clone') return {kind:'custom', voiceId:cfg.ref};
   return null;
 }
-
 /* ---------- 多角色 tab：书列表 ---------- */
 async function renderCastBooks(){
   const box=$('#cast-books'); if(!box) return;
@@ -615,7 +600,6 @@ async function renderCastBooks(){
   });
   if(!books.length) box.innerHTML='<div class="empty"><div class="empty-icon">📚</div><p class="sub">先去导入一本书</p></div>';
 }
-
 /* ---------- 声音视图 ---------- */
 function renderVoice(){
   const cur=document.querySelector('.vt.cur');
@@ -633,7 +617,6 @@ document.querySelectorAll('.vt').forEach(t=>t.onclick=()=>{
   document.querySelectorAll('.vt').forEach(x=>x.classList.remove('cur'));
   t.classList.add('cur'); renderVoice();
 });
-
 /* ================= ElevenLabs 云端广场 ================= */
 async function elevenVoices(force){
   const key=(store.get('eleven_key')||'').trim();
@@ -716,7 +699,6 @@ async function renderCloud(){
       d.querySelector('.use').onclick=()=>{
         store.set('tts_engine','elevenlabs'); store.set('eleven_voice',v.id);
         try{ $('#sel-engine').value='elevenlabs'; }catch(e){}
-        try{ $('#engine-eleven').classList.remove('hidden'); $('#engine-custom').classList.add('hidden'); }catch(e){}
         toast(`已选用云端音色「${v.name}」朗读`);
         renderCloud();
       };
