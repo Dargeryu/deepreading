@@ -126,15 +126,16 @@ function beginLeaf(dir){
 
 function setAngle(deg){
   if(!Flip.leaf) return;
-  Flip.leaf.style.transform = 'perspective(1600px) rotateY(' + deg + 'deg)';
+  // 只写 transform/opacity（GPU 合成），不碰 left 等布局属性
+  Flip.leaf.style.transform = 'rotateY(' + deg + 'deg)';
   const p = Math.min(1, Math.abs(deg) / 180);
   const s = Math.sin(p * Math.PI);
   if(Flip.shade) Flip.shade.style.opacity = (s * 0.6).toFixed(3);
   if(Flip.spine) Flip.spine.style.opacity = (s * 0.85).toFixed(3);
   // 卷曲前锋的投影位置：自由边投影 x = W*cos(θ)
   const W = Flip.W || 1, proj = Flip.dir === 1 ? W * Math.cos(p * Math.PI) : W - W * Math.cos(p * Math.PI);
-  if(Flip.fx){ Flip.fx.style.left = (proj - 55) + 'px'; Flip.fx.style.opacity = (s * 0.5).toFixed(3); }
-  if(Flip.hl){ Flip.hl.style.left = (Flip.dir === 1 ? proj - 70 : proj) + 'px'; Flip.hl.style.opacity = (s * 0.65).toFixed(3); }
+  if(Flip.fx){ Flip.fx.style.transform = 'translateX(' + (proj - 55).toFixed(1) + 'px)'; Flip.fx.style.opacity = (s * 0.5).toFixed(3); }
+  if(Flip.hl){ Flip.hl.style.transform = 'translateX(' + (Flip.dir === 1 ? proj - 70 : proj).toFixed(1) + 'px)'; Flip.hl.style.opacity = (s * 0.65).toFixed(3); }
 }
 
 function edgeDrag(dx){
