@@ -271,34 +271,68 @@ async function loadBooks(){
     : {idx:0, updatedAt:b.addedAt}; });
   books.sort((a,b)=>b.progress.updatedAt-a.progress.updatedAt);
 }
-let shelfSort='recent'; // recent | title
+let shelfSort='recent', shelfFmt='';
 async function renderShelf(){
   await loadBooks();
-  const list=[...books];
-  if(shelfSort==='title') list.sort((a,b)=>String(a.title).localeCompare(String(b.title),'zh'));
-  $('#lib-count').textContent = books.length?`共 ${books.length} 本`:'我的书架';
-  const shelf=$('#shelf'); shelf.innerHTML='';
-  $('#shelf-empty').classList.toggle('hidden', books.length>0);
-  list.forEach((b)=>{
+  const has=books.length>0;
+  $('#shelf-empty').classList.toggle('hidden', has);
+  $('#shelf-has').classList.toggle('hidden', !has);
+  if(!has){ updateMiniPlayer(); return; }
+  // 格式筛选
+  const fmtSel=$('#shelf-fmt'), keep=fmtSel.value;
+  fmtSel.innerHTML='<option value="">全部格式</option>';
+  [...new Set(books.map(b=>(b.format||'').toLowerCase()).filter(Boolean))].sort()
+    .forEach(f=>{ const o=document.createElement('option'); o.value=f; o.textContent=f.toUpperCase(); fmtSel.appendChild(o); });
+  fmtSel.value=[...fmtSel.options].some(o=>o.value===keep)?keep:'';
+  shelfFmt=fmtSel.value;
+  const list=books.filter(b=>!shelfFmt||(b.format||'').toLowerCase()===shelfFmt);
+  const sorted=[...list];
+  if(shelfSort==='title') sorted.sort((a,b)=>String(a.title).localeCompare(String(b.title),'zh'));
+  $('#lib-count').textContent=`全部书籍 · ${sorted.length} 本`;
+  // 最近阅读横滑
+  const recent=[...books].sort((a,b)=>b.progress.updatedAt-a.progress.updatedAt).slice(0,8);
+  const rc=$('#shelf-recent'); rc.innerHTML='';
+  recent.forEach(b=>{
     const pct=Math.round(100*b.progress.idx/Math.max(1,b.total));
-    const el=document.createElement('div'); el.className='book-row';
-    el.innerHTML=`<div class="cov-wrap">${coverHTML(b,'sm')}${pct?`<span class="pct-badge">${pct}%</span>`:''}</div>
-      <div class="info"><div class="title">${esc(b.title)}</div>
-      <div class="meta">${b.total}句 · 已读${pct}%</div>
-      <span class="fmt">${esc((b.format||'').toUpperCase())}</span></div>
-      <div class="ops">${b.hasFile?`<button class="dl icon-btn" title="下载原文件" style="font-size:18px">⏬</button>`:''}<button class="del icon-btn" title="删除" style="font-size:18px">🗑</button></div>`;
-    el.onclick=e=>{ if(e.target.closest('.del,.dl'))return; openDetail(b.id); };
-    el.querySelector('.del').onclick=async e=>{ e.stopPropagation();
-      if(confirm(`删除《${b.title}》？`)){ await idb.del(b.id); if(cur&&cur.id===b.id){cur=null;stopSpeak();} renderShelf(); } };
-    const dl=el.querySelector('.dl');
-    if(dl) dl.onclick=e=>{ e.stopPropagation(); downloadBook(b); };
-    shelf.appendChild(el);
+    const el=document.createElement('div'); el.className='recent-card';
+    el.innerHTML=`<div class="cov-wrap"><div class="cover cov3d" style="background:${coverBG(b)}">${esc((b.title||'?').slice(0,6))}</div>${pct?`<span class="pct-badge">${pct}%</span>`:''}</div>
+      <div class="info"><div class="t">${esc(b.title)}</div><div class="d">${pct?('已读 '+pct+'%'):'未开始'}</div></div>`;
+    el.onclick=()=>openDetail(b.id);
+    rc.appendChild(el);
+  });
+  // 全部书籍网格
+  const grid=$('#shelf-grid'); grid.innerHTML='';
+  sorted.forEach(b=>{
+    const pct=Math.round(100*b.progress.idx/Math.max(1,b.total));
+    const el=document.createElement('div'); el.className='grid-card';
+    el.innerHTML=`<div class="cov-wrap"><div class="cover cov3d" style="background:${coverBG(b)}">${esc((b.title||'?').slice(0,10))}</div>
+      ${pct?`<span class="pct-badge">${pct}%</span>`:''}
+      <button class="grid-more" title="更多操作">⋯</button></div>
+      <div class="t">${esc(b.title)}</div>
+      <div class="a">${esc(b.author||(b.format||'').toUpperCase()||'本地导入')}</div>`;
+    el.onclick=e=>{ if(e.target.closest('.grid-more'))return; openDetail(b.id); };
+    el.querySelector('.grid-more').onclick=e=>{ e.stopPropagation(); openBookMenu(b); };
+    grid.appendChild(el);
   });
   updateMiniPlayer();
 }
+/* 书籍操作菜单 */
+let menuBook=null;
+function openBookMenu(b){
+  menuBook=b;
+  const pct=Math.round(100*b.progress.idx/Math.max(1,b.total));
+  $('#bm-title').textContent=b.title;
+  $('#bm-sub').textContent=`${b.total}句 · 已读${pct}%`;
+  $('#bm-dl').classList.toggle('hidden', !b.hasFile);
+  openSheet('book-menu');
+}
+$('#bm-open').onclick=()=>{ closeSheets(); if(menuBook) openDetail(menuBook.id); };
+$('#bm-dl').onclick=()=>{ closeSheets(); if(menuBook) downloadBook(menuBook); };
+$('#bm-del').onclick=async()=>{ const b=menuBook; closeSheets(); if(!b) return;
+  if(confirm(`删除《${b.title}》？`)){ await idb.del(b.id); if(cur&&cur.id===b.id){cur=null;stopSpeak();} renderShelf(); } };
 $('#btn-lib-search').onclick=()=>go('search');
-$('#btn-lib-sort').onclick=()=>{ shelfSort=shelfSort==='recent'?'title':'recent';
-  toast(shelfSort==='recent'?'按最近阅读排序':'按书名排序'); renderShelf(); };
+$('#shelf-sort').onchange=e=>{ shelfSort=e.target.value; renderShelf(); };
+$('#shelf-fmt').onchange=e=>{ shelfFmt=e.target.value; renderShelf(); };
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 async function downloadBook(b){
   const f=await idb.getFile(b.id).catch(()=>null);
@@ -320,6 +354,7 @@ function go(name){
   document.body.classList.toggle('in-reader', name==='reader');
   document.body.classList.toggle('in-splash', name==='splash');
   document.querySelectorAll('#tabbar .tab').forEach(t=>t.classList.toggle('cur', t.dataset.v===name));
+  document.querySelectorAll('#sidebar .sb-item').forEach(t=>t.classList.toggle('cur', t.dataset.v===name));
   if(name==='library'){ stopSpeak(); renderShelf(); }
   else if(name==='home'){ stopSpeak(); renderHome(); }
   else if(name==='voice'){ stopSpeak(); renderVoice(); }
@@ -693,6 +728,8 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden) releaseWa
 
 /* ---------- 底部导航 ---------- */
 document.querySelectorAll('#tabbar .tab').forEach(t=>{ t.onclick=()=>go(t.dataset.v); });
+document.querySelectorAll('#sidebar .sb-item').forEach(b=>{ b.onclick=()=>go(b.dataset.v); });
+$('#sb-add').onclick=()=>openImportSheet();
 $('#tab-add').onclick=()=>openImportSheet();
 
 /* ================= v3.5：阅读统计 ================= */
@@ -1023,6 +1060,9 @@ function updateMiniPlayer(){
   $('#mp-title').textContent=cur.title;
   $('#mp-pos').textContent=Math.round(100*cur.progress.idx/Math.max(1,cur.total))+'%';
   $('#mp-play').textContent=wantPlay?'⏸':'▶';
+  const mf=$('#mp-fill');
+  if(mf) mf.style.width=Math.round(100*cur.progress.idx/Math.max(1,cur.total))+'%';
+  paintWave();
 }
 $('#mini-player').onclick=e=>{
   if(e.target.closest('#mp-play')){ if(!cur)return; wantPlay?stopSpeak():play(); return; }
@@ -1042,6 +1082,18 @@ function renderFullPlayer(){
   $('#fp-sub').textContent=ch?ch.title:'';
   syncFullPlayer();
 }
+(function initWave(){
+  const w=$('#fp-wave'); if(!w||w.children.length) return;
+  for(let i=0;i<56;i++){ const b=document.createElement('i');
+    b.style.height=(5+Math.round(24*Math.abs(Math.sin(i*1.93)+0.4*Math.sin(i*0.7))))+'px';
+    b.style.animationDelay=(i%9*0.13).toFixed(2)+'s'; w.appendChild(b); }
+})();
+function paintWave(){
+  document.body.classList.toggle('playing', typeof wantPlay!=='undefined'&&!!wantPlay);
+  const w=$('#fp-wave'); if(!w||!cur||!w.children.length) return;
+  const on=Math.round(w.children.length*cur.progress.idx/Math.max(1,cur.total));
+  for(let i=0;i<w.children.length;i++) w.children[i].classList.toggle('on', i<on);
+}
 function syncFullPlayer(){
   if(!cur||$('#player-full').classList.contains('hidden')) return;
   const pct=Math.round(1000*cur.progress.idx/Math.max(1,cur.total));
@@ -1059,6 +1111,8 @@ function openFullPlayer(){ if(!cur){toast('先选一本书');return;} renderFull
 $('#fp-close').onclick=()=>{ $('#player-full').classList.add('hidden'); updateMiniPlayer(); };
 $('#fp-play').onclick=()=>{ if(!cur)return; wantPlay?stopSpeak():play(); syncFullPlayer(); };
 $('#fp-seek').addEventListener('change',e=>{ if(!cur)return; seekTo(Math.round(e.target.value/1000*(cur.total-1))); });
+$('#fp-wave').onclick=e=>{ if(!cur)return; const r=e.currentTarget.getBoundingClientRect();
+  seekTo(Math.round((e.clientX-r.left)/r.width*(cur.total-1))); };
 $('#fp-back15').onclick=()=>skipSeconds(-15);
 $('#fp-fwd15').onclick=()=>skipSeconds(15);
 function skipSeconds(sec){

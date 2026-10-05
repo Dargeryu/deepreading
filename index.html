@@ -19,6 +19,17 @@ if ('serviceWorker' in navigator) {
 </script>
 </head>
 <body>
+<aside id="sidebar">
+  <div class="sb-brand"><img src="icon-192.png" alt="DeepRead"><span>DeepRead</span></div>
+  <button class="sb-item cur" data-v="home"><span class="ti">🏠</span>首页</button>
+  <button class="sb-item" data-v="voice"><span class="ti">🎙</span>声音</button>
+  <button class="sb-item" data-v="library"><span class="ti">📚</span>书架</button>
+  <button class="sb-item" data-v="mine"><span class="ti">👤</span>我的</button>
+  <div class="sb-foot">
+    <button class="sb-import" id="sb-add">＋ 导入书籍</button>
+    <div class="sb-ver">DeepRead v3.22</div>
+  </div>
+</aside>
 <div id="app">
 
   <!-- 启动页 -->
@@ -76,7 +87,14 @@ if ('serviceWorker' in navigator) {
     </div>
 
     <div id="home-empty" class="empty hidden">
-      <div class="empty-icon">📚</div><p class="serif">书架还是空的</p>
+      <svg class="empty-illus" viewBox="0 0 150 112" aria-hidden="true">
+        <circle cx="75" cy="56" r="52" fill="#f7f2e7"/>
+        <path d="M48 72 Q61 64 75 70 Q89 64 102 72 L102 46 Q89 38 75 44 Q61 38 48 46 Z" fill="#fffdf8" stroke="#2b2620" stroke-width="2.5" stroke-linejoin="round"/>
+        <line x1="75" y1="44" x2="75" y2="70" stroke="#2b2620" stroke-width="2"/>
+        <path d="M36 50 q-7 6 0 13" stroke="#c9a86a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M112 50 q8 7 0 13" stroke="#b5493a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M120 44 q12 11 0 25" stroke="#b5493a" stroke-width="2.5" fill="none" stroke-linecap="round" opacity=".5"/>
+      </svg><p class="serif">书架还是空的</p>
       <p class="sub">点下方 ＋ 导入 PDF / EPUB / TXT，把书听成故事</p>
     </div>
   </main>
@@ -87,14 +105,30 @@ if ('serviceWorker' in navigator) {
       <div class="lib-title serif">书架</div>
       <div class="lib-icons">
         <button id="btn-lib-search" class="icon-btn" title="搜书">🔍</button>
-        <button id="btn-lib-sort" class="icon-btn" title="排序">⇅</button>
       </div>
     </header>
     <div id="view-shelf">
-      <div class="sec-head" style="margin-top:6px"><h3 id="lib-count" class="serif"></h3></div>
-      <div id="shelf"></div>
+      <div id="shelf-has">
+        <div class="sec-head" style="margin-top:6px"><h3 class="serif">最近阅读</h3></div>
+        <div id="shelf-recent" class="h-scroll shelf-recent"></div>
+        <div class="shelf-all-head"><h3 id="lib-count"></h3>
+          <div class="shelf-filters">
+            <select id="shelf-fmt"><option value="">全部格式</option></select>
+            <select id="shelf-sort"><option value="recent">最近阅读</option><option value="title">书名排序</option></select>
+          </div>
+        </div>
+        <div id="shelf-grid" class="shelf-grid"></div>
+      </div>
       <div id="shelf-empty" class="empty hidden">
-        <div class="empty-icon">📚</div><p class="serif">书架还是空的</p>
+        <svg class="empty-illus" viewBox="0 0 150 112" aria-hidden="true">
+          <circle cx="75" cy="56" r="52" fill="#f7f2e7"/>
+          <path d="M48 72 Q61 64 75 70 Q89 64 102 72 L102 46 Q89 38 75 44 Q61 38 48 46 Z" fill="#fffdf8" stroke="#2b2620" stroke-width="2.5" stroke-linejoin="round"/>
+          <line x1="75" y1="44" x2="75" y2="70" stroke="#2b2620" stroke-width="2"/>
+          <path d="M36 50 q-7 6 0 13" stroke="#c9a86a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M112 50 q8 7 0 13" stroke="#b5493a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M120 44 q12 11 0 25" stroke="#b5493a" stroke-width="2.5" fill="none" stroke-linecap="round" opacity=".5"/>
+        </svg>
+        <p class="serif">书架还是空的</p>
         <p class="sub">导入 PDF / EPUB / DOCX / TXT，把书听成故事</p>
         <button id="btn-import-empty" class="btn-primary">导入第一本书</button>
       </div>
@@ -249,7 +283,7 @@ if ('serviceWorker' in navigator) {
         <label><span class="k">字号</span><input type="range" id="ts-size" min="14" max="26" value="18"><span id="ts-size-v">18</span></label>
         <label><span class="k">字体</span><select id="ts-font"><option value="serif">衬线（宋体）</option><option value="sans">无衬线（黑体）</option></select></label>
         <label><span class="k">行高</span><input type="range" id="ts-lh" min="16" max="28" value="20"><span id="ts-lh-v">2.0</span></label>
-        <label><span class="k">主题</span><select id="ts-theme"><option value="day">白天</option><option value="sepia">护眼</option><option value="ink">墨黑</option><option value="night">夜间</option></select></label>
+        <label><span class="k">主题</span><select id="ts-theme"><option value="day">白天</option><option value="sepia">暖纸</option><option value="ink">墨黑</option><option value="night">夜间</option></select></label>
       </div>
       <div class="set-group" id="engine-eleven">
         <div class="sec">ElevenLabs 云端语音</div>
@@ -282,12 +316,13 @@ if ('serviceWorker' in navigator) {
         <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
         <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
       </div>
-      <div class="ver">DeepRead v3.21</div>
+      <div class="ver">DeepRead v3.22</div>
     </div>
   </main>
 
   <!-- 迷你播放器 -->
   <div id="mini-player" class="hidden">
+    <div id="mp-bar"><i id="mp-fill"></i></div>
     <div class="cover sm" id="mp-cover"></div>
     <div style="flex:1;min-width:0"><div id="mp-title"></div><div id="mp-pos"></div></div>
     <button id="mp-play">▶</button>
@@ -306,6 +341,7 @@ if ('serviceWorker' in navigator) {
       <p class="sub" id="fp-sub"></p>
       <div class="fp-progress">
         <input type="range" id="fp-seek" min="0" max="1000" value="0">
+        <div class="fp-wave" id="fp-wave"></div>
         <div class="fp-times"><span id="fp-cur"></span><span id="fp-total"></span></div>
       </div>
     </div>
@@ -325,7 +361,7 @@ if ('serviceWorker' in navigator) {
   <div id="typeset" class="sheet hidden">
     <div class="sheet-head"><span class="serif">排版</span> <button id="btn-type-close" class="btn-ghost">✕</button></div>
     <p class="hint" style="padding:0">详细排版选项已移到「我的」页面，这里保留快捷入口。</p>
-    <label>主题 <select id="ts-theme2"><option value="day">白天</option><option value="sepia">护眼</option><option value="ink">墨黑</option><option value="night">夜间</option></select></label>
+    <label>主题 <select id="ts-theme2"><option value="day">白天</option><option value="sepia">暖纸</option><option value="ink">墨黑</option><option value="night">夜间</option></select></label>
   </div>
 
   <!-- AI 助手 -->
@@ -403,6 +439,15 @@ if ('serviceWorker' in navigator) {
   <div id="cast-sheet" class="sheet tall hidden">
     <div class="sheet-head"><span class="serif">🎭 多角色配音</span> <button id="btn-cast-close" class="btn-ghost">✕</button></div>
     <div id="cast-body"></div>
+  </div>
+
+  <div id="book-menu" class="sheet bottom hidden">
+    <div class="grab"></div>
+    <div class="sheet-title serif" id="bm-title"></div>
+    <p class="sheet-sub" id="bm-sub"></p>
+    <button class="imp-opt" id="bm-open">📖 <span class="io-t">打开详情</span><i>›</i></button>
+    <button class="imp-opt hidden" id="bm-dl">⏬ <span class="io-t">下载原文件</span><i>›</i></button>
+    <button class="imp-opt" id="bm-del">🗑 <span class="io-t">删除此书</span><i>›</i></button>
   </div>
 
   <div id="scrim" class="scrim hidden"></div>
