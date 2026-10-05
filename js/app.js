@@ -375,14 +375,23 @@ async function openBook(id){
 /* ---------- 分窗渲染（v3.19）：长书只渲染当前窗口句子，避免多列一次性排几千句卡死 ---------- */
 const WIN_SIZE=500;
 let winStart=0; // sentEls[i] 对应全局 idx = winStart+i
+let pgVer=0, winVer=-1; // 分页版本号：starts 变化时窗口必须重渲染
 function renderWindow(centerIdx){
   const c=$('#content'); if(!c||!cur) return;
   const total=cur.total, ci0=Math.max(0,Math.min(total-1,centerIdx));
-  let s=Math.max(0, Math.floor(ci0/WIN_SIZE)*WIN_SIZE - WIN_SIZE);
+  let s;
+  if(PG.ready&&PG.starts.length){
+    // 对齐到页边界：窗口内分列与全局分页完全一致，localPageOf 才精确
+    s=sentenceOfPage(pageOfSentence(ci0));
+    s=Math.max(0, s-120); // 向前预渲染一点
+    s=sentenceOfPage(pageOfSentence(s));
+  }else{
+    s=Math.max(0, Math.floor(ci0/WIN_SIZE)*WIN_SIZE - WIN_SIZE);
+  }
   const e=Math.min(total, s+WIN_SIZE*3);
-  winStart=s;
+  winStart=s; winVer=pgVer;
   c.innerHTML=''; sentEls=[];
-  let ci=-1;
+  let ci=s>0?cur.sentences[s-1].c:-1; // 继承上一句章节，窗口开头不重复标题顶开内容
   for(let i=s;i<e;i++){
     const sn=cur.sentences[i];
     if(sn.c!==ci){ ci=sn.c;
@@ -411,7 +420,7 @@ function localPageOffset(){ return (PG.ready&&PG.starts.length)?pageOfSentence(w
 function localPageOf(gp){ return gp-localPageOffset(); }
 function ensureWindowForPage(gp){
   const s0=sentenceOfPage(gp);
-  if(s0<winStart||s0>=winStart+sentEls.length) renderWindow(s0);
+  if(winVer!==pgVer||s0<winStart||s0>=winStart+sentEls.length) renderWindow(s0);
 }
 function showPageInstant(gp){
   if(!cur) return;
@@ -452,7 +461,7 @@ async function bootPagination(){
   let rec=null; try{ rec=await idb.getProgress(cur.id); }catch(e){}
   const hit=await idb.getPageCache(cur.id+'|'+h).catch(()=>null);
   if(hit&&hit.starts&&hit.starts.length){
-    PG.starts=hit.starts; PG.total=hit.total; PG.ready=true;
+    PG.starts=hit.starts; PG.total=hit.total; PG.ready=true; pgVer++;
     const p=(rec&&rec.page!=null)?Math.max(0,Math.min(PG.total-1,rec.page)):pageOfSentence(rec?rec.idx:0);
     showPageInstant(p);
   }else{
@@ -473,7 +482,7 @@ async function paginateInBackground(h, idx){
   try{ res=await paginateBook(cur, h); }catch(e){ res=null; }
   if(!res) return;                                        // 中途已失效
   if(!cur||PG.bookId!==cur.id||pageHash()!==h) return;    // 书已切换或排版已变
-  PG.starts=res.starts; PG.total=res.total; PG.ready=true;
+  PG.starts=res.starts; PG.total=res.total; PG.ready=true; pgVer++;
   try{ await idb.putPageCache({key:cur.id+'|'+h, bookId:cur.id, hash:h, starts:res.starts, total:res.total, updatedAt:Date.now()}); }catch(e){}
   const target=pageOfSentence(Math.max(0,Math.min(cur.total-1,idx||0)));
   if(target!==PG.page) showPageInstant(target); else updateCount();
@@ -489,7 +498,7 @@ async function repaginate(){
   layoutPages();
   const hit=await idb.getPageCache(cur.id+'|'+h).catch(()=>null);
   if(hit&&hit.starts&&hit.starts.length){
-    PG.starts=hit.starts; PG.total=hit.total; PG.ready=true;
+    PG.starts=hit.starts; PG.total=hit.total; PG.ready=true; pgVer++;
     showPageInstant(pageOfSentence(keepIdx));
   }else paginateInBackground(h, keepIdx);
 }
