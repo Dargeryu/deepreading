@@ -434,6 +434,27 @@ function showPageInstant(gp){
   ensureWindowForPage(gp);
   el.scrollTo({left:localPageOf(gp)*W, behavior:'auto'});
   PG.page=gp; commitPageState();
+  verifyPageAlignment(gp, W);
+}
+// 实测纠偏：目标页首句应在列首 x≈22（padding），偏差则直接纠正
+function verifyPageAlignment(gp, W){
+  if(!PG.ready || !W || W<=10) return;
+  requestAnimationFrame(()=>{
+    if(!cur || PG.page!==gp || Flip.active) return;
+    try{
+      const si = sentenceOfPage(gp) - winStart;
+      const node = sentEls[si];
+      if(!node) return;
+      const el = pagesEl();
+      const r = node.getBoundingClientRect(), cr = el.getBoundingClientRect();
+      if(r.width < 1) return; // 未布局完成，跳过
+      const pad = parseFloat(getComputedStyle(el).paddingLeft) || 0;
+      const err = (r.left - cr.left) - pad;
+      if(Math.abs(err) > 3 && Math.abs(err) < W/2){
+        el.scrollTo({left: el.scrollLeft + err, behavior:'auto'});
+      }
+    }catch(e){}
+  });
 }
 function commitPage(gp){ PG.page=gp; commitPageState(); }
 function commitPageState(){ updateCount(); saveProgress(); }

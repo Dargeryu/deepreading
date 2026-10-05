@@ -194,6 +194,7 @@ function completeFlip(){
     const tp = Flip.toPage;
     endLeaf();
     commitPage(tp);
+    verifyPageAlignment(tp, pagesEl().clientWidth||1);
     drainQueue();
   });
 }
