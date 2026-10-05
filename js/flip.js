@@ -47,7 +47,8 @@ function selectionTakesOver(){
 }
 
 function onFlipMove(e){
-  if(!Flip.tracking || Flip.active) return;
+  // 手指拖拽中（dragging）允许持续移动；只有非拖拽的程序化动画才拦截
+  if(!Flip.tracking || (Flip.active && !Flip.dragging)) return;
   const dx = e.clientX - Flip.startX, dy = e.clientY - Flip.startY;
   if(!Flip.dragging){
     if(Math.abs(dx) < 14 || Math.abs(dx) < Math.abs(dy) * 1.25) return;
