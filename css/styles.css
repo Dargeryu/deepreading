@@ -581,3 +581,11 @@ body.playing .fp-wave i.on{animation:wv 1.15s ease-in-out infinite}
 /* 新版本提示条 */
 #sw-update-bar{position:fixed;top:0;left:0;right:0;z-index:9999;display:flex;align-items:center;justify-content:center;gap:12px;background:#1d1d1f;color:#fff;font-size:14px;padding:10px 16px;box-shadow:0 2px 12px rgba(0,0,0,.25)}
 #sw-update-bar button{border:none;background:#ff9500;color:#fff;font-size:14px;font-weight:700;padding:8px 18px;border-radius:999px;cursor:pointer}
+
+/* AI 排版 sheet */
+.ts-opt{display:flex;gap:12px;align-items:flex-start;padding:14px;border:1px solid var(--line,#e5e5ea);border-radius:14px;margin-top:10px;cursor:pointer}
+.ts-opt input{margin-top:4px;width:18px;height:18px;flex:none;accent-color:#ff9500}
+.ts-opt b{display:block;font-size:15px}
+.ts-opt i{display:block;font-style:normal;font-size:12.5px;color:var(--sub,#8e8e93);margin-top:4px;line-height:1.6}
+.ts-bar{height:8px;background:#f0f0f2;border-radius:99px;overflow:hidden}
+.ts-bar #ts-bar-fill{height:100%;width:0;background:linear-gradient(90deg,#ff9500,#ffb340);border-radius:99px;transition:width .3s}

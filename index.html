@@ -49,7 +49,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">👤</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">DeepRead v3.29</div>
+    <div class="sb-ver">DeepRead v3.30</div>
   </div>
 </aside>
 <div id="app">
@@ -195,6 +195,7 @@ if ('serviceWorker' in navigator) {
       <button class="btn-soft" id="btn-listen-now">🎧 开始听书</button>
     </div>
     <div style="padding:0 24px"><button class="btn-ghost" id="btn-cast" style="width:100%">🎭 AI 多角色配音</button></div>
+    <div style="padding:12px 24px 0"><button class="btn-ghost" id="btn-typeset" style="width:100%">✨ AI 排版</button></div>
     <div class="toc-head"><span class="serif">目录</span><span id="dt-toc-count"></span></div>
     <div class="toc" id="dt-toc"></div>
   </main>
@@ -338,7 +339,7 @@ if ('serviceWorker' in navigator) {
         <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
         <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
       </div>
-      <div class="ver">DeepRead v3.29</div>
+      <div class="ver">DeepRead v3.30</div>
     </div>
   </main>
 
@@ -426,6 +427,24 @@ if ('serviceWorker' in navigator) {
     <button id="btn-url-do" class="btn-primary" style="width:100%;margin-top:12px">抓取并导入</button>
   </div>
 
+  <!-- AI 排版 -->
+  <div id="typeset-sheet" class="sheet bottom hidden">
+    <div class="grab"></div>
+    <div class="sheet-title serif">AI 排版</div>
+    <p class="sheet-sub">专业校正与排版：先备份原文，可一键还原</p>
+    <label class="ts-opt"><input type="checkbox" id="ts-opt-local" checked><span><b>智能排版</b><i>本地完成，免费秒排：合并断行、压缩空行、标点规范、引号配对、盘古空格</i></span></label>
+    <label class="ts-opt"><input type="checkbox" id="ts-opt-ai"><span><b>AI 校对</b><i id="ts-ai-hint">将调用 Gemini 逐章校对错别字与语病</i></span></label>
+    <div id="ts-progress" class="hidden" style="margin-top:14px">
+      <div class="ts-bar"><div id="ts-bar-fill"></div></div>
+      <p id="ts-step" class="sheet-sub" style="margin-top:8px">准备中…</p>
+    </div>
+    <div id="ts-actions" style="margin-top:14px">
+      <button id="ts-do" class="btn-primary" style="width:100%">开始排版</button>
+      <button id="ts-restore" class="btn-ghost" style="width:100%;margin-top:8px;display:none">↩ 还原排版前的原文</button>
+    </div>
+    <button id="ts-cancel" class="btn-ghost hidden" style="width:100%;margin-top:14px">取消</button>
+  </div>
+
   <!-- 粘贴文本导入 -->
   <div id="text-sheet" class="sheet bottom tall hidden">
     <div class="grab"></div>
@@ -497,5 +516,6 @@ if ('serviceWorker' in navigator) {
 <script src="js/paginate.js"></script>
 <script src="js/flip.js"></script>
 <script src="js/app.js"></script>
+<script src="js/typeset.js"></script>
 </body>
 </html>
