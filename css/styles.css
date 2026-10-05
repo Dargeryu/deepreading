@@ -1,4 +1,4 @@
-/* DeepRead v3.22 — Readify 视觉语言 */
+/* DeepRead v3.23 — 翻页修复 */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
   --bg:#ffffff; --card:#ffffff; --ink:#1d1d1f; --sub:#86868b; --line:#e8e8ec;
@@ -467,10 +467,12 @@ textarea.txt.big{resize:vertical;min-height:150px;line-height:1.7}
 /* ===== v3.21 仿真翻页：真书触感 ===== */
 #reader-pages{position:relative;overflow-x:hidden;touch-action:pan-y}
 .flip-leaf{position:absolute;left:0;top:0;width:100%;height:100%;z-index:20;pointer-events:none;
-  transform-style:preserve-3d;will-change:transform}
+  transform-style:preserve-3d;will-change:transform;background:#fff} /* 背面=纸色 */
 .flip-src{width:100%;height:100%;box-sizing:border-box;padding:22px;
-  column-gap:44px;column-fill:auto;overflow:hidden}
-.flip-shade{position:absolute;inset:0;pointer-events:none;opacity:0;
+  column-gap:44px;column-fill:auto;overflow:hidden;backface-visibility:hidden;
+  -webkit-backface-visibility:hidden}
+.flip-shade{position:absolute;inset:0;pointer-events:none;opacity:0;backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
   background:linear-gradient(100deg,rgba(0,0,0,0) 28%,rgba(0,0,0,.30) 76%,rgba(0,0,0,.46) 100%)}
 .flip-spine{position:absolute;top:0;bottom:0;width:44px;z-index:19;pointer-events:none;opacity:0}
 .flip-spine.l{left:0;background:linear-gradient(90deg,rgba(0,0,0,.30),rgba(0,0,0,0))}
@@ -530,9 +532,7 @@ textarea.txt.big{resize:vertical;min-height:150px;line-height:1.7}
 .cover{position:relative}
 
 /* ---------- M2 暖纸主题 ---------- */
-#content[data-theme=sepia]{background-color:#f7f1e2;color:#38312a;
-  background-image:radial-gradient(rgba(120,100,70,.07) 1px,transparent 1.4px);
-  background-size:22px 22px}
+#content[data-theme=sepia]{background:#f7f1e2;color:#38312a}
 #content[data-theme=sepia] .sent.active{background:#e9dcc0;box-shadow:0 0 0 3px #e9dcc0}
 #content[data-theme=sepia] .ch-title{color:#2e2822}
 

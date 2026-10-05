@@ -13,7 +13,7 @@ const Flip = {
   dir: 0,           // 1=下一页，-1=上一页
   fromPage: 0, toPage: 0, progress: 0,
   leaf: null, shade: null, spine: null,
-  startX: 0, startY: 0, lastX: 0, lastT: 0, vel: 0,
+  startX: 0, startY: 0, lastX: 0, lastT: 0, vel: 0, W: 0,
   queued: null,     // 翻页进行中时新到的目标页（朗读连续翻页）
 };
 
@@ -34,6 +34,7 @@ function onFlipDown(e){
   Flip.startX = e.clientX; Flip.startY = e.clientY;
   Flip.lastX = e.clientX; Flip.lastT = performance.now(); Flip.vel = 0;
   Flip.downT = performance.now();
+  Flip.W = pagesEl().clientWidth || 1;
   pageTouchMoved = false;
 }
 
@@ -64,7 +65,8 @@ function onFlipMove(e){
   const dt = Math.max(1, now - Flip.lastT);
   Flip.vel = 0.75 * Flip.vel + 0.25 * ((e.clientX - Flip.lastX) / dt); // px/ms
   Flip.lastX = e.clientX; Flip.lastT = now;
-  dragTo(e.clientX - Flip.startX);
+  if(Flip.edge){ edgeDrag(e.clientX - Flip.startX); }
+  else dragTo(e.clientX - Flip.startX);
   if(e.cancelable) e.preventDefault();
 }
 
@@ -73,28 +75,34 @@ function onFlipUp(){
   Flip.tracking = false;
   if(!Flip.dragging) return; // 轻触：交给句子的 click
   Flip.dragging = false;
+  if(Flip.edge){ edgeRelease(); Flip.edge = false; return; }
   const quick = Math.abs(Flip.vel) > 0.45 && Flip.progress > 0.04;
-  if(!Flip.edge && (Flip.progress > 0.24 || quick)) completeFlip();
+  if(Flip.progress > 0.24 || quick) completeFlip();
   else cancelFlip();
 }
 function onFlipCancel(){
   if(!Flip.tracking) return;
   Flip.tracking = false;
-  if(Flip.dragging){ Flip.dragging = false; cancelFlip(); }
+  if(Flip.dragging){ Flip.dragging = false;
+    if(Flip.edge){ edgeRelease(); Flip.edge = false; } else cancelFlip(); }
 }
 
 /* 开始一次翻页：静层先切到目标页，叶子盖住显示当前页 */
 function beginLeaf(dir){
-  const el = pagesEl(), W = el.clientWidth || 1;
+  const el = pagesEl(), W = Flip.W || el.clientWidth || 1;
   Flip.dir = dir; Flip.fromPage = PG.page; Flip.toPage = PG.page + dir; Flip.progress = 0;
   ensureWindowForPage(Flip.toPage);                       // 目标页句子必须已渲染
   el.scrollTo({ left: localPageOf(Flip.toPage) * W, behavior: 'auto' }); // 静层=目标页
   const src = el.cloneNode(true);                          // 叶子=当前页
   src.removeAttribute('id'); src.className = 'flip-src';
+  src.style.transform = ''; src.style.transition = '';       // 清掉可能残留的边缘橡皮筋位移
   const leaf = document.createElement('div');
   leaf.className = 'flip-leaf';
   leaf.style.transformOrigin = dir === 1 ? 'left center' : 'right center';
   leaf.appendChild(src);
+  try{ // 叶子背面 = 纸色，转过 90° 后不再看到镜像文字
+    leaf.style.background = getComputedStyle(document.getElementById('content')).backgroundColor || '#fff';
+  }catch(_){}
   const shade = document.createElement('div');
   shade.className = 'flip-shade';
   if(dir === -1) shade.style.transform = 'scaleX(-1)';
@@ -118,14 +126,20 @@ function setAngle(deg){
   if(Flip.spine) Flip.spine.style.opacity = (s * 0.85).toFixed(3);
 }
 
+function edgeDrag(dx){
+  const el = pagesEl(), W = Flip.W || 1;
+  const x = Math.max(-1, Math.min(1, dx / (W * 0.6)));
+  el.style.transition = 'none';
+  el.style.transform = 'translateX(' + (x * W * 0.16).toFixed(1) + 'px)';
+}
+function edgeRelease(){
+  const el = pagesEl();
+  el.style.transition = 'transform .28s cubic-bezier(.2,.8,.3,1)';
+  el.style.transform = '';
+  setTimeout(()=>{ if(el.style.transform === '') el.style.transition = ''; }, 320);
+}
 function dragTo(dx){
-  const W = pagesEl().clientWidth || 1;
-  if(Flip.edge){
-    const p = Math.max(-1, Math.min(1, dx / (W * 0.6)));   // 橡皮筋：卷起一点点
-    setAngle(Flip.dir === 1 ? -22 * p : 22 * p);
-    Flip.progress = 0;
-    return;
-  }
+  const W = Flip.W || 1;
   const p = Math.min(1, Math.abs(dx) / (W * 0.82));
   Flip.progress = p;
   setAngle(Flip.dir === 1 ? -180 * p : 180 * p);
