@@ -366,8 +366,9 @@ function showView(name){ go(name); } // 兼容旧调用
 async function openBook(id){
   cur=books.find(b=>b.id===id); if(!cur) return;
   document.title='DeepRead · '+cur.title;
-  renderWindow(cur.progress.idx);
-  renderChapters(); go('reader'); updatePlayer();
+  go('reader'); renderWindow(cur.progress.idx);
+  __lastW=pagesEl().clientWidth||0;
+  renderChapters(); updatePlayer();
   requestAnimationFrame(()=>{ bootPagination(); });
   applyBookVoice(); updateMiniPlayer();
 }
@@ -401,7 +402,8 @@ let pageTouchMoved=false;
 const pagesEl=()=>$('#reader-pages');
 function layoutPages(){
   const el=pagesEl(); if(!el||!cur) return;
-  const w=el.clientWidth||1;
+  const w=el.clientWidth||0;
+  if(w<10) return; // 阅读器隐藏时不写，避免 200px 最小列宽污染后续排版
   el.style.columnWidth=Math.max(200, w-44)+'px'; // 多列直接建在滚动容器上（一列一页）
 }
 /* 全局页 -> 当前渲染窗口内的列号 */
@@ -435,6 +437,7 @@ function updateCount(){
   if(rc) rc.textContent=(PG.ready&&PG.total>0)?('第 '+(PG.page+1)+' 页 / 共 '+PG.total+' 页'):'';
 }
 /* ---------- 分页启动 / 重排 ---------- */
+let __lastW=0;
 async function bootPagination(){
   applyType();
   const h=pageHash();
@@ -489,7 +492,13 @@ async function repaginate(){
 function bindReaderGestures(){
   bindFlip();
   let rT=null;
-  window.addEventListener('resize',()=>{ clearTimeout(rT); rT=setTimeout(()=>{ if(!Flip.active) repaginate(); },280); });
+  window.addEventListener('resize',()=>{ clearTimeout(rT); rT=setTimeout(()=>{
+    if(Flip.active||curView!=='reader'||!cur||!PG.ready) return;
+    const w=pagesEl().clientWidth||0;
+    if(Math.abs(w-__lastW)<2) return; // 纯高度变化（安卓地址栏显隐）不重排，避免分页乱跳
+    __lastW=w;
+    repaginate(); // 宽度变了（旋转/折叠屏/分屏）才重算
+  },280); });
   if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ scheduleRepaginate(); });
   // 桌面端：左右方向键翻页（移动端走触屏手势）
   window.addEventListener('keydown',e=>{
