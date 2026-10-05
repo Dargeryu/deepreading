@@ -577,3 +577,7 @@ body.playing .fp-wave i.on{animation:wv 1.15s ease-in-out infinite}
 }
 /* v3.22 补：通用封面定位 */
 .cov-wrap{position:relative;flex:none}
+
+/* 新版本提示条 */
+#sw-update-bar{position:fixed;top:0;left:0;right:0;z-index:9999;display:flex;align-items:center;justify-content:center;gap:12px;background:#1d1d1f;color:#fff;font-size:14px;padding:10px 16px;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+#sw-update-bar button{border:none;background:#ff9500;color:#fff;font-size:14px;font-weight:700;padding:8px 18px;border-radius:999px;cursor:pointer}

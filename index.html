@@ -14,7 +14,29 @@
 <link rel="stylesheet" href="css/styles.css">
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then(reg=>{
+      // 主动检查更新：加载时 + 切回前台时 + 每 10 分钟
+      const check=()=>{ try{ reg.update(); }catch(_){} };
+      check();
+      setInterval(check, 10*60*1000);
+      document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) check(); });
+      // 新版本就绪后弹条提示，用户点一下即刷新（不打断阅读）
+      reg.addEventListener('updatefound', ()=>{
+        const nw=reg.installing;
+        if(!nw) return;
+        nw.addEventListener('statechange', ()=>{
+          if(nw.state==='installed' && navigator.serviceWorker.controller){
+            const bar=document.createElement('div');
+            bar.id='sw-update-bar';
+            bar.innerHTML='<span>DeepRead 有新版本</span><button>立即更新</button>';
+            bar.querySelector('button').onclick=()=>window.location.reload();
+            document.body.appendChild(bar);
+          }
+        });
+      });
+    }).catch(()=>{});
+  });
 }
 </script>
 </head>
@@ -27,7 +49,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">👤</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">DeepRead v3.28</div>
+    <div class="sb-ver">DeepRead v3.29</div>
   </div>
 </aside>
 <div id="app">
@@ -316,7 +338,7 @@ if ('serviceWorker' in navigator) {
         <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
         <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
       </div>
-      <div class="ver">DeepRead v3.28</div>
+      <div class="ver">DeepRead v3.29</div>
     </div>
   </main>
 
