@@ -90,7 +90,9 @@ function onFlipCancel(){
 
 /* 开始一次翻页：静层先切到目标页，叶子盖住显示当前页 */
 function beginLeaf(dir){
-  const el = pagesEl(), W = Flip.W || el.clientWidth || 1;
+  const el = pagesEl();
+  Flip.W = el.clientWidth || Flip.W || 1;
+  const W = Flip.W;
   Flip.dir = dir; Flip.fromPage = PG.page; Flip.toPage = PG.page + dir; Flip.progress = 0;
   ensureWindowForPage(Flip.toPage);                       // 目标页句子必须已渲染
   el.scrollTo({ left: localPageOf(Flip.toPage) * W, behavior: 'auto' }); // 静层=目标页
@@ -113,7 +115,10 @@ function beginLeaf(dir){
   const spine = document.createElement('div');
   spine.className = 'flip-spine ' + (dir === 1 ? 'l' : 'r');
   el.appendChild(spine);
+  const fx = document.createElement('div'); fx.className = 'flip-fx'; el.appendChild(fx);
+  const hl = document.createElement('div'); hl.className = 'flip-hl'; el.appendChild(hl);
   Flip.leaf = leaf; Flip.shade = shade; Flip.spine = spine;
+  Flip.fx = fx; Flip.hl = hl;
   Flip.active = true;
   setAngle(0);
 }
@@ -125,6 +130,10 @@ function setAngle(deg){
   const s = Math.sin(p * Math.PI);
   if(Flip.shade) Flip.shade.style.opacity = (s * 0.6).toFixed(3);
   if(Flip.spine) Flip.spine.style.opacity = (s * 0.85).toFixed(3);
+  // 卷曲前锋的投影位置：自由边投影 x = W*cos(θ)
+  const W = Flip.W || 1, proj = Flip.dir === 1 ? W * Math.cos(p * Math.PI) : W - W * Math.cos(p * Math.PI);
+  if(Flip.fx){ Flip.fx.style.left = (proj - 55) + 'px'; Flip.fx.style.opacity = (s * 0.5).toFixed(3); }
+  if(Flip.hl){ Flip.hl.style.left = (Flip.dir === 1 ? proj - 70 : proj) + 'px'; Flip.hl.style.opacity = (s * 0.65).toFixed(3); }
 }
 
 function edgeDrag(dx){
@@ -141,7 +150,8 @@ function edgeRelease(){
 }
 function dragTo(dx){
   const W = Flip.W || 1;
-  const p = Math.min(1, Math.abs(dx) / (W * 0.82));
+  const raw = Math.min(1, Math.abs(dx) / (W * 0.82));
+  const p = Math.pow(raw, 0.92);   // 纸张阻尼：起手稍沉
   Flip.progress = p;
   setAngle(Flip.dir === 1 ? -180 * p : 180 * p);
 }
@@ -162,7 +172,9 @@ function tween(from, to, dur, done){
 function endLeaf(){
   if(Flip.leaf) Flip.leaf.remove();
   if(Flip.spine) Flip.spine.remove();
-  Flip.leaf = Flip.shade = Flip.spine = null;
+  if(Flip.fx) Flip.fx.remove();
+  if(Flip.hl) Flip.hl.remove();
+  Flip.leaf = Flip.shade = Flip.spine = Flip.fx = Flip.hl = null;
   Flip.active = false; Flip.edge = false;
   cancelAnimationFrame(Flip.raf);
 }
@@ -170,7 +182,8 @@ function endLeaf(){
 function completeFlip(){
   const target = Flip.dir === 1 ? -180 : 180;
   const cur = Flip.dir === 1 ? -180 * Flip.progress : 180 * Flip.progress;
-  tween(cur, target, 230, () => {
+  const dur = Math.max(120, Math.min(420, 230 * (1 - Flip.progress) / (0.35 + Math.abs(Flip.vel))));
+  tween(cur, target, dur, () => {
     const tp = Flip.toPage;
     endLeaf();
     commitPage(tp);
