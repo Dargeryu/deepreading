@@ -416,8 +416,13 @@ function ensureWindowForPage(gp){
 function showPageInstant(gp){
   if(!cur) return;
   gp=PG.ready?Math.max(0,Math.min(PG.total-1,gp)):0;
-  ensureWindowForPage(gp);
   const el=pagesEl(), W=el.clientWidth||1;
+  if(W>10){ // 自愈：列宽若与当前视口不符先重算；清除橡皮筋残留位移
+    const want=W-44, has=parseFloat(el.style.columnWidth||'0');
+    if(Math.abs(has-want)>2) layoutPages();
+    if(el.style.transform){ el.style.transition=''; el.style.transform=''; }
+  }
+  ensureWindowForPage(gp);
   el.scrollTo({left:localPageOf(gp)*W, behavior:'auto'});
   PG.page=gp; commitPageState();
 }

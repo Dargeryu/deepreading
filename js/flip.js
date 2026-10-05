@@ -29,6 +29,7 @@ function bindFlip(){
 
 function onFlipDown(e){
   if(Flip.active || !PG.ready || PG.total <= 1) return;
+  clearStaleShift();
   if(e.pointerType === 'mouse' && e.button !== 0) return;
   Flip.tracking = true; Flip.dragging = false; Flip.edge = false;
   Flip.startX = e.clientX; Flip.startY = e.clientY;
@@ -148,6 +149,11 @@ function edgeRelease(){
   el.style.transform = '';
   setTimeout(()=>{ if(el.style.transform === '') el.style.transition = ''; }, 320);
 }
+// 防御：清除 #reader-pages 上残留的位移（多指/异常手势可能导致橡皮筋卡住）
+function clearStaleShift(){
+  const el = pagesEl(); if(!el) return;
+  if(el.style.transform){ el.style.transition=''; el.style.transform=''; }
+}
 function dragTo(dx){
   const W = Flip.W || 1;
   const raw = Math.min(1, Math.abs(dx) / (W * 0.82));
@@ -177,6 +183,7 @@ function endLeaf(){
   Flip.leaf = Flip.shade = Flip.spine = Flip.fx = Flip.hl = null;
   Flip.active = false; Flip.edge = false;
   cancelAnimationFrame(Flip.raf);
+  clearStaleShift();
 }
 
 function completeFlip(){
