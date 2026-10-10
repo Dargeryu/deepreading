@@ -338,7 +338,7 @@ function go(name){
   if(name==='library'){ stopSpeak(); renderShelf(); }
   else if(name==='home'){ stopSpeak(); renderHome(); }
   else if(name==='voice'){ stopSpeak(); renderVoice(); }
-  else if(name==='search'){ stopSpeak(); setSearchTab('all'); }
+  else if(name==='search'){ stopSpeak(); $('#search-results').innerHTML=''; }
   else if(name==='mine'){ stopSpeak(); }
   updateMiniPlayer();
   window.scrollTo(0,0);
@@ -866,74 +866,14 @@ $('#btn-text-do').onclick=async()=>{
   if(b){ books.unshift(b); go('library'); }
 };
 
-/* ---------- 搜书（4 Tab：全部/电子书/网页/AI搜索） ---------- */
-let searchTab='all';
-function setSearchTab(t){
-  searchTab=t;
-  document.querySelectorAll('#search-tabs .s-tab').forEach(b=>b.classList.toggle('cur', b.dataset.tab===t));
-  $('#search-ai-extra').classList.toggle('hidden', t!=='ai');
-  if(t!=='ai') $('#search-results').innerHTML='';
-}
-document.querySelectorAll('#search-tabs .s-tab').forEach(b=>{ b.onclick=()=>setSearchTab(b.dataset.tab); });
-$('#search-back').onclick=()=>go('home');
-/* 电子书结果卡：封面/书名/作者/Anna's Archive 来源/格式 + 下载直达 */
-function renderEbooks(rs, box){
-  box.innerHTML='';
-  if(!rs.length){ box.innerHTML='<p class="sub" style="padding:10px 20px">没有找到，换个关键词试试</p>'; return; }
-  const card=document.createElement('div'); card.className='s-card';
-  card.insertAdjacentHTML('beforeend','<div class="s-sec-t" style="padding:10px 10px 2px">电子书</div>');
-  rs.slice(0,4).forEach(r=>{
-    const d=document.createElement('div'); d.className='s-book';
-    d.innerHTML=`<div class="cov">${r.cover?`<img src="${esc(r.cover)}" alt="" loading="lazy">`:`<div class="ct" style="background:#3b2f4a">${esc((r.title||'?').slice(0,8))}</div>`}</div>
-      <div class="inf"><div class="t">${esc(r.title)}</div><div class="a">${esc(r.author)}${r.year?' · '+esc(r.year):''}</div>
-      <div class="src">Anna's Archive</div><span class="fb">EPUB / PDF</span>
-      <div class="ops"><button class="btn-ghost sm">去下载</button></div></div>`;
-    d.querySelector('.ops button').onclick=e=>{ e.stopPropagation(); window.open(r.aa,'_blank'); };
-    card.appendChild(d);
-  });
-  const more=document.createElement('button'); more.className='s-more';
-  more.textContent=`更多电子书（${rs.length}本）`;
-  more.onclick=()=>{
-    card.querySelectorAll('.s-book').forEach(x=>x.remove()); more.remove();
-    rs.forEach(r=>{
-      const d=document.createElement('div'); d.className='s-book';
-      d.innerHTML=`<div class="cov">${r.cover?`<img src="${esc(r.cover)}" alt="" loading="lazy">`:`<div class="ct" style="background:#3b2f4a">${esc((r.title||'?').slice(0,8))}</div>`}</div>
-        <div class="inf"><div class="t">${esc(r.title)}</div><div class="a">${esc(r.author)}</div>
-        <div class="src">Anna's Archive</div><span class="fb">EPUB / PDF</span>
-        <div class="ops"><button class="btn-ghost sm">去下载</button></div></div>`;
-      d.querySelector('.ops button').onclick=e=>{ e.stopPropagation(); window.open(r.aa,'_blank'); };
-      card.appendChild(d);
-    });
-  };
-  card.appendChild(more);
-  card.insertAdjacentHTML('beforeend','<p class="sub" style="padding:8px 12px">在 Anna\'s Archive 下载 EPUB/PDF 后，用首页 ＋ 导入即可阅读</p>');
-  box.appendChild(card);
-}
-$('#btn-search').onclick=async()=>{
+/* ---------- 搜书：直接 AI 搜书（Anna's Archive） ---------- */
+$('#btn-search').onclick=()=>{
 const q=$('#search-q').value.trim(); if(!q){toast('输入书名或作者');return;}
-const box=$('#search-results');
-if(searchTab==='web'){ // 网页导入
-  box.innerHTML=`<div class="s-card" style="padding:16px"><p class="sub" style="margin:0 0 10px">粘贴文章网页链接，抓取正文导入书架</p>
-    <div style="display:flex;gap:8px"><input class="s-input" id="web-url" placeholder="https://…" style="background:#fff">
-    <button class="btn-primary sm" id="web-go">导入</button></div></div>`;
-  $('#web-go').onclick=async()=>{
-    const url=$('#web-url').value.trim();
-    if(!/^https?:\/\//i.test(url)){ toast('粘贴完整的网页链接（http开头）'); return; }
-    const b=await importFromURL(url).catch(e=>{ toast('导入失败：'+e.message,3000); return null; });
-    if(b){ books.unshift(b); go('library'); }
-  };
-  return;
-}
-if(searchTab==='ai'){ setSearchTab('ai'); doAiSearch(q); return; }
-box.innerHTML='<p class="sub" style="padding:10px 20px">搜索中…</p>';
-try{
-  const rs=await searchGBK(q);
-  renderEbooks(rs, box);
-}catch(e){ box.innerHTML='<p class="sub" style="padding:10px 20px">搜索失败：'+esc(e.message)+'</p>';}
+doAiSearch(q);
 };
 /* AI搜索 Tab：默认直连 Anna's Archive，无选源步骤 */
 function doAiSearch(q){
-const box=$('#ai-results');
+const box=$('#search-results');
 const cur=aaBase();
 const mirrors=AA_MIRRORS.map(m=>`<button class="btn-ghost sm${m===cur?' btn-primary':''}" data-m="${m}">${m.replace('https://','')}</button>`).join('');
 box.innerHTML=`<div class="sr"><div class="t">在 Anna's Archive 搜索「${esc(q)}」</div>
@@ -1115,7 +1055,7 @@ async function renderHome(){
   CLASSICS.forEach(c=>{
     const d=document.createElement('div'); d.className='rd-bcard'; d.dataset.q=c.q;
     d.innerHTML=`<div class="cov"><div class="ct" style="background:linear-gradient(150deg,${c.c[0]},${c.c[1]})">${esc(c.title)}</div></div><div class="nm">${esc(c.title)}</div>`;
-    d.onclick=()=>{ go('search'); $('#search-q').value=c.q; setSearchTab('ebook'); $('#btn-search').click(); };
+    d.onclick=()=>{ go('search'); $('#search-q').value=c.q; $('#btn-search').click(); };
     cll.appendChild(d);
   });
   renderStats();

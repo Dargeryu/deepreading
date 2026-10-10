@@ -26,91 +26,12 @@ feynman:t=>`你是一位费曼学习法教练。请用最简单的大白话重�
 analogy:t=>`请把下面这个概念用一个生动的日常类比讲清楚，并输出恰好4格分镜。每格格式：一句话描述画面；（解说）一句话解说。类比要贴切，语言生动。\n\n概念：${t}`,
 };
 
-/* ---------- 正版搜书 ---------- */
-async function searchOL(q){
-const r=await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=12&fields=key,title,author_name,first_publish_year`);
-const j=await r.json();
-return (j.docs||[]).map(d=>({title:d.title, author:(d.author_name||[]).join(', '),
-year:d.first_publish_year||'', url:`https://openlibrary.org${d.key}`, dl:''}));
-}
-async function searchGB(q){
-const r=await fetch(`https://gutendex.com/books?search=${encodeURIComponent(q)}`);
-const j=await r.json();
-return (j.results||[]).slice(0,12).map(b=>({title:b.title,
-author:(b.authors||[]).map(a=>a.name).join(', '), year:'',
-url:'', dl:(b.formats||{})['application/epub+zip']||''}));
-}
-
-/* ---------- free-programming-books 本地搜书 ----------
-   数据来源：EbookFoundation/free-programming-books（GitHub 开源免费编程书单）
-   索引打包在 js/fpb-index.js，离线可搜。条目格式：[标题, 作者, 分类, 链接, 格式, 是否存档] */
-const FPB_ALIAS={
-'机器学习':'Machine Learning','深度学习':'Machine Learning','人工智能':'Artificial Intelligence',
-'算法':'Algorithms','数据结构':'Data Structures','操作系统':'Operating Systems',
-'计算机网络':'Networking','网络编程':'Networking','数据库':'Database','数据科学':'Data Science',
-'计算机视觉':'Computer Vision','前端':'JavaScript','爬虫':'Python','编译原理':'Compiler Design',
-'软件架构':'Software Architecture','区块链':'Blockchain','物联网':'IoT','云计算':'Cloud Computing',
-'信息安全':'Security','网络安全':'Security','密码学':'Cryptography','量子计算':'Quantum Computing',
-'游戏开发':'Game Development','编程入门':'Programming','自然语言':'Machine Learning',
-};
-function searchFPB(q){
-if(typeof FPB_INDEX==='undefined') return [];
-q=(q||'').trim(); if(!q) return [];
-let extra='';
-for(const k in FPB_ALIAS){ if(q.indexOf(k)>=0) extra+=' '+FPB_ALIAS[k]; }
-const tokens=(q+' '+extra).toLowerCase().split(/[\s,，、;；|/]+/).filter(t=>t.length>0);
-if(!tokens.length) return [];
-const out=[];
-for(const b of FPB_INDEX){
-const title=b[0]||'', author=b[1]||'', topic=b[2]||'';
-const tl=title.toLowerCase(), al=author.toLowerCase(), pl=topic.toLowerCase();
-let score=0, hit=0;
-for(const t of tokens){
-if(tl.indexOf(t)>=0){ score+=3; hit++; }
-else if(al.indexOf(t)>=0){ score+=2; hit++; }
-else if(pl.indexOf(t)>=0){ score+=1.5; hit++; }
-}
-if(!hit) continue;
-if(hit===tokens.length) score+=5; else score*=hit/tokens.length;
-if(tokens.length===1 && pl===tokens[0]) score+=4; // 恰好是分类名，加权
-if(b[5]) score*=0.7;
-out.push({title, author, topic, url:b[3]||'', fmts:b[4]||'WEB', archived:!!b[5], year:'', dl:'', score});
-}
-out.sort((a,b)=>b.score-a.score);
-return out.slice(0,30);
-}
 
 /* ---------- Anna's Archive 镜像（.org/.se 已被扣押，.li 已停放；.pk 国内最稳） ---------- */
 const AA_MIRRORS=['https://annas-archive.pk','https://annas-archive.gl','https://annas-archive.gd'];
 function aaBase(){ try{ return localStorage.getItem('dr_aa_mirror')||AA_MIRRORS[0]; }catch(e){ return AA_MIRRORS[0]; } }
 function aaSet(m){ try{ localStorage.setItem('dr_aa_mirror', m); }catch(e){} }
 function aaSearchURL(q){ return aaBase()+'/search?q='+encodeURIComponent(q); }
-/* ---------- 电子书搜索：Google Books 优先（中文全），配额受限时 fallback Open Library ---------- */
-async function searchGBK(q){
-try{
-  const r=await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=20&printType=books`);
-  if(!r.ok) throw new Error('gb '+r.status);
-  const j=await r.json();
-  const items=(j.items||[]).map(it=>{
-    const v=it.volumeInfo||{};
-    return {title:v.title||'未知书名', author:(v.authors||[]).join('、')||'未知作者',
-      year:(v.publishedDate||'').slice(0,4), cover:(v.imageLinks||{}).thumbnail||'',
-      aa:aaSearchURL(v.title||q)};
-  });
-  if(items.length) return items;
-  throw new Error('gb empty');
-}catch(e){
-  // fallback：Open Library（封面 via covers.openlibrary.org）
-  const r=await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=20&fields=key,title,author_name,first_publish_year,cover_i`);
-  if(!r.ok) throw new Error('搜索失败 '+r.status);
-  const j=await r.json();
-  return (j.docs||[]).map(d=>({title:d.title||'未知书名',
-    author:(d.author_name||[]).join('、')||'未知作者', year:d.first_publish_year||'',
-    cover:d.cover_i?`https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg`:'',
-    aa:aaSearchURL(d.title||q)}));
-}
-}
-
 /* ---------- ElevenLabs 连接诊断 ---------- */
 async function elevenDiag(){
   const key=(store.get('eleven_key')||'').trim();
