@@ -346,7 +346,7 @@ function go(name){
 function showView(name){ go(name); } // 兼容旧调用
 async function openBook(id){
   cur=books.find(b=>b.id===id); if(!cur) return;
-  document.title='DeepRead · '+cur.title;
+  document.title='Apo · '+cur.title;
   go('reader'); renderWindow(cur.progress.idx);
   __lastW=pagesEl().clientWidth||0;
   renderChapters(); updatePlayer();
@@ -740,7 +740,7 @@ $('#file-input').onchange=async e=>{
 };
 document.addEventListener('visibilitychange',()=>{ if(document.hidden) releaseWakeLock(); else if(wantPlay) ensureWakeLock(); });
 
-/* ---------- 外部文件打开/分享入库（下载后点文件→用 DeepRead 打开） ---------- */
+/* ---------- 外部文件打开/分享入库（下载后点文件→用 Apo 打开） ---------- */
 async function importSharedFiles(files){
   let added=0;
   for(const f of files){
@@ -937,7 +937,7 @@ const box=$('#ai-results');
 const cur=aaBase();
 const mirrors=AA_MIRRORS.map(m=>`<button class="btn-ghost sm${m===cur?' btn-primary':''}" data-m="${m}">${m.replace('https://','')}</button>`).join('');
 box.innerHTML=`<div class="sr"><div class="t">在 Anna's Archive 搜索「${esc(q)}」</div>
-<div class="a">输入书名/作者，直接跳转 Anna's Archive 站内搜索结果。下载 EPUB/PDF 后，点击文件选择"用 DeepRead 打开"，自动加入书架。</div>
+<div class="a">输入书名/作者，直接跳转 Anna's Archive 站内搜索结果。下载 EPUB/PDF 后，点击文件选择"用 Apo 打开"，自动加入书架。</div>
 <div class="ops"><button class="btn-primary sm" id="aa-go">搜索</button></div>
 <div class="sub" style="margin-top:10px">打不开？换个镜像：</div><div class="ops" id="aa-mirrors">${mirrors}</div></div>
 <p class="sub">小贴士：用英文书名或 ISBN 搜更准。</p>`;
@@ -1065,7 +1065,7 @@ document.addEventListener('touchend',handleSel);
 try{ initSettings(); applyType();}catch(e){}
 })();
 
-/* ================= v3：DeepRead 风格 UI ================= */
+/* ================= v3：Apo 风格 UI ================= */
 
 /* ---------- 启动页 ---------- */
 $('#btn-start').onclick=()=>{ try{store.set('splash_done','1');}catch(e){} go('home'); };

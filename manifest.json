@@ -16,10 +16,10 @@
     }
   ],
   "lang": "zh-CN",
-  "name": "DeepRead · 把书听成故事",
+  "name": "Apo · 把书听成故事",
   "orientation": "portrait",
   "scope": "./",
-  "short_name": "DeepRead",
+  "short_name": "Apo",
   "start_url": "./index.html",
   "theme_color": "#ffffff",
   "file_handlers": [

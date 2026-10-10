@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>DeepRead · 把书听成故事</title>
+<title>Apo · 把书听成故事</title>
 <link rel="stylesheet" href="css/styles.css">
 <script>
 if ('serviceWorker' in navigator) {
@@ -29,7 +29,7 @@ if ('serviceWorker' in navigator) {
           if(nw.state==='installed' && navigator.serviceWorker.controller){
             const bar=document.createElement('div');
             bar.id='sw-update-bar';
-            bar.innerHTML='<span>DeepRead 有新版本</span><button>立即更新</button>';
+            bar.innerHTML='<span>Apo 有新版本</span><button>立即更新</button>';
             bar.querySelector('button').onclick=()=>window.location.reload();
             document.body.appendChild(bar);
           }
@@ -42,22 +42,22 @@ if ('serviceWorker' in navigator) {
 </head>
 <body>
 <aside id="sidebar">
-  <div class="sb-brand"><img src="icon-192.png" alt="DeepRead"><span>DeepRead</span></div>
+  <div class="sb-brand"><img src="icon-192.png" alt="Apo"><span>Apo</span></div>
   <button class="sb-item cur" data-v="home"><span class="ti">🏠</span>首页</button>
   <button class="sb-item" data-v="voice"><span class="ti">🎙</span>声音</button>
   <button class="sb-item" data-v="library"><span class="ti">📚</span>书架</button>
   <button class="sb-item" data-v="mine"><span class="ti">👤</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">DeepRead v3.40</div>
+    <div class="sb-ver">Apo v3.41</div>
   </div>
 </aside>
 <div id="app">
 
   <!-- 启动页 -->
   <main id="view-splash" class="view hidden">
-    <div class="splash-logo"><img src="icon-192.png" alt="DeepRead"></div>
-    <h1 class="serif">DeepRead</h1>
+    <div class="splash-logo"><img src="icon-192.png" alt="Apo"></div>
+    <h1 class="serif">Apo</h1>
     <p class="slogan">在阅读与聆听中，<br>遇见更大的世界</p>
     <button id="btn-start" class="btn-primary">开始使用</button>
   </main>
@@ -65,7 +65,7 @@ if ('serviceWorker' in navigator) {
   <!-- 首页 -->
   <main id="view-home" class="view hidden">
     <header class="rd-top">
-      <div class="rd-logo">DeepRead</div>
+      <div class="rd-logo">Apo</div>
       <div class="rd-top-icons">
         <button class="rd-icbtn" id="btn-voice" title="声音">🎙</button>
         <button class="rd-avatar" id="btn-mine" title="我的">我</button>
@@ -262,7 +262,7 @@ if ('serviceWorker' in navigator) {
     <div id="view-mine-body" style="padding:6px 18px 20px">
       <div class="mine-head">
         <div class="avatar-btn lg">读</div>
-        <div><div class="t serif">DeepRead</div><div class="d">本地听书 · 数据只存本机</div></div>
+        <div><div class="t serif">Apo</div><div class="d">本地听书 · 数据只存本机</div></div>
       </div>
       <div class="set-group">
         <div class="sec">朗读引擎</div>
@@ -320,7 +320,7 @@ if ('serviceWorker' in navigator) {
         <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
         <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
       </div>
-      <div class="ver">DeepRead v3.40</div>
+      <div class="ver">Apo v3.41</div>
     </div>
   </main>
 
