@@ -886,50 +886,26 @@ if(searchTab==='web'){ // 网页导入
   };
   return;
 }
-if(searchTab==='ai'){ setSearchTab('ai'); $('#ai-results').innerHTML='<p class="sub">点上方选择来源后搜索</p>'; doAiSearch(q,'ol'); return; }
+if(searchTab==='ai'){ setSearchTab('ai'); doAiSearch(q); return; }
 box.innerHTML='<p class="sub" style="padding:10px 20px">搜索中…</p>';
 try{
   const rs=await searchGBK(q);
   renderEbooks(rs, box);
 }catch(e){ box.innerHTML='<p class="sub" style="padding:10px 20px">搜索失败：'+esc(e.message)+'</p>';}
 };
-/* AI搜索 Tab：多来源 */
-async function doAiSearch(q, src){
+/* AI搜索 Tab：默认直连 Anna's Archive，无选源步骤 */
+function doAiSearch(q){
 const box=$('#ai-results');
-document.querySelectorAll('#ai-src-row button').forEach(b=>b.classList.toggle('btn-primary', b.dataset.s===src));
-if(src==='aa'){
-  const cur=aaBase();
-  const mirrors=AA_MIRRORS.map(m=>`<button class="btn-ghost sm${m===cur?' btn-primary':''}" data-m="${m}">${m.replace('https://','')}</button>`).join('');
-  box.innerHTML=`<div class="sr"><div class="t">在 Anna's Archive 搜索「${esc(q)}」</div>
-  <div class="a">完全免费。海量图书资源，站内免费慢速下载 EPUB/PDF，再用首页 ＋ 导入书架即可阅读。</div>
-  <div class="ops"><button class="btn-primary sm" id="aa-go">去 Anna's Archive 搜</button></div>
-  <div class="sub" style="margin-top:10px">打不开？换个镜像：</div><div class="ops" id="aa-mirrors">${mirrors}</div></div>
-  <p class="sub">小贴士：用英文书名或 ISBN 搜更准；免费下载需排队稍等。</p>`;
-  $('#aa-go').onclick=()=>window.open(aaSearchURL(q),'_blank');
-  box.querySelectorAll('#aa-mirrors button').forEach(b=>{ b.onclick=()=>{ aaSet(b.dataset.m); doAiSearch(q,'aa'); }; });
-  return;
+const cur=aaBase();
+const mirrors=AA_MIRRORS.map(m=>`<button class="btn-ghost sm${m===cur?' btn-primary':''}" data-m="${m}">${m.replace('https://','')}</button>`).join('');
+box.innerHTML=`<div class="sr"><div class="t">在 Anna's Archive 搜索「${esc(q)}」</div>
+<div class="a">输入书名/作者，直接跳转 Anna's Archive 站内搜索结果。</div>
+<div class="ops"><button class="btn-primary sm" id="aa-go">搜索</button></div>
+<div class="sub" style="margin-top:10px">打不开？换个镜像：</div><div class="ops" id="aa-mirrors">${mirrors}</div></div>
+<p class="sub">小贴士：用英文书名或 ISBN 搜更准。</p>`;
+$('#aa-go').onclick=()=>window.open(aaSearchURL(q),'_blank');
+box.querySelectorAll('#aa-mirrors button').forEach(b=>{ b.onclick=()=>{ aaSet(b.dataset.m); doAiSearch(q); }; });
 }
-box.innerHTML='<p class="sub">搜索中…</p>';
-try{
-const rs = src==='ol'? await searchOL(q): src==='gb'? await searchGB(q): searchFPB(q);
-box.innerHTML='';
-if(!rs.length) box.innerHTML='<p class="sub">没有找到，换个关键词试试</p>';
-rs.forEach(r=>{
-const d=document.createElement('div'); d.className='sr';
-let meta=esc(r.author)+(r.year?' · '+esc(r.year):'');
-if(r.topic) meta+=' · '+esc(r.topic);
-d.innerHTML=`<div class="t">${esc(r.title)}</div><div class="a">${meta}</div><div class="ops"></div>`;
-const ops=d.querySelector('.ops');
-if(r.url){ const a=document.createElement('button'); a.className='btn-ghost'; a.textContent='打开链接';
-a.onclick=()=>window.open(r.url,'_blank'); ops.appendChild(a);}
-if(r.dl){ const b=document.createElement('button'); b.className='btn-ghost'; b.textContent='下载 EPUB';
-b.onclick=()=>window.open(r.dl,'_blank'); ops.appendChild(b);}
-box.appendChild(d);
-});
-}catch(e){ box.innerHTML='<p class="sub">搜索失败：'+esc(e.message)+'</p>';}
-}
-document.querySelectorAll('#ai-src-row button').forEach(b=>{ b.onclick=()=>doAiSearch($('#search-q').value.trim(), b.dataset.s); });
-
 /* ---------- 排版 ---------- */
 function applyType(){
 const c=$('#content'); if(!c) return;

@@ -49,7 +49,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">👤</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">DeepRead v3.38</div>
+    <div class="sb-ver">DeepRead v3.39</div>
   </div>
 </aside>
 <div id="app">
@@ -153,13 +153,6 @@ if ('serviceWorker' in navigator) {
     </div>
     <div id="search-results"></div>
     <div id="search-ai-extra" class="hidden" style="padding:0 20px 20px">
-      <p class="sub" style="margin:6px 0 10px">换个来源试试</p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap" id="ai-src-row">
-        <button class="btn-ghost sm" data-s="ol">Open Library</button>
-        <button class="btn-ghost sm" data-s="gb">Gutenberg</button>
-        <button class="btn-ghost sm" data-s="fpb">编程书单</button>
-        <button class="btn-ghost sm" data-s="aa">Anna's Archive</button>
-      </div>
       <div id="ai-results" style="margin-top:12px"></div>
     </div>
   </main>
@@ -327,7 +320,7 @@ if ('serviceWorker' in navigator) {
         <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
         <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
       </div>
-      <div class="ver">DeepRead v3.38</div>
+      <div class="ver">DeepRead v3.39</div>
     </div>
   </main>
 
