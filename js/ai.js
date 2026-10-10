@@ -27,6 +27,15 @@ analogy:t=>`请把下面这个概念用一个生动的日常类比讲清楚，�
 };
 
 
+/* ---------- Gutenberg 搜书（gutendex 公开 API，公版书免费） ---------- */
+async function searchGB(q){
+const r=await fetch(`https://gutendex.com/books?search=${encodeURIComponent(q)}`);
+if(!r.ok) throw new Error('Gutenberg 搜索失败 '+r.status);
+const j=await r.json();
+return (j.results||[]).slice(0,15).map(b=>({title:b.title,
+author:(b.authors||[]).map(a=>a.name).join(', ')||'未知作者', year:'',
+dl:(b.formats||{})['application/epub+zip']||''}));
+}
 /* ---------- Anna's Archive 镜像（.org/.se 已被扣押，.li 已停放；.pk 国内最稳） ---------- */
 const AA_MIRRORS=['https://annas-archive.pk','https://annas-archive.gl','https://annas-archive.gd'];
 function aaBase(){ try{ return localStorage.getItem('dr_aa_mirror')||AA_MIRRORS[0]; }catch(e){ return AA_MIRRORS[0]; } }
