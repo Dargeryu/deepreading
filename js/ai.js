@@ -80,6 +80,11 @@ out.sort((a,b)=>b.score-a.score);
 return out.slice(0,30);
 }
 
+/* ---------- Anna's Archive 镜像（.org/.se 已被扣押，.li 已停放；.pk 国内最稳） ---------- */
+const AA_MIRRORS=['https://annas-archive.pk','https://annas-archive.gl','https://annas-archive.gd'];
+function aaBase(){ try{ return localStorage.getItem('dr_aa_mirror')||AA_MIRRORS[0]; }catch(e){ return AA_MIRRORS[0]; } }
+function aaSet(m){ try{ localStorage.setItem('dr_aa_mirror', m); }catch(e){} }
+function aaSearchURL(q){ return aaBase()+'/search?q='+encodeURIComponent(q); }
 /* ---------- 电子书搜索：Google Books 优先（中文全），配额受限时 fallback Open Library ---------- */
 async function searchGBK(q){
 try{
@@ -90,7 +95,7 @@ try{
     const v=it.volumeInfo||{};
     return {title:v.title||'未知书名', author:(v.authors||[]).join('、')||'未知作者',
       year:(v.publishedDate||'').slice(0,4), cover:(v.imageLinks||{}).thumbnail||'',
-      aa:'https://annas-archive.org/search?q='+encodeURIComponent(v.title||q)};
+      aa:aaSearchURL(v.title||q)};
   });
   if(items.length) return items;
   throw new Error('gb empty');
@@ -102,7 +107,7 @@ try{
   return (j.docs||[]).map(d=>({title:d.title||'未知书名',
     author:(d.author_name||[]).join('、')||'未知作者', year:d.first_publish_year||'',
     cover:d.cover_i?`https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg`:'',
-    aa:'https://annas-archive.org/search?q='+encodeURIComponent(d.title||q)}));
+    aa:aaSearchURL(d.title||q)}));
 }
 }
 

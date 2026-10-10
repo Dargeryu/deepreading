@@ -898,11 +898,15 @@ async function doAiSearch(q, src){
 const box=$('#ai-results');
 document.querySelectorAll('#ai-src-row button').forEach(b=>b.classList.toggle('btn-primary', b.dataset.s===src));
 if(src==='aa'){
+  const cur=aaBase();
+  const mirrors=AA_MIRRORS.map(m=>`<button class="btn-ghost sm${m===cur?' btn-primary':''}" data-m="${m}">${m.replace('https://','')}</button>`).join('');
   box.innerHTML=`<div class="sr"><div class="t">在 Anna's Archive 搜索「${esc(q)}」</div>
-  <div class="a">海量图书资源。下载 EPUB/PDF 后用首页 ＋ 导入书架。</div>
-  <div class="ops"><button class="btn-primary sm" id="aa-go">去 Anna's Archive 搜</button></div></div>
-  <p class="sub">小贴士：用英文书名或 ISBN 搜更准。</p>`;
-  $('#aa-go').onclick=()=>window.open('https://annas-archive.org/search?q='+encodeURIComponent(q),'_blank');
+  <div class="a">完全免费。海量图书资源，站内免费慢速下载 EPUB/PDF，再用首页 ＋ 导入书架即可阅读。</div>
+  <div class="ops"><button class="btn-primary sm" id="aa-go">去 Anna's Archive 搜</button></div>
+  <div class="sub" style="margin-top:10px">打不开？换个镜像：</div><div class="ops" id="aa-mirrors">${mirrors}</div></div>
+  <p class="sub">小贴士：用英文书名或 ISBN 搜更准；免费下载需排队稍等。</p>`;
+  $('#aa-go').onclick=()=>window.open(aaSearchURL(q),'_blank');
+  box.querySelectorAll('#aa-mirrors button').forEach(b=>{ b.onclick=()=>{ aaSet(b.dataset.m); doAiSearch(q,'aa'); }; });
   return;
 }
 box.innerHTML='<p class="sub">搜索中…</p>';
