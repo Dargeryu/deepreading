@@ -49,7 +49,7 @@ function splitChapters(fullText){
 }
 
 /* ---------- IndexedDB ---------- */
-const DB='deepreading', VS=4;
+const DB='deepreading', VS=5;
 let db=null;
 function openDB(){
   return new Promise((res,rej)=>{
@@ -61,6 +61,7 @@ function openDB(){
       if(!d.objectStoreNames.contains('progress')) d.createObjectStore('progress',{keyPath:'bookId'});
       if(!d.objectStoreNames.contains('voices')) d.createObjectStore('voices',{keyPath:'id'});
       if(!d.objectStoreNames.contains('pagecache')) d.createObjectStore('pagecache',{keyPath:'key'});
+      if(!d.objectStoreNames.contains('sys')) d.createObjectStore('sys',{keyPath:'key'});
     };
     r.onsuccess=()=>{db=r.result;res();}; r.onerror=()=>rej(r.error);
   });
@@ -738,7 +739,7 @@ $('#file-input').onchange=async e=>{
   if(cur) await openBook(cur.id); else renderShelf();
   showView('library');
 };
-document.addEventListener('visibilitychange',()=>{ if(document.hidden) releaseWakeLock(); else if(wantPlay) ensureWakeLock(); });
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) releaseWakeLock(); else { if(wantPlay) ensureWakeLock(); scanDownloads(); } });
 
 /* ---------- 外部文件打开/分享入库（下载后点文件→用 Apo 打开） ---------- */
 async function importSharedFiles(files){
@@ -777,6 +778,57 @@ async function consumeShareTarget(){
   }catch(e){}
 }
 
+/* ---------- 下载自动上架：监听下载文件夹，新书自动入库 ---------- */
+async function sysGet(k){
+  try{ const r=await new Promise((res,rej)=>{ const t=_tx('sys').get(k); t.onsuccess=()=>res(t.result||null); t.onerror=()=>rej(t.error); }); return r?r.val:null; }
+  catch(e){ return null; }
+}
+async function sysPut(k,v){
+  try{ await new Promise((res,rej)=>{ const t=_tx('sys','readwrite').put({key:k,val:v}); t.onsuccess=res; t.onerror=()=>rej(t.error); }); }catch(e){}
+}
+async function enableAutoImport(){
+  if(!window.showDirectoryPicker){ toast('当前浏览器不支持文件夹监听，用“导入已下载的文件”手动导入'); return; }
+  try{
+    const h=await window.showDirectoryPicker({mode:'read'});
+    await sysPut('dlHandle', h);
+    toast('已开启：以后下载的新书会自动上架');
+    scanDownloads();
+  }catch(e){ if(e && e.name!=='AbortError') toast('开启失败：'+(e.message||e)); }
+}
+async function scanDownloads(){
+  const h=await sysGet('dlHandle');
+  if(!h || !h.values) return 0;
+  try{
+    if(await h.queryPermission({mode:'read'})!=='granted'){
+      if(await h.requestPermission({mode:'read'})!=='granted') return 0;
+    }
+  }catch(e){ return 0; }
+  let seen=[];
+  try{ seen=JSON.parse(localStorage.getItem('dr_auto_imported')||'[]'); }catch(e){}
+  const seenSet=new Set(seen);
+  let added=0;
+  try{
+    for await(const entry of h.values()){
+      if(entry.kind!=='file') continue;
+      const nm=entry.name||'';
+      if(!/\.(epub|pdf|txt|mobi|azw|fb2)$/i.test(nm)) continue;
+      if(seenSet.has(nm)) continue;
+      try{
+        const f=await entry.getFile();
+        if(!f.size) continue;
+        const b=await importFile(f).catch(()=>null);
+        if(b){ books.unshift(b); seenSet.add(nm); added++; }
+      }catch(e){}
+    }
+  }catch(e){}
+  if(added){
+    try{ localStorage.setItem('dr_auto_imported', JSON.stringify([...seenSet].slice(-300))); }catch(e){}
+    try{ renderShelf(); }catch(e){}
+    toast(`自动上架 ${added} 本新书`);
+  }
+  return added;
+}
+
 /* ---------- 启动 ---------- */
 (async()=>{
   if(!('speechSynthesis' in window)) toast('当前浏览器不支持语音朗读，换 Chrome / Edge / Safari 试试',4000);
@@ -784,6 +836,7 @@ async function consumeShareTarget(){
   await migrateV1();
   try{ await loadBooks(); }catch(e){}
   await consumeShareTarget();
+  scanDownloads();
   if(store.get('splash_done')) go('home'); else go('splash');
 })();
 
@@ -878,11 +931,13 @@ const cur=aaBase();
 const mirrors=AA_MIRRORS.map(m=>`<button class="btn-ghost sm${m===cur?' btn-primary':''}" data-m="${m}">${m.replace('https://','')}</button>`).join('');
 box.innerHTML=`<div class="sr"><div class="t">在 Anna's Archive 搜索「${esc(q)}」</div>
 <div class="a">Anna's Archive 无公开搜索接口，点下面跳转到它站内搜同样关键词。下载 EPUB/PDF 后，点击文件选择"用 Apo 打开"，自动加入书架。</div>
-<div class="ops"><button class="btn-primary sm" id="aa-go">去 Anna's Archive 搜</button><button class="btn-ghost sm" id="aa-import">导入已下载的文件</button></div>
+<div class="ops"><button class="btn-primary sm" id="aa-go">去 Anna's Archive 搜</button><button class="btn-ghost sm" id="aa-auto">开启下载自动上架</button><button class="btn-ghost sm" id="aa-import">导入已下载的文件</button></div>
 <div class="sub" style="margin-top:10px">打不开？换个镜像：</div><div class="ops" id="aa-mirrors">${mirrors}</div></div>
 <div class="sr" id="gb-sec"><div class="t">Gutenberg 搜索中…</div></div>`;
 $('#aa-go').onclick=()=>window.open(aaSearchURL(q),'_blank');
 $('#aa-import').onclick=()=>$('#file-input').click();
+const _aaAuto=$('#aa-auto');
+if(_aaAuto){ if(!window.showDirectoryPicker) _aaAuto.style.display='none'; else _aaAuto.onclick=()=>enableAutoImport(); }
 box.querySelectorAll('#aa-mirrors button').forEach(b=>{ b.onclick=()=>{ aaSet(b.dataset.m); doAiSearch(q); }; });
 // Gutenberg：App 内直接出结果
 searchGB(q).then(rs=>{
