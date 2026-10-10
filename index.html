@@ -49,7 +49,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">👤</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">DeepRead v3.34</div>
+    <div class="sb-ver">DeepRead v3.35</div>
   </div>
 </aside>
 <div id="app">
@@ -64,49 +64,44 @@ if ('serviceWorker' in navigator) {
 
   <!-- 首页 -->
   <main id="view-home" class="view hidden">
-    <header class="home-top">
-      <div class="brand serif">DeepRead</div>
-      <button id="btn-mine" class="avatar-btn" title="我的">读</button>
+    <header class="rd-top">
+      <div class="rd-logo">DeepRead</div>
+      <div class="rd-top-icons">
+        <button class="rd-icbtn" id="btn-voice" title="声音">🎙</button>
+        <button class="rd-avatar" id="btn-mine" title="我的">我</button>
+      </div>
     </header>
 
-    <div class="search-pill" id="home-search"><span class="sp-ic">✦</span><span>搜索书名、作者</span></div>
+    <div class="rd-search" id="home-search"><span>✨</span><span>搜索书名、作者…</span></div>
 
-    <div class="banner" id="banner">
-      <div class="slides" id="banner-slides">
-        <div class="slide" style="background-image:url('banner-ink.jpg')">
-          <div class="s-t serif">把书听成故事</div>
-          <div class="s-d">本地解析 · 断点续听 · AI 讲解</div>
-        </div>
-        <div class="slide grad2">
-          <div class="s-t serif">✦ AI 助手已上线</div>
-          <div class="s-d">讲解 · 费曼模式 · 类比四格分镜</div>
-        </div>
+    <div class="rd-banner" id="banner">
+      <div class="rb-txt">
+        <div class="rb-t">✦ AI 排版上新</div>
+        <div class="rb-d">智能断行修复 · 标点规范 · 一键校对</div>
+        <button class="rb-btn" id="banner-btn">去看看 ›</button>
       </div>
-      <div class="dots" id="banner-dots"><i class="on"></i><i></i></div>
+      <div class="rb-bg"></div>
     </div>
 
     <div id="continue-wrap" class="hidden">
-      <div class="sec-head"><h3 class="serif">继续阅读</h3></div>
-      <div class="h-scroll" id="cont-list"></div>
+      <div class="rd-sec"><h3>继续阅读</h3></div>
+      <div class="rd-hscroll" id="cont-list"></div>
     </div>
 
-    <div class="sec-head"><h3 class="serif">经典必读</h3><button class="more" id="classic-more">更多 ›</button></div>
-    <div class="h-scroll" id="classic-list"></div>
+    <div class="rd-sec"><h3>经典必读 <small>›</small></h3></div>
+    <div class="rd-hscroll" id="classic-list"></div>
 
-    <div class="sec-head"><h3 class="serif">阅读统计</h3></div>
-    <div class="stat-card">
-      <div class="ring-wrap">
-        <svg viewBox="0 0 120 120" class="ring">
-          <circle cx="60" cy="60" r="52" class="ring-bg"/>
-          <circle cx="60" cy="60" r="52" class="ring-fg" id="stat-ring-fg"/>
+    <div class="rd-sec"><h3>阅读统计 <small>›</small></h3></div>
+    <div class="rd-stat">
+      <div class="rd-ring">
+        <svg viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="52" class="rg-bg"/>
+          <circle cx="60" cy="60" r="52" class="rg-fg" id="stat-ring-fg"/>
         </svg>
-        <div class="ring-center"><div class="lb">今日听读</div><div class="tm serif" id="stat-time">0:00</div></div>
-      </div>
-      <div class="stat-side">
-        <button class="goal-pill" id="stat-goal">目标 <b id="stat-target">30分钟</b> ▾</button>
-        <div class="streak">已连续达标 <span id="stat-streak">🔥0天</span></div>
+        <div class="rd-ring-c"><div class="lb">今日阅读时长</div><div class="tm" id="stat-time">0:00</div></div>
       </div>
     </div>
+    <div class="rd-goal"><button id="stat-goal">目标 <b id="stat-target">30分钟</b> ▾</button></div>
 
     <div id="home-empty" class="empty hidden">
       <svg class="empty-illus" viewBox="0 0 150 112" aria-hidden="true">
@@ -123,33 +118,18 @@ if ('serviceWorker' in navigator) {
 
   <!-- 书架 -->
   <main id="view-library" class="view hidden">
-    <header class="lib-top">
-      <div class="lib-title serif">书架</div>
-      <div class="lib-icons">
-        <button id="btn-lib-search" class="icon-btn" title="搜书">🔍</button>
+    <header class="rd-lib-top">
+      <div class="t">书架</div>
+      <div class="ics">
+        <button id="btn-lib-search" class="rd-icbtn" title="搜书">🔍</button>
+        <button id="btn-lib-sort" class="rd-icbtn" title="排序">⇅</button>
       </div>
     </header>
     <div id="view-shelf">
       <div id="shelf-has">
-        <div class="sec-head" style="margin-top:6px"><h3 class="serif">最近阅读</h3></div>
-        <div id="shelf-recent" class="h-scroll shelf-recent"></div>
-        <div class="shelf-all-head"><h3 id="lib-count"></h3>
-          <div class="shelf-filters">
-            <select id="shelf-fmt"><option value="">全部格式</option></select>
-            <select id="shelf-sort"><option value="recent">最近阅读</option><option value="title">书名排序</option></select>
-          </div>
-        </div>
-        <div id="shelf-grid" class="shelf-grid"></div>
+        <div id="shelf-list"></div>
       </div>
       <div id="shelf-empty" class="empty hidden">
-        <svg class="empty-illus" viewBox="0 0 150 112" aria-hidden="true">
-          <circle cx="75" cy="56" r="52" fill="#f7f2e7"/>
-          <path d="M48 72 Q61 64 75 70 Q89 64 102 72 L102 46 Q89 38 75 44 Q61 38 48 46 Z" fill="#fffdf8" stroke="#2b2620" stroke-width="2.5" stroke-linejoin="round"/>
-          <line x1="75" y1="44" x2="75" y2="70" stroke="#2b2620" stroke-width="2"/>
-          <path d="M36 50 q-7 6 0 13" stroke="#c9a86a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-          <path d="M112 50 q8 7 0 13" stroke="#b5493a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-          <path d="M120 44 q12 11 0 25" stroke="#b5493a" stroke-width="2.5" fill="none" stroke-linecap="round" opacity=".5"/>
-        </svg>
         <p class="serif">书架还是空的</p>
         <p class="sub">导入 PDF / EPUB / DOCX / TXT，把书听成故事</p>
         <button id="btn-import-empty" class="btn-primary">导入第一本书</button>
@@ -160,21 +140,27 @@ if ('serviceWorker' in navigator) {
 
   <!-- 搜书（正版来源） -->
   <main id="view-search" class="view hidden">
-    <header class="topbar"><div class="brand serif">搜书</div></header>
-    <div id="view-search-body" style="padding:6px 18px 20px">
-      <p class="sub" style="margin:8px 0 14px">Open Library 借阅 · Project Gutenberg 公版免费下载</p>
-      <div class="search-bar">
-        <input id="search-q" placeholder="书名 / 作者，如：三体 刘慈欣">
-        <select id="search-src">
-          <option value="ol">Open Library</option>
-          <option value="gb">Gutenberg</option>
-          <option value="fpb">编程书单</option>
-          <option value="aa">Anna's Archive</option>
-        </select>
-        <button id="btn-search" class="btn-primary sm">搜索</button>
-        <button id="btn-search-mic" class="btn-ghost sm" title="语音输入">🎤</button>
+    <div class="s-top">
+      <button class="s-back" id="search-back">‹</button>
+      <input class="s-input" id="search-q" placeholder="搜索书名、作者">
+      <button class="s-go" id="btn-search">➤</button>
+    </div>
+    <div class="s-tabs" id="search-tabs">
+      <button class="s-tab cur" data-tab="all">全部</button>
+      <button class="s-tab" data-tab="ebook">电子书</button>
+      <button class="s-tab" data-tab="web">网页</button>
+      <button class="s-tab" data-tab="ai">AI搜索</button>
+    </div>
+    <div id="search-results"></div>
+    <div id="search-ai-extra" class="hidden" style="padding:0 20px 20px">
+      <p class="sub" style="margin:6px 0 10px">换个来源试试</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap" id="ai-src-row">
+        <button class="btn-ghost sm" data-s="ol">Open Library</button>
+        <button class="btn-ghost sm" data-s="gb">Gutenberg</button>
+        <button class="btn-ghost sm" data-s="fpb">编程书单</button>
+        <button class="btn-ghost sm" data-s="aa">Anna's Archive</button>
       </div>
-      <div id="search-results"></div>
+      <div id="ai-results" style="margin-top:12px"></div>
     </div>
   </main>
 
@@ -341,7 +327,7 @@ if ('serviceWorker' in navigator) {
         <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
         <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
       </div>
-      <div class="ver">DeepRead v3.34</div>
+      <div class="ver">DeepRead v3.35</div>
     </div>
   </main>
 
@@ -497,10 +483,9 @@ if ('serviceWorker' in navigator) {
 
   <!-- 底部导航 -->
   <nav id="tabbar">
-    <button class="tab cur" data-v="home"><span class="ti">🏠</span>首页</button>
-    <button class="tab" data-v="voice"><span class="ti">🎙</span>声音</button>
+    <button class="tab cur" data-v="home"><span class="ti">⌂</span>首页</button>
     <button id="tab-add" class="tab-add" title="导入">＋</button>
-    <button class="tab" data-v="library"><span class="ti">📚</span>书架</button>
+    <button class="tab" data-v="library"><span class="ti">📖</span>书架</button>
   </nav>
 
   <div id="toast" class="toast hidden"></div>

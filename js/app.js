@@ -278,41 +278,22 @@ async function renderShelf(){
   $('#shelf-empty').classList.toggle('hidden', has);
   $('#shelf-has').classList.toggle('hidden', !has);
   if(!has){ updateMiniPlayer(); return; }
-  // 格式筛选
-  const fmtSel=$('#shelf-fmt'), keep=fmtSel.value;
-  fmtSel.innerHTML='<option value="">全部格式</option>';
-  [...new Set(books.map(b=>(b.format||'').toLowerCase()).filter(Boolean))].sort()
-    .forEach(f=>{ const o=document.createElement('option'); o.value=f; o.textContent=f.toUpperCase(); fmtSel.appendChild(o); });
-  fmtSel.value=[...fmtSel.options].some(o=>o.value===keep)?keep:'';
-  shelfFmt=fmtSel.value;
-  const list=books.filter(b=>!shelfFmt||(b.format||'').toLowerCase()===shelfFmt);
-  const sorted=[...list];
+  const sorted=[...books];
   if(shelfSort==='title') sorted.sort((a,b)=>String(a.title).localeCompare(String(b.title),'zh'));
-  $('#lib-count').textContent=`全部书籍 · ${sorted.length} 本`;
-  // 最近阅读横滑
-  const recent=[...books].sort((a,b)=>b.progress.updatedAt-a.progress.updatedAt).slice(0,8);
-  const rc=$('#shelf-recent'); rc.innerHTML='';
-  recent.forEach(b=>{
-    const pct=Math.round(100*b.progress.idx/Math.max(1,b.total));
-    const el=document.createElement('div'); el.className='recent-card';
-    el.innerHTML=`<div class="cov-wrap"><div class="cover cov3d" style="background:${coverBG(b)}">${esc((b.title||'?').slice(0,6))}</div>${pct?`<span class="pct-badge">${pct}%</span>`:''}</div>
-      <div class="info"><div class="t">${esc(b.title)}</div><div class="d">${pct?('已读 '+pct+'%'):'未开始'}</div></div>`;
-    el.onclick=()=>openDetail(b.id);
-    rc.appendChild(el);
-  });
-  // 全部书籍网格
-  const grid=$('#shelf-grid'); grid.innerHTML='';
+  else sorted.sort((a,b)=>b.progress.updatedAt-a.progress.updatedAt);
+  const list=$('#shelf-list'); list.innerHTML='';
   sorted.forEach(b=>{
     const pct=Math.round(100*b.progress.idx/Math.max(1,b.total));
-    const el=document.createElement('div'); el.className='grid-card';
-    el.innerHTML=`<div class="cov-wrap"><div class="cover cov3d" style="background:${coverBG(b)}">${esc((b.title||'?').slice(0,10))}</div>
-      ${pct?`<span class="pct-badge">${pct}%</span>`:''}
-      <button class="grid-more" title="更多操作">⋯</button></div>
-      <div class="t">${esc(b.title)}</div>
-      <div class="a">${esc(b.author||(b.format||'').toUpperCase()||'本地导入')}</div>`;
-    el.onclick=e=>{ if(e.target.closest('.grid-more'))return; openDetail(b.id); };
-    el.querySelector('.grid-more').onclick=e=>{ e.stopPropagation(); openBookMenu(b); };
-    grid.appendChild(el);
+    const done=b.progress.idx>=b.total-1&&b.total>1;
+    const el=document.createElement('div'); el.className='bk-row';
+    el.innerHTML=`<div class="cov"><div class="ct" style="background:${coverBG(b)}">${esc((b.title||'?').slice(0,10))}</div>
+      ${pct?`<span class="pbdg${done?' done':''}">${done?'✓':pct+'%'}</span>`:''}</div>
+      <div class="inf"><div class="t">${esc(b.title)}</div>
+      <div class="a">${esc(b.author||'未知作者')}</div>
+      <span class="fb">${esc((b.format||'').toUpperCase()||'BOOK')}</span></div>`;
+    el.onclick=()=>openDetail(b.id);
+    el.oncontextmenu=e=>{ e.preventDefault(); openBookMenu(b); };
+    list.appendChild(el);
   });
   updateMiniPlayer();
 }
@@ -331,8 +312,7 @@ $('#bm-dl').onclick=()=>{ closeSheets(); if(menuBook) downloadBook(menuBook); };
 $('#bm-del').onclick=async()=>{ const b=menuBook; closeSheets(); if(!b) return;
   if(confirm(`删除《${b.title}》？`)){ await idb.del(b.id); if(cur&&cur.id===b.id){cur=null;stopSpeak();} renderShelf(); } };
 $('#btn-lib-search').onclick=()=>go('search');
-$('#shelf-sort').onchange=e=>{ shelfSort=e.target.value; renderShelf(); };
-$('#shelf-fmt').onchange=e=>{ shelfFmt=e.target.value; renderShelf(); };
+$('#btn-lib-sort').onclick=()=>{ shelfSort=shelfSort==='title'?'recent':'title'; toast(shelfSort==='title'?'按书名排序':'按最近阅读排序'); renderShelf(); };
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 async function downloadBook(b){
   const f=await idb.getFile(b.id).catch(()=>null);
@@ -358,7 +338,8 @@ function go(name){
   if(name==='library'){ stopSpeak(); renderShelf(); }
   else if(name==='home'){ stopSpeak(); renderHome(); }
   else if(name==='voice'){ stopSpeak(); renderVoice(); }
-  else if(name==='search'||name==='mine'){ stopSpeak(); }
+  else if(name==='search'){ stopSpeak(); setSearchTab('all'); }
+  else if(name==='mine'){ stopSpeak(); }
   updateMiniPlayer();
   window.scrollTo(0,0);
 }
@@ -847,51 +828,103 @@ $('#btn-text-do').onclick=async()=>{
   if(b){ books.unshift(b); go('library'); }
 };
 
-/* ---------- 正版搜书 ---------- */
+/* ---------- 搜书（4 Tab：全部/电子书/网页/AI搜索） ---------- */
+let searchTab='all';
+function setSearchTab(t){
+  searchTab=t;
+  document.querySelectorAll('#search-tabs .s-tab').forEach(b=>b.classList.toggle('cur', b.dataset.tab===t));
+  $('#search-ai-extra').classList.toggle('hidden', t!=='ai');
+  if(t!=='ai') $('#search-results').innerHTML='';
+}
+document.querySelectorAll('#search-tabs .s-tab').forEach(b=>{ b.onclick=()=>setSearchTab(b.dataset.tab); });
+$('#search-back').onclick=()=>go('home');
+/* 电子书结果卡：封面/书名/作者/Anna's Archive 来源/格式 + 下载直达 */
+function renderEbooks(rs, box){
+  box.innerHTML='';
+  if(!rs.length){ box.innerHTML='<p class="sub" style="padding:10px 20px">没有找到，换个关键词试试</p>'; return; }
+  const card=document.createElement('div'); card.className='s-card';
+  card.insertAdjacentHTML('beforeend','<div class="s-sec-t" style="padding:10px 10px 2px">电子书</div>');
+  rs.slice(0,4).forEach(r=>{
+    const d=document.createElement('div'); d.className='s-book';
+    d.innerHTML=`<div class="cov">${r.cover?`<img src="${esc(r.cover)}" alt="" loading="lazy">`:`<div class="ct" style="background:#3b2f4a">${esc((r.title||'?').slice(0,8))}</div>`}</div>
+      <div class="inf"><div class="t">${esc(r.title)}</div><div class="a">${esc(r.author)}${r.year?' · '+esc(r.year):''}</div>
+      <div class="src">Anna's Archive</div><span class="fb">EPUB / PDF</span>
+      <div class="ops"><button class="btn-ghost sm">去下载</button></div></div>`;
+    d.querySelector('.ops button').onclick=e=>{ e.stopPropagation(); window.open(r.aa,'_blank'); };
+    card.appendChild(d);
+  });
+  const more=document.createElement('button'); more.className='s-more';
+  more.textContent=`更多电子书（${rs.length}本）`;
+  more.onclick=()=>{
+    card.querySelectorAll('.s-book').forEach(x=>x.remove()); more.remove();
+    rs.forEach(r=>{
+      const d=document.createElement('div'); d.className='s-book';
+      d.innerHTML=`<div class="cov">${r.cover?`<img src="${esc(r.cover)}" alt="" loading="lazy">`:`<div class="ct" style="background:#3b2f4a">${esc((r.title||'?').slice(0,8))}</div>`}</div>
+        <div class="inf"><div class="t">${esc(r.title)}</div><div class="a">${esc(r.author)}</div>
+        <div class="src">Anna's Archive</div><span class="fb">EPUB / PDF</span>
+        <div class="ops"><button class="btn-ghost sm">去下载</button></div></div>`;
+      d.querySelector('.ops button').onclick=e=>{ e.stopPropagation(); window.open(r.aa,'_blank'); };
+      card.appendChild(d);
+    });
+  };
+  card.appendChild(more);
+  card.insertAdjacentHTML('beforeend','<p class="sub" style="padding:8px 12px">在 Anna\'s Archive 下载 EPUB/PDF 后，用首页 ＋ 导入即可阅读</p>');
+  box.appendChild(card);
+}
 $('#btn-search').onclick=async()=>{
 const q=$('#search-q').value.trim(); if(!q){toast('输入书名或作者');return;}
-const src=$('#search-src').value, box=$('#search-results');
-/* Anna's Archive 无公开 API 且有反爬，PWA 端无法直接抓取：用深度链接跳转其站内搜索 */
+const box=$('#search-results');
+if(searchTab==='web'){ // 网页导入
+  box.innerHTML=`<div class="s-card" style="padding:16px"><p class="sub" style="margin:0 0 10px">粘贴文章网页链接，抓取正文导入书架</p>
+    <div style="display:flex;gap:8px"><input class="s-input" id="web-url" placeholder="https://…" style="background:#fff">
+    <button class="btn-primary sm" id="web-go">导入</button></div></div>`;
+  $('#web-go').onclick=async()=>{
+    const url=$('#web-url').value.trim();
+    if(!/^https?:\/\//i.test(url)){ toast('粘贴完整的网页链接（http开头）'); return; }
+    const b=await importFromURL(url).catch(e=>{ toast('导入失败：'+e.message,3000); return null; });
+    if(b){ books.unshift(b); go('library'); }
+  };
+  return;
+}
+if(searchTab==='ai'){ setSearchTab('ai'); $('#ai-results').innerHTML='<p class="sub">点上方选择来源后搜索</p>'; doAiSearch(q,'ol'); return; }
+box.innerHTML='<p class="sub" style="padding:10px 20px">搜索中…</p>';
+try{
+  const rs=await searchGBK(q);
+  renderEbooks(rs, box);
+}catch(e){ box.innerHTML='<p class="sub" style="padding:10px 20px">搜索失败：'+esc(e.message)+'</p>';}
+};
+/* AI搜索 Tab：多来源 */
+async function doAiSearch(q, src){
+const box=$('#ai-results');
+document.querySelectorAll('#ai-src-row button').forEach(b=>b.classList.toggle('btn-primary', b.dataset.s===src));
 if(src==='aa'){
-box.innerHTML='';
-const d=document.createElement('div'); d.className='sr';
-d.innerHTML=`<div class="t">在 Anna's Archive 搜索「${esc(q)}」</div><div class="a">海量图书/论文资源站。找到后下载 EPUB 或 PDF，再用首页「导入」放进书架即可阅读。</div><div class="ops"></div>`;
-const ops=d.querySelector('.ops');
-const go=document.createElement('button'); go.className='btn-primary sm'; go.textContent="去 Anna's Archive 搜";
-go.onclick=()=>window.open('https://annas-archive.org/search?q='+encodeURIComponent(q),'_blank');
-ops.appendChild(go);
-const tip=document.createElement('p'); tip.className='sub';
-tip.textContent='小贴士：用英文书名或 ISBN 搜更准；站内下载通常要等一会儿（免费慢速通道）。';
-box.appendChild(d); box.appendChild(tip);
-return;
+  box.innerHTML=`<div class="sr"><div class="t">在 Anna's Archive 搜索「${esc(q)}」</div>
+  <div class="a">海量图书资源。下载 EPUB/PDF 后用首页 ＋ 导入书架。</div>
+  <div class="ops"><button class="btn-primary sm" id="aa-go">去 Anna's Archive 搜</button></div></div>
+  <p class="sub">小贴士：用英文书名或 ISBN 搜更准。</p>`;
+  $('#aa-go').onclick=()=>window.open('https://annas-archive.org/search?q='+encodeURIComponent(q),'_blank');
+  return;
 }
 box.innerHTML='<p class="sub">搜索中…</p>';
 try{
 const rs = src==='ol'? await searchOL(q): src==='gb'? await searchGB(q): searchFPB(q);
 box.innerHTML='';
 if(!rs.length) box.innerHTML='<p class="sub">没有找到，换个关键词试试</p>';
-if(src==='fpb'&&rs.length) box.innerHTML='<p class="sub">免费编程书单（GitHub free-programming-books，共'+(typeof FPB_INDEX!=='undefined'?FPB_INDEX.length:0)+'本）</p>';
 rs.forEach(r=>{
 const d=document.createElement('div'); d.className='sr';
 let meta=esc(r.author)+(r.year?' · '+esc(r.year):'');
-if(src==='fpb'&&r.topic) meta=(meta?meta+' · ':'')+esc(r.topic);
-if(src==='fpb'&&r.fmts) meta+=' <span class="fmt">'+esc(r.fmts)+'</span>'+(r.archived?' <span class="sub">(存档版)</span>':'');
+if(r.topic) meta+=' · '+esc(r.topic);
 d.innerHTML=`<div class="t">${esc(r.title)}</div><div class="a">${meta}</div><div class="ops"></div>`;
 const ops=d.querySelector('.ops');
-if(src==='fpb'&&(r.fmts||'').indexOf('HTML')>=0||(r.fmts||'').indexOf('WEB')>=0){
-const im=document.createElement('button'); im.className='btn-ghost'; im.textContent='导入书架';
-im.onclick=async()=>{ closeSheets(); const b=await importFromURL(r.url).catch(e=>{ toast('导入失败：'+e.message,3000); return null; }); if(b){ books.unshift(b); go('library'); } };
-ops.appendChild(im);
-}
-if(r.url){ const a=document.createElement('button'); a.className='btn-ghost'; a.textContent=src==='fpb'?'打开链接':'去借阅/查看';
+if(r.url){ const a=document.createElement('button'); a.className='btn-ghost'; a.textContent='打开链接';
 a.onclick=()=>window.open(r.url,'_blank'); ops.appendChild(a);}
 if(r.dl){ const b=document.createElement('button'); b.className='btn-ghost'; b.textContent='下载 EPUB';
 b.onclick=()=>window.open(r.dl,'_blank'); ops.appendChild(b);}
-if(!r.url&&!r.dl) ops.innerHTML='<span class="sub">暂无可用链接</span>';
 box.appendChild(d);
 });
 }catch(e){ box.innerHTML='<p class="sub">搜索失败：'+esc(e.message)+'</p>';}
-};
+}
+document.querySelectorAll('#ai-src-row button').forEach(b=>{ b.onclick=()=>doAiSearch($('#search-q').value.trim(), b.dataset.s); });
 
 /* ---------- 排版 ---------- */
 function applyType(){
@@ -1037,10 +1070,12 @@ const CLASSICS=[
   {title:'唐诗三百首', q:'唐诗三百首', c:['#4a2e4a','#7a4a7a']},
   {title:'孙子兵法', q:'孙子兵法', c:['#5a4a2e','#8a7a4a']},
 ];
-function spineHTML(cl){
-  return `<div class="classic-item" data-q="${esc(cl.q)}">
-    <div class="spine" style="background:linear-gradient(150deg,${cl.c[0]},${cl.c[1]})"><span>${esc(cl.title)}</span></div>
-    <div class="t">${esc(cl.title)}</div></div>`;
+function rdCardHTML(b){
+  const pct=Math.round(100*b.progress.idx/Math.max(1,b.total));
+  const done=b.progress.idx>=b.total-1&&b.total>1;
+  return `<div class="cov"><div class="ct" style="background:${coverBG(b)}">${esc((b.title||'?').slice(0,10))}</div>
+    ${pct?`<span class="pbdg${done?' done':''}">${done?'✓':pct+'%'}</span>`:''}</div>
+    <div class="nm">${esc(b.title)}</div>`;
 }
 async function renderHome(){
   if(!books.length){ try{ await loadBooks(); }catch(e){} }
@@ -1052,26 +1087,27 @@ async function renderHome(){
   $('#continue-wrap').classList.toggle('hidden', !cont.length);
   const cl=$('#cont-list'); cl.innerHTML='';
   cont.forEach(b=>{
-    const pct=Math.round(100*b.progress.idx/Math.max(1,b.total));
-    const d=document.createElement('div'); d.className='cont-item';
-    d.innerHTML=`<div class="cov-wrap">${coverHTML(b,'sm')}<span class="pct-badge">${pct}%</span></div>
-      <div class="t">${esc(b.title)}</div><div class="d">已读 ${pct}%</div>`;
+    const d=document.createElement('div'); d.className='rd-bcard';
+    d.innerHTML=rdCardHTML(b);
     d.onclick=()=>{ returnView='home'; openDetail(b.id); };
     cl.appendChild(d);
   });
   // 经典必读
   const cll=$('#classic-list'); cll.innerHTML='';
-  CLASSICS.forEach(c=>{ cll.insertAdjacentHTML('beforeend', spineHTML(c)); });
-  cll.querySelectorAll('.classic-item').forEach(el=>{
-    el.onclick=()=>{ go('search'); $('#search-q').value=el.dataset.q; $('#btn-search').click(); };
+  CLASSICS.forEach(c=>{
+    const d=document.createElement('div'); d.className='rd-bcard'; d.dataset.q=c.q;
+    d.innerHTML=`<div class="cov"><div class="ct" style="background:linear-gradient(150deg,${c.c[0]},${c.c[1]})">${esc(c.title)}</div></div><div class="nm">${esc(c.title)}</div>`;
+    d.onclick=()=>{ go('search'); $('#search-q').value=c.q; setSearchTab('ebook'); $('#btn-search').click(); };
+    cll.appendChild(d);
   });
   renderStats();
   updateMiniPlayer();
 }
 $('#home-search').onclick=()=>{ go('search'); setTimeout(()=>$('#search-q').focus(),80); };
 $('#btn-mine').onclick=()=>go('mine');
+$('#btn-voice').onclick=()=>go('voice');
 $('#mine-back').onclick=()=>go('home');
-$('#classic-more').onclick=()=>go('search');
+$('#banner-btn').onclick=()=>{ go('library'); setTimeout(()=>openImportSheet(),300); };
 /* 横幅轮播 */
 let bannerIdx=0;
 function bannerGo(i){
@@ -1236,4 +1272,3 @@ function voiceInput(target, btn){
   try{ r.start(); }catch(e){ done(); toast('启动失败：'+e.message); }
 }
 $('#btn-ai-mic').onclick=e=>voiceInput($('#ai-input'), e.currentTarget);
-$('#btn-search-mic').onclick=e=>voiceInput($('#search-q'), e.currentTarget);

@@ -80,6 +80,32 @@ out.sort((a,b)=>b.score-a.score);
 return out.slice(0,30);
 }
 
+/* ---------- 电子书搜索：Google Books 优先（中文全），配额受限时 fallback Open Library ---------- */
+async function searchGBK(q){
+try{
+  const r=await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=20&printType=books`);
+  if(!r.ok) throw new Error('gb '+r.status);
+  const j=await r.json();
+  const items=(j.items||[]).map(it=>{
+    const v=it.volumeInfo||{};
+    return {title:v.title||'未知书名', author:(v.authors||[]).join('、')||'未知作者',
+      year:(v.publishedDate||'').slice(0,4), cover:(v.imageLinks||{}).thumbnail||'',
+      aa:'https://annas-archive.org/search?q='+encodeURIComponent(v.title||q)};
+  });
+  if(items.length) return items;
+  throw new Error('gb empty');
+}catch(e){
+  // fallback：Open Library（封面 via covers.openlibrary.org）
+  const r=await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=20&fields=key,title,author_name,first_publish_year,cover_i`);
+  if(!r.ok) throw new Error('搜索失败 '+r.status);
+  const j=await r.json();
+  return (j.docs||[]).map(d=>({title:d.title||'未知书名',
+    author:(d.author_name||[]).join('、')||'未知作者', year:d.first_publish_year||'',
+    cover:d.cover_i?`https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg`:'',
+    aa:'https://annas-archive.org/search?q='+encodeURIComponent(d.title||q)}));
+}
+}
+
 /* ---------- ElevenLabs 连接诊断 ---------- */
 async function elevenDiag(){
   const key=(store.get('eleven_key')||'').trim();

@@ -590,3 +590,92 @@ body.playing .fp-wave i.on{animation:wv 1.15s ease-in-out infinite}
 .ts-opt i{display:block;font-style:normal;font-size:12.5px;color:var(--sub,#8e8e93);margin-top:4px;line-height:1.6}
 .ts-bar{height:8px;background:#f0f0f2;border-radius:99px;overflow:hidden}
 .ts-bar #ts-bar-fill{height:100%;width:0;background:linear-gradient(90deg,#ff9500,#ffb340);border-radius:99px;transition:width .3s}
+
+/* ============ Readify 风格重构（v3.35） ============ */
+/* 首页顶栏：粗黑 Logo + 右侧图标 */
+.rd-top{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 6px}
+.rd-logo{font-size:27px;font-weight:800;letter-spacing:-.5px;color:#111}
+.rd-top-icons{display:flex;align-items:center;gap:14px}
+.rd-icbtn{background:none;border:none;font-size:21px;color:#111;padding:4px;cursor:pointer}
+.rd-avatar{width:38px;height:38px;border-radius:50%;background:#f06292;color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer}
+/* 首页搜索框 */
+.rd-search{display:flex;align-items:center;gap:8px;background:#f4f4f6;border-radius:14px;margin:10px 20px 14px;padding:13px 16px;color:#9a9aa0;font-size:14.5px;cursor:pointer}
+/* 推广横幅 */
+.rd-banner{margin:0 20px 20px;border-radius:16px;overflow:hidden;position:relative;background:#2f3a2e;color:#fff;min-height:118px;display:flex;align-items:center}
+.rd-banner .rb-t{font-size:19px;font-weight:800;margin-bottom:4px}
+.rd-banner .rb-d{font-size:12.5px;opacity:.75;margin-bottom:10px}
+.rd-banner .rb-btn{display:inline-block;background:#c9a86a;color:#fff;font-size:13px;font-weight:700;border-radius:99px;padding:7px 16px;border:none;cursor:pointer}
+.rd-banner .rb-txt{padding:18px;position:relative;z-index:2}
+.rd-banner .rb-bg{position:absolute;right:0;top:0;bottom:0;width:55%;background:linear-gradient(100deg,transparent,#3d4a3a);opacity:.9}
+/* 分区标题 */
+.rd-sec{display:flex;align-items:center;justify-content:space-between;padding:4px 20px 12px}
+.rd-sec h3{font-size:16.5px;font-weight:800;margin:0;color:#111}
+.rd-sec .more{color:#111;font-size:16.5px;font-weight:800;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:2px}
+.rd-sec .more small{color:#b0b0b8;font-weight:400;font-size:14px}
+/* 横滑书卡 */
+.rd-hscroll{display:flex;gap:14px;overflow-x:auto;padding:0 20px 18px;scrollbar-width:none}
+.rd-hscroll::-webkit-scrollbar{display:none}
+.rd-bcard{flex:0 0 108px;cursor:pointer}
+.rd-bcard .cov{position:relative;width:108px;height:148px;border-radius:8px;overflow:hidden;background:#eee;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.rd-bcard .cov img{width:100%;height:100%;object-fit:cover;display:block}
+.rd-bcard .cov .ct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:10px;text-align:center;font-size:13px;font-weight:700;color:#fff}
+.rd-bcard .pbdg{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.85);color:#fff;font-size:11px;font-weight:700;border-radius:6px;padding:2px 7px}
+.rd-bcard .pbdg.done{background:#22a355}
+.rd-bcard .nm{font-size:12.5px;color:#333;margin-top:7px;line-height:1.35;height:34px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+/* 阅读统计 */
+.rd-stat{margin:0 20px 22px;display:flex;justify-content:center;padding:8px 0 4px}
+.rd-ring{position:relative;width:230px;height:230px}
+.rd-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.rd-ring .rg-bg{fill:none;stroke:#f1f1f4;stroke-width:11}
+.rd-ring .rg-fg{fill:none;stroke:#111;stroke-width:11;stroke-linecap:round;stroke-dasharray:327;stroke-dashoffset:327;transition:stroke-dashoffset .6s}
+.rd-ring-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.rd-ring-c .lb{font-size:14px;color:#333;margin-bottom:6px}
+.rd-ring-c .tm{font-size:52px;font-weight:800;color:#111;letter-spacing:1px;font-variant-numeric:tabular-nums}
+.rd-goal{display:flex;justify-content:center;margin:-6px 0 26px}
+.rd-goal button{background:#f4f4f6;border:none;border-radius:99px;padding:9px 20px;font-size:13.5px;color:#333;cursor:pointer}
+/* 底部导航：首页 / 大黑＋ / 书架 */
+#tabbar{display:flex!important;justify-content:space-around;align-items:center;background:#fff;border-top:1px solid #f0f0f2;padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
+#tabbar .tab{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;font-size:11px;color:#b0b0b8;cursor:pointer;min-width:70px}
+#tabbar .tab .ti{font-size:23px;line-height:1}
+#tabbar .tab.cur{color:#111}
+#tabbar .tab.cur .ti{color:#111}
+#tabbar .tab-add{width:58px;height:58px;border-radius:50%;background:#111;color:#fff;font-size:30px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;margin-top:-22px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+/* 书架列表行 */
+.bk-row{display:flex;gap:14px;padding:14px 20px;cursor:pointer;align-items:flex-start}
+.bk-row + .bk-row{border-top:1px solid #f5f5f7}
+.bk-row .cov{position:relative;flex:0 0 76px;width:76px;height:106px;border-radius:6px;overflow:hidden;background:#eee;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.bk-row .cov img{width:100%;height:100%;object-fit:cover;display:block}
+.bk-row .cov .ct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:8px;text-align:center;font-size:11px;font-weight:700;color:#fff}
+.bk-row .pbdg{position:absolute;right:5px;bottom:5px;background:rgba(0,0,0,.85);color:#fff;font-size:10.5px;font-weight:700;border-radius:5px;padding:2px 6px}
+.bk-row .pbdg.done{background:#22a355}
+.bk-row .inf{flex:1;min-width:0;padding-top:2px}
+.bk-row .t{font-size:16px;font-weight:700;color:#111;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.bk-row .a{font-size:13px;color:#9a9aa0;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bk-row .fb{display:inline-block;background:#f4f4f6;color:#9a9aa0;font-size:11.5px;border-radius:6px;padding:3px 9px;margin-top:9px;letter-spacing:1px}
+/* 书架顶栏 */
+.rd-lib-top{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 6px}
+.rd-lib-top .t{font-size:21px;font-weight:800;color:#111}
+.rd-lib-top .ics{display:flex;gap:16px}
+/* 搜书页 */
+.s-top{display:flex;align-items:center;gap:10px;padding:12px 16px}
+.s-back{background:none;border:none;font-size:22px;color:#111;cursor:pointer;padding:4px}
+.s-input{flex:1;background:#f4f4f6;border-radius:12px;padding:12px 16px;font-size:15px;border:none;outline:none;color:#111;min-width:0}
+.s-go{width:44px;height:44px;border-radius:50%;background:#111;color:#fff;border:none;font-size:18px;cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center}
+.s-tabs{display:flex;gap:26px;padding:6px 20px 12px}
+.s-tab{background:none;border:none;font-size:15.5px;color:#9a9aa0;cursor:pointer;padding:6px 0;position:relative}
+.s-tab.cur{color:#111;font-weight:800}
+.s-tab.cur::after{content:'';position:absolute;left:50%;transform:translateX(-50%);bottom:-2px;width:20px;height:3px;border-radius:2px;background:#6c7bff}
+.s-sec-t{font-size:14px;color:#9a9aa0;padding:8px 20px 10px}
+.s-card{background:#f7f7f9;border-radius:18px;margin:0 14px 14px;padding:8px 6px}
+.s-book{display:flex;gap:13px;padding:12px 10px;cursor:pointer}
+.s-book + .s-book{border-top:1px solid #eeeef1}
+.s-book .cov{flex:0 0 64px;width:64px;height:88px;border-radius:6px;overflow:hidden;background:#e8e8ec;position:relative}
+.s-book .cov img{width:100%;height:100%;object-fit:cover;display:block}
+.s-book .cov .ct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:6px;text-align:center;font-size:10px;font-weight:700;color:#fff}
+.s-book .inf{flex:1;min-width:0}
+.s-book .t{font-size:15px;font-weight:700;color:#111;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.s-book .a{font-size:13px;color:#9a9aa0;margin-top:4px}
+.s-book .src{font-size:12.5px;color:#b0b0b8;margin-top:2px}
+.s-book .fb{display:inline-block;background:#fff;color:#9a9aa0;font-size:11px;border:1px solid #eee;border-radius:6px;padding:2px 8px;margin-top:7px;letter-spacing:.5px}
+.s-book .ops{margin-top:8px;display:flex;gap:8px}
+.s-more{display:block;width:100%;background:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;color:#333;cursor:pointer;margin:4px 0}
