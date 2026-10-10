@@ -49,7 +49,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">👤</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">DeepRead v3.32</div>
+    <div class="sb-ver">DeepRead v3.33</div>
   </div>
 </aside>
 <div id="app">
@@ -168,6 +168,7 @@ if ('serviceWorker' in navigator) {
         <select id="search-src">
           <option value="ol">Open Library</option>
           <option value="gb">Gutenberg</option>
+          <option value="fpb">编程书单</option>
         </select>
         <button id="btn-search" class="btn-primary sm">搜索</button>
         <button id="btn-search-mic" class="btn-ghost sm" title="语音输入">🎤</button>
@@ -339,7 +340,7 @@ if ('serviceWorker' in navigator) {
         <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
         <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
       </div>
-      <div class="ver">DeepRead v3.32</div>
+      <div class="ver">DeepRead v3.33</div>
     </div>
   </main>
 
@@ -511,6 +512,7 @@ if ('serviceWorker' in navigator) {
 <script>if (window.pdfjsLib) { pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js'; }</script>
 <script src="js/util.js"></script>
 <script src="js/ambience.js"></script>
+<script src="js/fpb-index.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/voice.js"></script>
 <script src="js/paginate.js"></script>

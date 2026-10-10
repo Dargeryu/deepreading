@@ -89,7 +89,8 @@ button{font-family:inherit}
 .sr{background:var(--card);border-radius:14px;padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow)}
 .sr .t{font-weight:700}
 .sr .a{color:var(--sub);font-size:13px;margin:2px 0 8px}
-.sr .ops{display:flex;gap:8px}
+.sr .ops{display:flex;gap:8px;flex-wrap:wrap}
+.sr .fmt{display:inline-block;background:#eef4ee;color:#3a7d44;border-radius:6px;padding:1px 7px;font-size:12px;font-weight:700}
 
 /* ---------- 书籍详情 ---------- */
 #view-detail{padding:0 0 20px}

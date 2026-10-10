@@ -853,14 +853,23 @@ const q=$('#search-q').value.trim(); if(!q){toast('输入书名或作者');retur
 const src=$('#search-src').value, box=$('#search-results');
 box.innerHTML='<p class="sub">搜索中…</p>';
 try{
-const rs = src==='ol'? await searchOL(q): await searchGB(q);
+const rs = src==='ol'? await searchOL(q): src==='gb'? await searchGB(q): searchFPB(q);
 box.innerHTML='';
 if(!rs.length) box.innerHTML='<p class="sub">没有找到，换个关键词试试</p>';
+if(src==='fpb'&&rs.length) box.innerHTML='<p class="sub">免费编程书单（GitHub free-programming-books，共'+(typeof FPB_INDEX!=='undefined'?FPB_INDEX.length:0)+'本）</p>';
 rs.forEach(r=>{
 const d=document.createElement('div'); d.className='sr';
-d.innerHTML=`<div class="t">${esc(r.title)}</div><div class="a">${esc(r.author)}${r.year?' · '+esc(r.year):''}</div><div class="ops"></div>`;
+let meta=esc(r.author)+(r.year?' · '+esc(r.year):'');
+if(src==='fpb'&&r.topic) meta=(meta?meta+' · ':'')+esc(r.topic);
+if(src==='fpb'&&r.fmts) meta+=' <span class="fmt">'+esc(r.fmts)+'</span>'+(r.archived?' <span class="sub">(存档版)</span>':'');
+d.innerHTML=`<div class="t">${esc(r.title)}</div><div class="a">${meta}</div><div class="ops"></div>`;
 const ops=d.querySelector('.ops');
-if(r.url){ const a=document.createElement('button'); a.className='btn-ghost'; a.textContent='去借阅/查看';
+if(src==='fpb'&&(r.fmts||'').indexOf('HTML')>=0||(r.fmts||'').indexOf('WEB')>=0){
+const im=document.createElement('button'); im.className='btn-ghost'; im.textContent='导入书架';
+im.onclick=async()=>{ closeSheets(); const b=await importFromURL(r.url).catch(e=>{ toast('导入失败：'+e.message,3000); return null; }); if(b){ books.unshift(b); go('library'); } };
+ops.appendChild(im);
+}
+if(r.url){ const a=document.createElement('button'); a.className='btn-ghost'; a.textContent=src==='fpb'?'打开链接':'去借阅/查看';
 a.onclick=()=>window.open(r.url,'_blank'); ops.appendChild(a);}
 if(r.dl){ const b=document.createElement('button'); b.className='btn-ghost'; b.textContent='下载 EPUB';
 b.onclick=()=>window.open(r.dl,'_blank'); ops.appendChild(b);}

@@ -41,6 +41,45 @@ author:(b.authors||[]).map(a=>a.name).join(', '), year:'',
 url:'', dl:(b.formats||{})['application/epub+zip']||''}));
 }
 
+/* ---------- free-programming-books 本地搜书 ----------
+   数据来源：EbookFoundation/free-programming-books（GitHub 开源免费编程书单）
+   索引打包在 js/fpb-index.js，离线可搜。条目格式：[标题, 作者, 分类, 链接, 格式, 是否存档] */
+const FPB_ALIAS={
+'机器学习':'Machine Learning','深度学习':'Machine Learning','人工智能':'Artificial Intelligence',
+'算法':'Algorithms','数据结构':'Data Structures','操作系统':'Operating Systems',
+'计算机网络':'Networking','网络编程':'Networking','数据库':'Database','数据科学':'Data Science',
+'计算机视觉':'Computer Vision','前端':'JavaScript','爬虫':'Python','编译原理':'Compiler Design',
+'软件架构':'Software Architecture','区块链':'Blockchain','物联网':'IoT','云计算':'Cloud Computing',
+'信息安全':'Security','网络安全':'Security','密码学':'Cryptography','量子计算':'Quantum Computing',
+'游戏开发':'Game Development','编程入门':'Programming','自然语言':'Machine Learning',
+};
+function searchFPB(q){
+if(typeof FPB_INDEX==='undefined') return [];
+q=(q||'').trim(); if(!q) return [];
+let extra='';
+for(const k in FPB_ALIAS){ if(q.indexOf(k)>=0) extra+=' '+FPB_ALIAS[k]; }
+const tokens=(q+' '+extra).toLowerCase().split(/[\s,，、;；|/]+/).filter(t=>t.length>0);
+if(!tokens.length) return [];
+const out=[];
+for(const b of FPB_INDEX){
+const title=b[0]||'', author=b[1]||'', topic=b[2]||'';
+const tl=title.toLowerCase(), al=author.toLowerCase(), pl=topic.toLowerCase();
+let score=0, hit=0;
+for(const t of tokens){
+if(tl.indexOf(t)>=0){ score+=3; hit++; }
+else if(al.indexOf(t)>=0){ score+=2; hit++; }
+else if(pl.indexOf(t)>=0){ score+=1.5; hit++; }
+}
+if(!hit) continue;
+if(hit===tokens.length) score+=5; else score*=hit/tokens.length;
+if(tokens.length===1 && pl===tokens[0]) score+=4; // 恰好是分类名，加权
+if(b[5]) score*=0.7;
+out.push({title, author, topic, url:b[3]||'', fmts:b[4]||'WEB', archived:!!b[5], year:'', dl:'', score});
+}
+out.sort((a,b)=>b.score-a.score);
+return out.slice(0,30);
+}
+
 /* ---------- ElevenLabs 连接诊断 ---------- */
 async function elevenDiag(){
   const key=(store.get('eleven_key')||'').trim();
