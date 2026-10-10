@@ -851,6 +851,20 @@ $('#btn-text-do').onclick=async()=>{
 $('#btn-search').onclick=async()=>{
 const q=$('#search-q').value.trim(); if(!q){toast('输入书名或作者');return;}
 const src=$('#search-src').value, box=$('#search-results');
+/* Anna's Archive 无公开 API 且有反爬，PWA 端无法直接抓取：用深度链接跳转其站内搜索 */
+if(src==='aa'){
+box.innerHTML='';
+const d=document.createElement('div'); d.className='sr';
+d.innerHTML=`<div class="t">在 Anna's Archive 搜索「${esc(q)}」</div><div class="a">海量图书/论文资源站。找到后下载 EPUB 或 PDF，再用首页「导入」放进书架即可阅读。</div><div class="ops"></div>`;
+const ops=d.querySelector('.ops');
+const go=document.createElement('button'); go.className='btn-primary sm'; go.textContent="去 Anna's Archive 搜";
+go.onclick=()=>window.open('https://annas-archive.org/search?q='+encodeURIComponent(q),'_blank');
+ops.appendChild(go);
+const tip=document.createElement('p'); tip.className='sub';
+tip.textContent='小贴士：用英文书名或 ISBN 搜更准；站内下载通常要等一会儿（免费慢速通道）。';
+box.appendChild(d); box.appendChild(tip);
+return;
+}
 box.innerHTML='<p class="sub">搜索中…</p>';
 try{
 const rs = src==='ol'? await searchOL(q): src==='gb'? await searchGB(q): searchFPB(q);
