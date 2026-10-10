@@ -53,10 +53,17 @@ function onFlipMove(e){
   const dx = e.clientX - Flip.startX, dy = e.clientY - Flip.startY;
   if(!Flip.dragging){
     if(Math.abs(dx) < 14 || Math.abs(dx) < Math.abs(dy) * 1.25) return;
-    if(selectionTakesOver()){ Flip.tracking = false; return; } // 让给系统文本选择
+    const sel = window.getSelection();
+    const hasSel = sel && !sel.isCollapsed && sel.toString().length > 0;
+    const longPress = performance.now() - (Flip.downT || 0) > 500;
+    if(hasSel && !longPress){
+      // 有旧选中但这是快速横滑：清掉选中直接翻页（用户想翻页，不是想调选中）
+      try{ sel.removeAllRanges(); }catch(_){}
+    } else if(selectionTakesOver()){ Flip.tracking = false; return; } // 长按让给系统文本选择
     const dir = dx < 0 ? 1 : -1;
     const to = PG.page + dir;
     Flip.dragging = true; pageTouchMoved = true;
+    try{ document.getElementById('content').style.userSelect='none'; }catch(_){} // 拖拽中禁选中，防蓝色高亮
     if(to < 0 || to >= PG.total){ Flip.edge = true; Flip.dir = dir; }
     else { Flip.edge = false; beginLeaf(dir); }
     try{ pagesEl().setPointerCapture(e.pointerId); }catch(_){}
@@ -184,6 +191,7 @@ function endLeaf(){
   Flip.leaf = Flip.shade = Flip.spine = Flip.fx = Flip.hl = null;
   Flip.active = false; Flip.edge = false;
   cancelAnimationFrame(Flip.raf);
+  try{ document.getElementById('content').style.userSelect=''; }catch(_){} // 恢复文本选择
   clearStaleShift();
 }
 
