@@ -1,5 +1,5 @@
 /* Deepreading service worker：应用壳离线缓存 */
-const CACHE = 'deepreading-v3.39';
+const CACHE = 'deepreading-v3.40';
 const CORE = [
   './', './index.html', './manifest.json',
   './icon-192.png', './icon-512.png', './banner-ink.jpg',
@@ -21,6 +21,24 @@ self.addEventListener('activate', e => {
 });
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
+  // 分享目标：外部 App 分享文件给 DeepRead（POST multipart），暂存后跳回应用入库
+  if(e.request.method==='POST' && url.pathname.endsWith('/index.html')){
+    e.respondWith((async()=>{
+      try{
+        const fd=await e.request.formData();
+        const files=fd.getAll('book').filter(f=>f instanceof File && f.size>0);
+        if(files.length){
+          const c=await caches.open('dr-share');
+          for(const f of files){
+            await c.put('share/'+Date.now()+'_'+Math.random().toString(36).slice(2)+'/'+encodeURIComponent(f.name),
+              new Response(f,{headers:{'Content-Type':f.type||'application/octet-stream'}}));
+          }
+        }
+      }catch(_){}
+      return Response.redirect(new URL('./index.html?shared=1', self.location.href).href, 303);
+    })());
+    return;
+  }
   // 跨域请求（ElevenLabs/Gemini 等 API）：不拦截，直接走网络，失败如实抛错
   // （旧版曾把失败的 API 请求兜底成首页 HTML，导致"HTTP 200 却返回网页"的假成功）
   if (url.origin !== self.location.origin) return;

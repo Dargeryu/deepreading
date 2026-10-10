@@ -740,12 +740,50 @@ $('#file-input').onchange=async e=>{
 };
 document.addEventListener('visibilitychange',()=>{ if(document.hidden) releaseWakeLock(); else if(wantPlay) ensureWakeLock(); });
 
+/* ---------- 外部文件打开/分享入库（下载后点文件→用 DeepRead 打开） ---------- */
+async function importSharedFiles(files){
+  let added=0;
+  for(const f of files){
+    const b=await importFile(f).catch(err=>{ toast('导入失败：'+err.message); return null; });
+    if(b){ books.unshift(b); added++; }
+  }
+  if(added){ renderShelf(); go('library'); toast(`已加入书架 ${added} 本`); }
+}
+if('launchQueue' in window){
+  launchQueue.setConsumer(async params=>{
+    const fs=[];
+    for(const h of (params.files||[])){ try{ fs.push(await h.getFile()); }catch(e){} }
+    if(fs.length) importSharedFiles(fs);
+  });
+}
+async function consumeShareTarget(){
+  let qs='';
+  try{ qs=new URLSearchParams(location.search).get('shared'); }catch(e){}
+  if(!qs) return;
+  try{
+    history.replaceState(null,'','./index.html');
+    const c=await caches.open('dr-share');
+    const keys=await c.keys();
+    const fs=[];
+    for(const k of keys){
+      const res=await c.match(k);
+      if(!res) continue;
+      const blob=await res.blob();
+      const name=decodeURIComponent(k.url.split('/').pop()||'book.epub');
+      fs.push(new File([blob], name, {type:res.headers.get('Content-Type')||'application/octet-stream'}));
+      await c.delete(k);
+    }
+    if(fs.length) importSharedFiles(fs);
+  }catch(e){}
+}
+
 /* ---------- 启动 ---------- */
 (async()=>{
   if(!('speechSynthesis' in window)) toast('当前浏览器不支持语音朗读，换 Chrome / Edge / Safari 试试',4000);
   await openDB().catch(()=>toast('本地数据库不可用'));
   await migrateV1();
   try{ await loadBooks(); }catch(e){}
+  await consumeShareTarget();
   if(store.get('splash_done')) go('home'); else go('splash');
 })();
 
@@ -899,7 +937,7 @@ const box=$('#ai-results');
 const cur=aaBase();
 const mirrors=AA_MIRRORS.map(m=>`<button class="btn-ghost sm${m===cur?' btn-primary':''}" data-m="${m}">${m.replace('https://','')}</button>`).join('');
 box.innerHTML=`<div class="sr"><div class="t">在 Anna's Archive 搜索「${esc(q)}」</div>
-<div class="a">输入书名/作者，直接跳转 Anna's Archive 站内搜索结果。</div>
+<div class="a">输入书名/作者，直接跳转 Anna's Archive 站内搜索结果。下载 EPUB/PDF 后，点击文件选择"用 DeepRead 打开"，自动加入书架。</div>
 <div class="ops"><button class="btn-primary sm" id="aa-go">搜索</button></div>
 <div class="sub" style="margin-top:10px">打不开？换个镜像：</div><div class="ops" id="aa-mirrors">${mirrors}</div></div>
 <p class="sub">小贴士：用英文书名或 ISBN 搜更准。</p>`;
