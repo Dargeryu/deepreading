@@ -49,7 +49,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">👤</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.45</div>
+    <div class="sb-ver">Apo v3.46</div>
   </div>
 </aside>
 <div id="app">
@@ -177,6 +177,8 @@ if ('serviceWorker' in navigator) {
     <header id="reader-bar">
       <button id="btn-back" class="icon-btn">‹</button>
       <div id="reader-chapter" class="reader-ch" title="目录"></div>
+      <button id="btn-bookmark" class="icon-btn" title="书签">🔖</button>
+      <button id="btn-bookchat" class="icon-btn" title="AI书伴">💬</button>
       <div id="reader-count" class="reader-count"></div>
     </header>
     <div id="chapter-drawer" class="drawer hidden">
@@ -188,7 +190,7 @@ if ('serviceWorker' in navigator) {
       <div id="chapter-list"></div>
     </div>
     <div id="reader-pages"><article id="content"></article></div>
-    <div id="sel-tip" class="sel-tip hidden">已选中 <button id="btn-ai-ask" class="btn-primary sm">AI 讲解</button></div>
+    <div id="sel-tip" class="sel-tip hidden">已选中 <button id="btn-hl" class="btn-ghost sm">划线</button><button id="btn-note" class="btn-ghost sm">笔记</button><button id="btn-ai-ask" class="btn-primary sm">AI 讲解</button></div>
     <button id="voice-fab" title="挑选音色">🎙</button>
     <div id="voice-sheet" class="sheet hidden">
       <div class="sheet-head"><span class="serif">🎙 挑选朗读音色</span> <button id="voice-sheet-close" class="btn-ghost">✕</button></div>
@@ -243,6 +245,29 @@ if ('serviceWorker' in navigator) {
     </div>
   </main>
 
+  <!-- AI书伴 -->
+  <main id="view-bookchat" class="view hidden">
+    <div class="s-top"><button class="s-back" id="bookchat-back">‹</button><div class="serif" style="font-size:18px">📖 AI书伴</div><div style="width:40px"></div></div>
+    <div id="bookchat-sugg" style="padding:4px 20px 8px"></div>
+    <div id="bookchat-list" style="padding:8px 0 16px;max-height:55vh;overflow-y:auto"></div>
+    <div style="display:flex;gap:8px;padding:0 20px 30px">
+      <input class="s-input" id="bookchat-input" placeholder="问这本书…" style="background:#fff">
+      <button class="btn-primary" id="bookchat-send">发送</button>
+    </div>
+  </main>
+
+  <!-- 书签 -->
+  <main id="view-bookmarks" class="view hidden">
+    <div class="s-top"><button class="s-back" id="bookmarks-back">‹</button><div class="serif" style="font-size:18px">我的书签</div><div style="width:40px"></div></div>
+    <div id="bookmarks-list" style="padding:8px 0 40px"></div>
+  </main>
+
+  <!-- 笔记汇总 -->
+  <main id="view-notes" class="view hidden">
+    <div class="s-top"><button class="s-back" id="notes-back">‹</button><div class="serif" style="font-size:18px">划线与笔记</div><div style="width:40px"></div></div>
+    <div id="notes-list" style="padding:8px 0 40px"></div>
+  </main>
+
   <!-- 我的 -->
   <main id="view-mine" class="view hidden">
     <header class="topbar">
@@ -265,7 +290,7 @@ if ('serviceWorker' in navigator) {
           <p class="hint">按 {text} 发送 POST JSON，返回音频流。音色克隆在你自己的服务商侧完成（如 ElevenLabs / MiniMax），本应用只负责调用。</p>
         </div>
         <label><span class="k">音色</span><select id="sel-voice"></select></label>
-        <label><span class="k">语速</span><input type="range" id="rng-rate" min="50" max="200" value="100"><span id="rate-val">1.0x</span></label>
+        <label><span class="k">语速</span><input type="range" id="rng-rate" min="50" max="400" value="100"><span id="rate-val">1.0x</span></label>
         <label><input type="checkbox" id="chk-dialog"><span class="k">对白音色</span><select id="sel-voice2"></select></label>
       </div>
       <div class="set-group">
@@ -311,7 +336,12 @@ if ('serviceWorker' in navigator) {
         <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
         <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
       </div>
-      <div class="ver">Apo v3.45</div>
+      <div class="set-group">
+        <div class="sec">我的内容</div>
+        <button class="btn-ghost" id="mine-notes" style="width:100%;margin-bottom:8px">📝 划线与笔记</button>
+        <button class="btn-ghost" id="mine-bookmarks" style="width:100%">🔖 我的书签</button>
+      </div>
+      <div class="ver">Apo v3.46</div>
     </div>
   </main>
 

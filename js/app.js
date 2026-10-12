@@ -49,7 +49,7 @@ function splitChapters(fullText){
 }
 
 /* ---------- IndexedDB ---------- */
-const DB='deepreading', VS=5;
+const DB='deepreading', VS=6;
 let db=null;
 function openDB(){
   return new Promise((res,rej)=>{
@@ -62,11 +62,24 @@ function openDB(){
       if(!d.objectStoreNames.contains('voices')) d.createObjectStore('voices',{keyPath:'id'});
       if(!d.objectStoreNames.contains('pagecache')) d.createObjectStore('pagecache',{keyPath:'key'});
       if(!d.objectStoreNames.contains('sys')) d.createObjectStore('sys',{keyPath:'key'});
+      if(!d.objectStoreNames.contains('marks')) d.createObjectStore('marks',{keyPath:'id',autoIncrement:true});
+      if(!d.objectStoreNames.contains('bookmarks')) d.createObjectStore('bookmarks',{keyPath:'id',autoIncrement:true});
     };
     r.onsuccess=()=>{db=r.result;res();}; r.onerror=()=>rej(r.error);
   });
 }
 const _tx=(s,m='readonly')=>db.transaction(s,m).objectStore(s);
+const idbMarks={
+  add:m=>new Promise((res,rej)=>{const t=_tx('marks','readwrite').add(m);t.onsuccess=()=>res(t.result);t.onerror=()=>rej(t.error);}),
+  byBook:bid=>new Promise((res,rej)=>{const t=_tx('marks').getAll();t.onsuccess=()=>res((t.result||[]).filter(x=>x.bookId===bid));t.onerror=()=>rej(t.error);}),
+  all:()=>new Promise((res,rej)=>{const t=_tx('marks').getAll();t.onsuccess=()=>res(t.result||[]);t.onerror=()=>rej(t.error);}),
+  del:id=>new Promise((res,rej)=>{const t=_tx('marks','readwrite').delete(id);t.onsuccess=res;t.onerror=()=>rej(t.error);}),
+};
+const idbBookmarks={
+  add:m=>new Promise((res,rej)=>{const t=_tx('bookmarks','readwrite').add(m);t.onsuccess=()=>res(t.result);t.onerror=()=>rej(t.error);}),
+  byBook:bid=>new Promise((res,rej)=>{const t=_tx('bookmarks').getAll();t.onsuccess=()=>res((t.result||[]).filter(x=>x.bookId===bid));t.onerror=()=>rej(t.error);}),
+  del:id=>new Promise((res,rej)=>{const t=_tx('bookmarks','readwrite').delete(id);t.onsuccess=res;t.onerror=()=>rej(t.error);}),
+};
 const idb={
   put:b=>new Promise((res,rej)=>{const t=_tx('books','readwrite').put(b);t.onsuccess=res;t.onerror=()=>rej(t.error);}),
   all:()=>new Promise((res,rej)=>{const t=_tx('books').getAll();t.onsuccess=()=>res(t.result||[]);t.onerror=()=>rej(t.error);}),
@@ -327,7 +340,7 @@ async function downloadBook(b){
 /* ---------- 阅读器 ---------- */
 let cur=null, sentEls=[];
 /* ---------- v3 导航 ---------- */
-const VIEWS=['splash','home','library','search','detail','reader','mine','voice'];
+const VIEWS=['splash','home','library','search','detail','reader','mine','voice','notes','bookchat','bookmarks'];
 let curView='home', returnView='library';
 function go(name){
   curView=name;
@@ -341,6 +354,9 @@ function go(name){
   else if(name==='voice'){ stopSpeak(); renderVoice(); }
   else if(name==='search'){ stopSpeak(); $('#search-results').innerHTML=''; }
   else if(name==='mine'){ stopSpeak(); }
+  else if(name==='notes'){ stopSpeak(); renderNotesList(); }
+  else if(name==='bookchat'){ stopSpeak(); }
+  else if(name==='bookmarks'){ stopSpeak(); renderBookmarksList(); }
   updateMiniPlayer();
   window.scrollTo(0,0);
 }
@@ -777,6 +793,214 @@ async function consumeShareTarget(){
     if(fs.length) importSharedFiles(fs);
   }catch(e){}
 }
+
+/* ---------- 划线与笔记 ---------- */
+function sentElOf(node){
+  let el = node.nodeType===1 ? node : node.parentElement;
+  while(el && !el.classList?.contains('sent')) el = el.parentElement;
+  return el;
+}
+function captureSelection(){
+  const sel = window.getSelection();
+  if(!sel || sel.isCollapsed || !cur) return null;
+  const r = sel.getRangeAt(0);
+  const sEl = sentElOf(r.startContainer), eEl = sentElOf(r.endContainer);
+  if(!sEl || !eEl) return null;
+  const text = sel.toString().trim();
+  if(text.length < 1) return null;
+  return {
+    bookId: cur.id,
+    startG: +sEl.dataset.g, startOff: r.startOffset,
+    endG: +eEl.dataset.g, endOff: r.endOffset,
+    text: text.slice(0, 500),
+    note: '', createdAt: Date.now(),
+  };
+}
+async function saveMark(note){
+  const m = captureSelection();
+  if(!m){ toast('先选中一段文字'); return; }
+  m.note = note || '';
+  await idbMarks.add(m);
+  applyMarks();
+  window.getSelection().removeAllRanges();
+  $('#sel-tip').classList.add('hidden');
+  toast(m.note ? '笔记已保存' : '已划线');
+}
+function applyMarks(){
+  if(!cur || !PG.ready) return;
+  idbMarks.byBook(cur.id).then(marks => {
+    if(!marks.length) return;
+    const c = $('#content');
+    for(const m of marks){
+      try{
+        const sEl = c.querySelector(`[data-g="${m.startG}"]`);
+        const eEl = c.querySelector(`[data-g="${m.endG}"]`);
+        if(!sEl || !eEl) continue;
+        // 跳过已标记的（避免重复）
+        if(sEl.querySelector('mark.hl')) continue;
+        const r = document.createRange();
+        const sNode = sEl.firstChild, eNode = eEl.firstChild;
+        if(!sNode || !eNode) continue;
+        r.setStart(sNode, Math.min(m.startOff, sNode.length || 0));
+        r.setEnd(eNode, Math.min(m.endOff, eNode.length || 0));
+        const mark = document.createElement('mark');
+        mark.className = 'hl' + (m.note ? ' has-note' : '');
+        mark.title = m.note || '';
+        try{ r.surroundContents(mark); }
+        catch(e){
+          // 跨节点复杂情况：退化为整句标记
+          const frag = r.extractContents();
+          mark.appendChild(frag); r.insertNode(mark);
+        }
+      }catch(e){}
+    }
+  });
+}
+$('#btn-hl').onclick = () => saveMark('');
+$('#btn-note').onclick = () => {
+  const m = captureSelection();
+  if(!m){ toast('先选中一段文字'); return; }
+  const note = prompt('写下你的笔记：', '');
+  if(note === null) return;
+  m.note = note;
+  idbMarks.add(m).then(() => {
+    applyMarks();
+    window.getSelection().removeAllRanges();
+    $('#sel-tip').classList.add('hidden');
+    toast('笔记已保存');
+  });
+};
+// 渲染窗口后重打划线
+const _renderWindow = renderWindow;
+renderWindow = function(s){ _renderWindow(s); setTimeout(applyMarks, 50); };
+
+/* ---------- 笔记汇总 ---------- */
+async function renderNotesList(){
+  const box = $('#notes-list');
+  const marks = await idbMarks.all();
+  if(!marks.length){ box.innerHTML = '<p class="sub" style="text-align:center;padding:40px 20px">还没有划线或笔记<br>在阅读时选中文字即可划线</p>'; return; }
+  // 按书分组
+  const byBook = {};
+  for(const m of marks){ (byBook[m.bookId] = byBook[m.bookId] || []).push(m); }
+  let h = '';
+  for(const bid of Object.keys(byBook)){
+    const b = books.find(x => x.id === bid);
+    const title = b ? b.title : '未知书籍';
+    h += `<div class="serif" style="padding:12px 20px 8px;font-size:15px">${esc(title)}（${byBook[bid].length}）</div>`;
+    for(const m of byBook[bid].sort((a,b) => b.createdAt - a.createdAt)){
+      h += `<div class="note-card" data-id="${m.id}"><div class="q">${esc(m.text)}</div>`;
+      if(m.note) h += `<div class="n">${esc(m.note)}</div>`;
+      h += `<div class="meta"><span>${new Date(m.createdAt).toLocaleDateString()}</span><button data-del="${m.id}">删除</button></div></div>`;
+    }
+  }
+  box.innerHTML = h;
+  box.querySelectorAll('[data-del]').forEach(btn => {
+    btn.onclick = async e => { e.stopPropagation(); await idbMarks.del(+btn.dataset.del); renderNotesList(); applyMarks(); };
+  });
+  // 点击卡片跳转到书中位置
+  box.querySelectorAll('.note-card').forEach(card => {
+    card.onclick = async () => {
+      const id = +card.dataset.id;
+      const all = await idbMarks.all();
+      const m = all.find(x => x.id === id);
+      if(!m) return;
+      const b = books.find(x => x.id === m.bookId);
+      if(!b){ toast('这本书已不在书架'); return; }
+      await openBook(b.id);
+      setPage(pageOfSentence(m.startG), {animate:false});
+      setTimeout(applyMarks, 300);
+    };
+  });
+}
+$('#notes-back').onclick = () => go('mine');
+
+/* ---------- 书签 ---------- */
+$('#btn-bookmark').onclick = async () => {
+  if(!cur){ return; }
+  const si = PG.ready ? sentenceOfPage(PG.page) : 0;
+  const snippet = (cur.sentences[si]?.t || '').slice(0, 60);
+  await idbBookmarks.add({ bookId: cur.id, sentence: si, page: PG.page, snippet, createdAt: Date.now() });
+  toast('书签已添加');
+};
+$('#btn-bookchat').onclick = () => {
+  if(!cur){ toast('先打开一本书'); return; }
+  renderBookchatSugg();
+  go('bookchat');
+};
+
+/* ---------- AI书伴：基于整书内容的问答 ---------- */
+const BOOKCHAT_SUGG = ['这本书讲了什么？', '作者的核心观点是什么？', '总结一下当前章节', '书中最重要的三个概念？'];
+function bookContext(){
+  if(!cur) return '';
+  // 当前章节及前后文（最多约4000字）
+  const si = PG.ready ? sentenceOfPage(PG.page) : 0;
+  const from = Math.max(0, si - 30), to = Math.min(cur.sentences.length, si + 80);
+  let txt = cur.sentences.slice(from, to).map(x => x.t).join('');
+  if(txt.length > 4000) txt = txt.slice(0, 4000) + '…';
+  return `书名：《${cur.title}》\n当前章节附近内容：\n${txt}`;
+}
+function renderBookchatSugg(){
+  $('#bookchat-sugg').innerHTML = BOOKCHAT_SUGG.map(q => `<button class="chat-sugg">${esc(q)}</button>`).join('');
+  $('#bookchat-sugg').querySelectorAll('.chat-sugg').forEach(b => {
+    b.onclick = () => { $('#bookchat-input').value = b.textContent; $('#bookchat-send').click(); };
+  });
+}
+function bookchatAdd(role, text){
+  const d = document.createElement('div');
+  d.className = 'chat-msg ' + role;
+  d.textContent = text;
+  $('#bookchat-list').appendChild(d);
+  $('#bookchat-list').scrollTop = 1e9;
+}
+async function bookchatSend(){
+  const q = $('#bookchat-input').value.trim();
+  if(!q){ return; }
+  if(!cur){ toast('先打开一本书'); return; }
+  $('#bookchat-input').value = '';
+  bookchatAdd('user', q);
+  bookchatAdd('ai', '思考中…');
+  const aiEl = $('#bookchat-list').lastChild;
+  try{
+    const ans = await geminiAsk(`你是一位博学的读书助手。用户正在读《${cur.title}》。\n${bookContext()}\n\n用户问题：${q}\n\n请基于书中内容简明回答（200字内），引用书中观点时注明。`);
+    aiEl.textContent = ans;
+  }catch(e){ aiEl.textContent = '失败：' + e.message; }
+  $('#bookchat-list').scrollTop = 1e9;
+}
+$('#bookchat-send').onclick = bookchatSend;
+$('#bookchat-input').addEventListener('keydown', e => { if(e.key === 'Enter') bookchatSend(); });
+$('#bookchat-back').onclick = () => go('reader');
+
+/* ---------- 书签列表 ---------- */
+async function renderBookmarksList(){
+  const box = $('#bookmarks-list');
+  const all = await new Promise((res,rej)=>{const t=_tx('bookmarks').getAll();t.onsuccess=()=>res(t.result||[]);t.onerror=()=>rej(t.error);});
+  if(!all.length){ box.innerHTML = '<p class="sub" style="text-align:center;padding:40px 20px">还没有书签<br>在阅读时点顶栏 🔖 添加</p>'; return; }
+  const byBook = {};
+  for(const m of all){ (byBook[m.bookId] = byBook[m.bookId] || []).push(m); }
+  let h = '';
+  for(const bid of Object.keys(byBook)){
+    const b = books.find(x => x.id === bid);
+    h += `<div class="serif" style="padding:12px 20px 8px;font-size:15px">${esc(b ? b.title : '未知书籍')}</div>`;
+    for(const m of byBook[bid].sort((a,b) => b.createdAt - a.createdAt)){
+      h += `<div class="note-card" data-bid="${m.bookId}" data-s="${m.sentence}"><div class="q">🔖 ${esc(m.snippet || '')}</div><div class="meta"><span>${new Date(m.createdAt).toLocaleDateString()}</span><button data-del="${m.id}">删除</button></div></div>`;
+    }
+  }
+  box.innerHTML = h;
+  box.querySelectorAll('[data-del]').forEach(btn => {
+    btn.onclick = async e => { e.stopPropagation(); await idbBookmarks.del(+btn.dataset.del); renderBookmarksList(); };
+  });
+  box.querySelectorAll('.note-card').forEach(card => {
+    card.onclick = async () => {
+      const b = books.find(x => x.id === card.dataset.bid);
+      if(!b){ toast('这本书已不在书架'); return; }
+      await openBook(b.id);
+      setPage(pageOfSentence(+card.dataset.s), {animate:false});
+    };
+  });
+}
+$('#bookmarks-back').onclick = () => go('mine');
+$('#mine-notes').onclick = () => go('notes');
+$('#mine-bookmarks').onclick = () => go('bookmarks');
 
 /* ---------- 下载自动上架：监听下载文件夹，新书自动入库 ---------- */
 async function sysGet(k){
