@@ -286,13 +286,43 @@ async function loadBooks(){
   books.sort((a,b)=>b.progress.updatedAt-a.progress.updatedAt);
 }
 let shelfSort='recent', shelfFmt='';
+/* ---------- 书架分类 ---------- */
+let shelfCat = '';
+const getCats = () => { try{ return JSON.parse(localStorage.getItem('dr_cats')||'[]'); }catch(e){ return []; } };
+const saveCats = c => { try{ localStorage.setItem('dr_cats', JSON.stringify(c)); }catch(e){} };
+function renderCatBar(){
+  const bar = $('#cat-bar');
+  if(!bar) return;
+  const cats = getCats();
+  let h = `<button class="chat-sugg${!shelfCat?'':' '}" data-c="" style="${!shelfCat?'background:#1890ff;color:#fff;border-color:#1890ff':''}">全部</button>`;
+  for(const c of cats) h += `<button class="chat-sugg" data-c="${esc(c)}" style="${shelfCat===c?'background:#1890ff;color:#fff;border-color:#1890ff':''}">${esc(c)}</button>`;
+  h += `<button class="chat-sugg" data-c="__new" style="border-style:dashed">＋新建</button>`;
+  bar.innerHTML = h;
+  bar.querySelectorAll('[data-c]').forEach(b => {
+    b.onclick = () => {
+      const c = b.dataset.c;
+      if(c === '__new'){
+        const n = prompt('新分类名称：', '');
+        if(n && n.trim()){
+          const cats = getCats();
+          if(!cats.includes(n.trim())){ cats.push(n.trim()); saveCats(cats); }
+          shelfCat = n.trim(); renderCatBar(); renderShelf();
+        }
+        return;
+      }
+      shelfCat = c; renderCatBar(); renderShelf();
+    };
+  });
+}
 async function renderShelf(){
   await loadBooks();
+  renderCatBar();
   const has=books.length>0;
   $('#shelf-empty').classList.toggle('hidden', has);
   $('#shelf-has').classList.toggle('hidden', !has);
   if(!has){ updateMiniPlayer(); return; }
-  const sorted=[...books];
+  const filtered = shelfCat ? books.filter(b => (b.cat||'')===shelfCat) : books;
+  const sorted=[...filtered];
   if(shelfSort==='title') sorted.sort((a,b)=>String(a.title).localeCompare(String(b.title),'zh'));
   else sorted.sort((a,b)=>b.progress.updatedAt-a.progress.updatedAt);
   const list=$('#shelf-list'); list.innerHTML='';
@@ -323,6 +353,22 @@ function openBookMenu(b){
 }
 $('#bm-open').onclick=()=>{ closeSheets(); if(menuBook) openDetail(menuBook.id); };
 $('#bm-dl').onclick=()=>{ closeSheets(); if(menuBook) downloadBook(menuBook); };
+$('#bm-cat').onclick=()=>{
+  const b=menuBook; if(!b) return;
+  const cats=getCats();
+  const cur=(b.cat||'');
+  let msg='选择分类（输入新名称可创建）：\n0. 无分类\n';
+  cats.forEach((c,i)=>msg+=`${i+1}. ${c}${c===cur?'（当前）':''}\n`);
+  const inp=prompt(msg+'\n输入序号或新名称：','');
+  if(inp===null){ return; }
+  const t=inp.trim();
+  let nc='';
+  if(t==='0') nc='';
+  else if(/^\d+$/.test(t)&&+t>=1&&+t<=cats.length) nc=cats[+t-1];
+  else if(t) { nc=t; if(!cats.includes(t)){cats.push(t);saveCats(cats);} }
+  else return;
+  b.cat=nc; idb.put(b).then(()=>{ closeSheets(); renderCatBar(); renderShelf(); toast(nc?`已移到「${nc}」`:'已移出分类'); });
+};
 $('#bm-del').onclick=async()=>{ const b=menuBook; closeSheets(); if(!b) return;
   if(confirm(`删除《${b.title}》？`)){ await idb.del(b.id); if(cur&&cur.id===b.id){cur=null;stopSpeak();} renderShelf(); } };
 $('#btn-lib-search').onclick=()=>go('search');
@@ -1002,6 +1048,52 @@ $('#bookmarks-back').onclick = () => go('mine');
 $('#mine-notes').onclick = () => go('notes');
 $('#mine-bookmarks').onclick = () => go('bookmarks');
 
+/* ---------- 双语对照翻译 ---------- */
+let bilingualOn = false;
+const trCache = {}; // sentenceIdx -> translation
+$('#dr-bilingual').onclick = async () => {
+  bilingualOn = !bilingualOn;
+  $('#dr-bilingual').classList.toggle('btn-primary', bilingualOn);
+  $('#chapter-drawer').classList.add('hidden');
+  if(bilingualOn){ toast('双语模式开：正在翻译本页…'); await translatePage(); }
+  else { document.querySelectorAll('.sent .tr').forEach(e => e.remove()); }
+};
+async function translatePage(){
+  if(!cur || !PG.ready) return;
+  const s0 = sentenceOfPage(PG.page), s1 = sentenceOfPage(Math.min(PG.total-1, PG.page+1));
+  const batch = [];
+  for(let i = s0; i < Math.min(s1, s0+12); i++){
+    if(trCache[i]) continue;
+    const t = cur.sentences[i]?.t || '';
+    if(t.length < 2) continue;
+    batch.push([i, t]);
+  }
+  if(!batch.length){ applyTranslations(); return; }
+  try{
+    const txt = batch.map(([i,t]) => `[${i}]${t}`).join('\n');
+    const r = await geminiAsk(`将以下句子翻译成中文（如果是中文则译成英文）。每行格式保持 [序号]译文，只输出译文行：\n\n${txt.slice(0,3000)}`);
+    for(const line of r.split('\n')){
+      const m = line.match(/^\[(\d+)\](.*)/);
+      if(m) trCache[+m[1]] = m[2].trim();
+    }
+  }catch(e){ toast('翻译失败：'+e.message); }
+  applyTranslations();
+}
+function applyTranslations(){
+  if(!bilingualOn) return;
+  document.querySelectorAll('#content .sent').forEach(sp => {
+    const g = +sp.dataset.g;
+    if(trCache[g] && !sp.querySelector('.tr')){
+      const d = document.createElement('span');
+      d.className = 'tr'; d.textContent = trCache[g];
+      sp.appendChild(d);
+    }
+  });
+}
+// 翻页后自动翻译新页
+const _showPageInstant = showPageInstant;
+showPageInstant = function(gp){ _showPageInstant(gp); if(bilingualOn) setTimeout(translatePage, 400); };
+
 /* ---------- 下载自动上架：监听下载文件夹，新书自动入库 ---------- */
 async function sysGet(k){
   try{ const r=await new Promise((res,rej)=>{ const t=_tx('sys').get(k); t.onsuccess=()=>res(t.result||null); t.onerror=()=>rej(t.error); }); return r?r.val:null; }
@@ -1237,6 +1329,19 @@ $('#btn-ai-story').classList.add('hidden'); $('#btn-ai-story').textContent='▶ 
 /* AI 助手按钮已并入目录抽屉（#dr-ai），选中文字仍可用 #btn-ai-ask */
 $('#btn-ai-close').onclick=()=>{ $('#aisheet').classList.add('hidden'); stopStory();};
 const getSelText=()=>{ const s=window.getSelection(); return s?s.toString().trim():'';};
+$('#btn-tr').onclick=async()=>{
+  const t=getSelText(); if(!t){ toast('先选中文字'); return; }
+  const tip=$('#sel-tip'); tip.classList.add('hidden');
+  toast('翻译中…');
+  try{
+    const r=await geminiAsk(`请翻译以下文字。如果是英文译成简体中文，如果是中文译成英文。只给出译文，不要解释：\n\n${t.slice(0,500)}`);
+    // 用 AI 弹窗显示
+    $('#ai-input').value='翻译：'+t.slice(0,80);
+    renderAI('原文：'+t.slice(0,200)+'\n\n译文：'+r);
+    $('#aisheet').classList.remove('hidden');
+  }catch(e){ toast('翻译失败：'+e.message); }
+  window.getSelection().removeAllRanges();
+};
 $('#btn-ai-ask').onclick=()=>{ const t=getSelText(); if(t) $('#ai-input').value=t;
 $('#sel-tip').classList.add('hidden'); $('#aisheet').classList.remove('hidden');};
 $('#btn-ai-go').onclick=async()=>{
