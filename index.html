@@ -49,7 +49,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">👤</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.48</div>
+    <div class="sb-ver">Apo v3.49</div>
   </div>
 </aside>
 <div id="app">
@@ -192,6 +192,8 @@ if ('serviceWorker' in navigator) {
         <button id="dr-ai" class="btn-ghost sm">✦ AI 助手</button>
         <button id="dr-type" class="btn-ghost sm">Aa 排版</button>
         <button id="dr-bilingual" class="btn-ghost sm">🌐 双语</button>
+        <button id="dr-trbook" class="btn-ghost sm">📖 整书翻译</button>
+        <div id="tr-progress" style="display:none;width:100%;font-size:12px;color:#666;padding:6px 0"></div>
       </div>
       <div id="chapter-list"></div>
     </div>
@@ -364,7 +366,7 @@ if ('serviceWorker' in navigator) {
         <button class="btn-ghost" id="mine-notes" style="width:100%;margin-bottom:8px">📝 划线与笔记</button>
         <button class="btn-ghost" id="mine-bookmarks" style="width:100%">🔖 我的书签</button>
       </div>
-      <div class="ver">Apo v3.48</div>
+      <div class="ver">Apo v3.49</div>
     </div>
   </main>
 

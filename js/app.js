@@ -49,7 +49,7 @@ function splitChapters(fullText){
 }
 
 /* ---------- IndexedDB ---------- */
-const DB='deepreading', VS=6;
+const DB='deepreading', VS=7;
 let db=null;
 function openDB(){
   return new Promise((res,rej)=>{
@@ -64,6 +64,7 @@ function openDB(){
       if(!d.objectStoreNames.contains('sys')) d.createObjectStore('sys',{keyPath:'key'});
       if(!d.objectStoreNames.contains('marks')) d.createObjectStore('marks',{keyPath:'id',autoIncrement:true});
       if(!d.objectStoreNames.contains('bookmarks')) d.createObjectStore('bookmarks',{keyPath:'id',autoIncrement:true});
+      if(!d.objectStoreNames.contains('translations')) d.createObjectStore('translations',{keyPath:'bookId'});
     };
     r.onsuccess=()=>{db=r.result;res();}; r.onerror=()=>rej(r.error);
   });
@@ -411,6 +412,10 @@ function showView(name){ go(name); } // 兼容旧调用
 async function openBook(id){
   cur=books.find(b=>b.id===id); if(!cur) return;
   document.title='Apo · '+cur.title;
+  // 清空上本书的翻译缓存，加载这本的
+  for(const k in trCache) delete trCache[k];
+  trProgress = 0; trRunning = false; updateTrProgress();
+  loadBookTranslations();
   go('reader'); renderWindow(cur.progress.idx);
   __lastW=pagesEl().clientWidth||0;
   renderChapters(); updatePlayer();
@@ -1049,9 +1054,17 @@ $('#bookmarks-back').onclick = () => go('mine');
 $('#mine-notes').onclick = () => go('notes');
 $('#mine-bookmarks').onclick = () => go('bookmarks');
 
+/* ---------- 翻译持久化 ---------- */
+const idbTr = {
+  get(bookId){ return new Promise((res,rej)=>{ const t=_tx('translations').get(bookId); t.onsuccess=()=>res(t.result?.map||{}); t.onerror=()=>rej(t.error); }); },
+  save(bookId, map){ return new Promise((res,rej)=>{ const t=_tx('translations','readwrite').put({bookId, map, updatedAt:Date.now()}); t.onsuccess=()=>res(); t.onerror=()=>rej(t.error); }); },
+  clear(bookId){ return new Promise((res,rej)=>{ const t=_tx('translations','readwrite').delete(bookId); t.onsuccess=()=>res(); t.onerror=()=>rej(t.error); }); },
+};
+
 /* ---------- 双语对照翻译 ---------- */
 let bilingualOn = false;
 const trCache = {}; // sentenceIdx -> translation
+$('#dr-trbook').onclick = () => { $('#chapter-drawer').classList.add('hidden'); translateWholeBook(); };
 $('#dr-bilingual').onclick = async () => {
   bilingualOn = !bilingualOn;
   $('#dr-bilingual').classList.toggle('btn-primary', bilingualOn);
@@ -1059,6 +1072,65 @@ $('#dr-bilingual').onclick = async () => {
   if(bilingualOn){ toast('双语模式开：正在翻译本页…'); await translatePage(); }
   else { document.querySelectorAll('.sent .tr').forEach(e => e.remove()); }
 };
+/* ---------- 整书翻译 ---------- */
+let trRunning = false, trProgress = 0;
+async function loadBookTranslations(){
+  if(!cur) return;
+  try{
+    const saved = await idbTr.get(cur.id);
+    Object.assign(trCache, saved);
+  }catch(e){}
+}
+async function translateWholeBook(){
+  if(!cur) return;
+  if(trRunning){ toast('正在翻译中…'); return; }
+  const key = ($('#gemini-key')?.value || '').trim();
+  if(!key){ toast('请先在设置里填写 Gemini API Key'); go('mine'); return; }
+  trRunning = true; trProgress = 0;
+  const total = cur.total;
+  const BATCH = 8;
+  let done = 0, failed = 0;
+  toast('开始整书翻译，共'+total+'句，后台进行中…');
+  updateTrProgress();
+  for(let i = 0; i < total && trRunning; i += BATCH){
+    const batch = [];
+    for(let j = i; j < Math.min(i+BATCH, total); j++){
+      if(trCache[j]){ done++; continue; }
+      const t = cur.sentences[j]?.t || '';
+      if(t.length < 2){ done++; continue; }
+      batch.push([j, t]);
+    }
+    if(batch.length){
+      try{
+        const txt = batch.map(([k,t]) => `[${k}]${t}`).join('\n');
+        const r = await geminiAsk(`将以下句子翻译成中文（如果是中文则译成英文）。每行格式保持 [序号]译文，只输出译文行：\n\n${txt.slice(0,3000)}`);
+        for(const line of r.split('\n')){
+          const m = line.match(/^\[(\d+)\](.*)/);
+          if(m){ trCache[+m[1]] = m[2].trim(); done++; }
+        }
+      }catch(e){ failed += batch.length; }
+      // 每批保存一次
+      try{ await idbTr.save(cur.id, {...trCache}); }catch(e){}
+    }
+    trProgress = Math.round(done/total*100);
+    updateTrProgress();
+    // 礼貌间隔，避免触发限流
+    await new Promise(r => setTimeout(r, 800));
+  }
+  trRunning = false;
+  updateTrProgress();
+  toast(failed ? `翻译完成，${done}句成功，${failed}句失败` : `整书翻译完成，共${done}句`);
+  applyTranslations();
+}
+function updateTrProgress(){
+  const el = $('#tr-progress');
+  if(el){
+    el.style.display = (trRunning || trProgress > 0) ? 'block' : 'none';
+    el.innerHTML = trRunning ? `翻译中… ${trProgress}% <button id="tr-stop" style="margin-left:8px;font-size:12px">停止</button>` : (trProgress >= 100 ? '翻译完成 ✓' : '');
+    const stop = $('#tr-stop');
+    if(stop) stop.onclick = () => { trRunning = false; toast('已停止翻译'); };
+  }
+}
 async function translatePage(){
   if(!cur || !PG.ready) return;
   const s0 = sentenceOfPage(PG.page), s1 = sentenceOfPage(Math.min(PG.total-1, PG.page+1));
