@@ -386,7 +386,7 @@ async function downloadBook(b){
 /* ---------- 阅读器 ---------- */
 let cur=null, sentEls=[];
 /* ---------- v3 导航 ---------- */
-const VIEWS=['splash','home','library','search','detail','reader','mine','voice','notes','bookchat','bookmarks'];
+const VIEWS=['splash','home','library','search','detail','reader','mine','voice','notes','bookchat','bookmarks','stats'];
 let curView='home', returnView='library';
 function go(name){
   curView=name;
@@ -403,6 +403,7 @@ function go(name){
   else if(name==='notes'){ stopSpeak(); renderNotesList(); }
   else if(name==='bookchat'){ stopSpeak(); }
   else if(name==='bookmarks'){ stopSpeak(); renderBookmarksList(); }
+  else if(name==='stats'){ stopSpeak(); renderStatsDetail('week'); }
   updateMiniPlayer();
   window.scrollTo(0,0);
 }
@@ -1094,6 +1095,72 @@ function applyTranslations(){
 const _showPageInstant = showPageInstant;
 showPageInstant = function(gp){ _showPageInstant(gp); if(bilingualOn) setTimeout(translatePage, 400); };
 
+/* ---------- OCR 拍照识字导入 ---------- */
+$('#imp-ocr').onclick = () => { closeSheets(); $('#ocr-input').click(); };
+$('#ocr-input').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if(!f) return;
+  loading(true, '识别文字中…');
+  try{
+    const fd = new FormData();
+    fd.append('file', f);
+    fd.append('language', 'chs');
+    fd.append('isOverlayRequired', 'false');
+    // ocr.space 免费接口
+    const r = await fetch('https://api.ocr.space/parse/image', { method: 'POST', body: fd });
+    if(!r.ok) throw new Error('OCR 请求失败 ' + r.status);
+    const j = await r.json();
+    const txt = (j.ParsedResults || []).map(x => x.ParsedText || '').join('\n').trim();
+    if(!txt) throw new Error('没识别出文字，换张清晰点的照片试试');
+    const title = '拍照识字 ' + new Date().toLocaleDateString();
+    const b = await importFromText(title, txt);
+    if(b){ books.unshift(b); renderShelf(); go('library'); toast('已导入书架'); }
+  }catch(err){ toast('识别失败：' + err.message); }
+  finally{ loading(false); }
+};
+
+/* ---------- 阅读统计详情 ---------- */
+let statsPeriod = 'week';
+function renderStatsDetail(p){
+  statsPeriod = p || statsPeriod;
+  document.querySelectorAll('#stats-tabs .chat-sugg').forEach(b => {
+    const on = b.dataset.p === statsPeriod;
+    b.style.background = on ? '#1890ff' : ''; b.style.color = on ? '#fff' : ''; b.style.borderColor = on ? '#1890ff' : '';
+  });
+  const s = getStat();
+  const days = statsPeriod === 'week' ? 7 : 30;
+  const chart = $('#stats-chart');
+  let h = '', total = 0, maxV = 1;
+  const vals = [];
+  for(let i = days-1; i >= 0; i--){
+    const d = new Date(Date.now() - i*864e5);
+    const v = Math.round((s.days[statKey(d)] || 0) / 60);
+    vals.push({d, v}); total += v; maxV = Math.max(maxV, v);
+  }
+  for(const {d, v} of vals){
+    const hh = Math.max(4, Math.round(v/maxV*130));
+    const isToday = statKey(d) === statKey(new Date());
+    h += `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
+      <div style="font-size:10px;color:#999">${v>0?v:''}</div>
+      <div style="width:100%;max-width:28px;height:${hh}px;background:${isToday?'#1890ff':'#d6e9ff'};border-radius:4px"></div>
+      <div style="font-size:10px;color:#999;margin-top:4px">${d.getDate()}日</div></div>`;
+  }
+  chart.innerHTML = h;
+  const avg = Math.round(total/days);
+  $('#stats-summary').innerHTML = `<div style="display:flex;justify-content:space-around;text-align:center">
+    <div><div class="serif" style="font-size:22px">${total}<small style="font-size:12px">分</small></div><div class="sub">累计阅读</div></div>
+    <div><div class="serif" style="font-size:22px">${avg}<small style="font-size:12px">分</small></div><div class="sub">日均</div></div>
+    <div><div class="serif" style="font-size:22px">${s.streak||0}<small style="font-size:12px">天</small></div><div class="sub">连续达标</div></div></div>`;
+  $('#stats-goals').innerHTML = STAT_GOALS.map(g =>
+    `<button class="chat-sugg" data-g="${g}" style="${s.target===g?'background:#1890ff;color:#fff;border-color:#1890ff':''}">${g}分钟</button>`).join('');
+  $('#stats-goals').querySelectorAll('[data-g]').forEach(b => {
+    b.onclick = () => { const st = getStat(); st.target = +b.dataset.g; setStat(st); renderStatsDetail(); };
+  });
+}
+document.querySelectorAll('#stats-tabs .chat-sugg').forEach(b => { b.onclick = () => renderStatsDetail(b.dataset.p); });
+$('#stats-back').onclick = () => go('home');
+$('#home-stats-link').onclick = () => go('stats');
+
 /* ---------- 下载自动上架：监听下载文件夹，新书自动入库 ---------- */
 async function sysGet(k){
   try{ const r=await new Promise((res,rej)=>{ const t=_tx('sys').get(k); t.onsuccess=()=>res(t.result||null); t.onerror=()=>rej(t.error); }); return r?r.val:null; }
@@ -1460,7 +1527,30 @@ async function renderHome(){
     cll.appendChild(d);
   });
   renderStats();
+  renderReco();
   updateMiniPlayer();
+}
+/* ---------- 猜你喜欢：基于书架推荐 ---------- */
+async function renderReco(){
+  const box = $('#reco-list');
+  if(!box || !books.length){ return; }
+  // 取阅读进度最高的书的关键词
+  const top = [...books].sort((a,b) => (b.progress?.idx||0) - (a.progress?.idx||0))[0];
+  const kw = ((top.author || '') + ' ' + (top.title || '')).split(/[,，\s]+/).filter(w => w.length > 1)[0] || 'novel';
+  try{
+    const rs = await searchGB(kw);
+    const seen = new Set(books.map(b => b.title));
+    const recs = rs.filter(r => !seen.has(r.title)).slice(0, 8);
+    if(!recs.length){ return; }
+    box.innerHTML = '';
+    recs.forEach(r => {
+      const d = document.createElement('div');
+      d.className = 'rd-bcard';
+      d.innerHTML = `<div class="cov"><div class="ct" style="background:linear-gradient(150deg,#5b4a8a,#8a4a6b)">${esc((r.title||'?').slice(0,10))}</div></div><div class="nm">${esc(r.title)}</div>`;
+      d.onclick = () => { go('search'); $('#search-q').value = r.title; $('#btn-search').click(); };
+      box.appendChild(d);
+    });
+  }catch(e){ /* 静默失败 */ }
 }
 $('#home-search').onclick=()=>{ go('search'); setTimeout(()=>$('#search-q').focus(),80); };
 $('#btn-mine').onclick=()=>go('mine');

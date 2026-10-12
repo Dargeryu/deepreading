@@ -49,7 +49,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">👤</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.47</div>
+    <div class="sb-ver">Apo v3.48</div>
   </div>
 </aside>
 <div id="app">
@@ -91,7 +91,10 @@ if ('serviceWorker' in navigator) {
     <div class="rd-sec"><h3>经典必读 <small>›</small></h3></div>
     <div class="rd-hscroll" id="classic-list"></div>
 
-    <div class="rd-sec"><h3>阅读统计 <small>›</small></h3></div>
+    <div class="rd-sec"><h3>猜你喜欢</h3></div>
+    <div class="rd-hscroll" id="reco-list"><div class="sub" style="padding:8px 4px">多读几本书，推荐更准</div></div>
+
+    <div class="rd-sec" id="home-stats-link"><h3>阅读统计 <small>›</small></h3></div>
     <div class="rd-stat">
       <div class="rd-ring">
         <svg viewBox="0 0 120 120">
@@ -136,6 +139,7 @@ if ('serviceWorker' in navigator) {
         <button id="btn-import-empty" class="btn-primary">导入第一本书</button>
       </div>
     </div>
+    <input type="file" id="ocr-input" accept="image/*" hidden>
     <input type="file" id="file-input" accept=".pdf,.epub,.txt,.docx,.md,.html,.htm,.fb2,.mobi,.azw" multiple hidden>
   </main>
 
@@ -264,6 +268,23 @@ if ('serviceWorker' in navigator) {
     <div id="bookmarks-list" style="padding:8px 0 40px"></div>
   </main>
 
+  <!-- 阅读统计详情 -->
+  <main id="view-stats" class="view hidden">
+    <div class="s-top"><button class="s-back" id="stats-back">‹</button><div class="serif" style="font-size:18px">阅读统计</div><div style="width:40px"></div></div>
+    <div style="padding:0 20px">
+      <div style="display:flex;gap:8px;margin-bottom:12px" id="stats-tabs">
+        <button class="chat-sugg" data-p="week">周</button>
+        <button class="chat-sugg" data-p="month">月</button>
+      </div>
+      <div id="stats-chart" style="display:flex;align-items:flex-end;gap:6px;height:160px;padding:12px;background:#fff;border-radius:12px;margin-bottom:12px"></div>
+      <div id="stats-summary" style="background:#fff;border-radius:12px;padding:14px 16px"></div>
+      <div style="margin-top:12px;background:#fff;border-radius:12px;padding:14px 16px">
+        <div class="serif" style="margin-bottom:8px">每日目标（分钟）</div>
+        <div style="display:flex;gap:8px" id="stats-goals"></div>
+      </div>
+    </div>
+  </main>
+
   <!-- 笔记汇总 -->
   <main id="view-notes" class="view hidden">
     <div class="s-top"><button class="s-back" id="notes-back">‹</button><div class="serif" style="font-size:18px">划线与笔记</div><div style="width:40px"></div></div>
@@ -343,7 +364,7 @@ if ('serviceWorker' in navigator) {
         <button class="btn-ghost" id="mine-notes" style="width:100%;margin-bottom:8px">📝 划线与笔记</button>
         <button class="btn-ghost" id="mine-bookmarks" style="width:100%">🔖 我的书签</button>
       </div>
-      <div class="ver">Apo v3.47</div>
+      <div class="ver">Apo v3.48</div>
     </div>
   </main>
 
@@ -420,6 +441,7 @@ if ('serviceWorker' in navigator) {
     <button class="imp-opt" id="imp-file"><span class="io-ic">📁</span><span class="io-t">从文件导入</span><i>›</i></button>
     <button class="imp-opt" id="imp-url"><span class="io-ic">🌐</span><span class="io-t">从网页导入</span><i>›</i></button>
     <button class="imp-opt" id="imp-text"><span class="io-ic">📝</span><span class="io-t">输入或粘贴文本</span><i>›</i></button>
+    <button class="imp-opt" id="imp-ocr"><span class="io-ic">📷</span><span class="io-t">拍照识字导入</span><i>›</i></button>
   </div>
 
   <!-- 网页导入 -->
