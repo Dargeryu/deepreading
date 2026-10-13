@@ -17,7 +17,7 @@ const Flip = {
   queued: null,     // 翻页进行中时新到的目标页（朗读连续翻页）
 };
 
-/* v3.51 翻页模式：slide=原生滑动（默认，对标 Readify），curl=3D仿真，none=无动画 */
+/* v3.52 翻页模式：slide=原生滑动（默认，对标 Readify），curl=3D仿真，none=无动画 */
 function flipMode(){ return store.get('ts_flip', 'slide'); }
 function bindFlip(){
   const el = pagesEl();
@@ -71,13 +71,17 @@ function snapToPage(){
   if(flipMode() !== 'slide' || !PG.ready || PG.total <= 1) return;
   const el = pagesEl(), W = el.clientWidth || 1;
   const local = Math.round(el.scrollLeft / W);
-  const gp = Math.max(0, Math.min(PG.total - 1, local + localPageOffset()));
+  let gp = Math.max(0, Math.min(PG.total - 1, local + localPageOffset()));
+  // 用力猛滑也只允许翻一页（Readify 式单页步进）
+  if(gp > PG.page + 1) gp = PG.page + 1;
+  if(gp < PG.page - 1) gp = PG.page - 1;
+  const targetLocal = gp - localPageOffset();
   if(gp !== PG.page){
-    el.scrollTo({ left: local * W, behavior: 'smooth' });
+    el.scrollTo({ left: targetLocal * W, behavior: 'smooth' });
     PG.page = gp; commitPageState(); updateCount();
   } else {
     // 对齐到精确位置
-    const target = local * W;
+    const target = targetLocal * W;
     if(Math.abs(el.scrollLeft - target) > 2) el.scrollTo({ left: target, behavior: 'smooth' });
   }
 }

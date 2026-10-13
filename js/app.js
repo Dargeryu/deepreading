@@ -1379,37 +1379,21 @@ $('#btn-search').onclick=()=>{
 const q=$('#search-q').value.trim(); if(!q){toast('输入书名或作者');return;}
 doAiSearch(q);
 };
-/* AI搜索 Tab：默认直连 Anna's Archive，无选源步骤 */
+/* AI搜索：点搜索直接跳 Anna's Archive（按钮合一），无 Gutenberg */
 function doAiSearch(q){
 const box=$('#search-results');
 const cur=aaBase();
 const mirrors=AA_MIRRORS.map(m=>`<button class="btn-ghost sm${m===cur?' btn-primary':''}" data-m="${m}">${m.replace('https://','')}</button>`).join('');
-box.innerHTML=`<div class="sr"><div class="t">在 Anna's Archive 搜索「${esc(q)}」</div>
-<div class="a">Anna's Archive 无公开搜索接口，点下面跳转到它站内搜同样关键词。下载 EPUB/PDF 后，点击文件选择"用 Apo 打开"，自动加入书架。</div>
-<div class="ops"><button class="btn-primary sm" id="aa-go">去 Anna's Archive 搜</button><button class="btn-ghost sm" id="aa-auto">开启下载自动上架</button><button class="btn-ghost sm" id="aa-import">导入已下载的文件</button></div>
-<div class="sub" style="margin-top:10px">打不开？换个镜像：</div><div class="ops" id="aa-mirrors">${mirrors}</div></div>
-<div class="sr" id="gb-sec"><div class="t">Gutenberg 搜索中…</div></div>`;
-$('#aa-go').onclick=()=>window.open(aaSearchURL(q),'_blank');
+box.innerHTML=`<div class="sr"><div class="t">已在 Anna's Archive 搜索「${esc(q)}」</div>
+<div class="a">下载 EPUB/PDF 后，点击文件选择"用 Apo 打开"，自动加入书架。</div>
+<div class="ops"><button class="btn-ghost sm" id="aa-import">导入已下载的文件</button><button class="btn-ghost sm" id="aa-auto">开启下载自动上架</button></div>
+<div class="sub" style="margin-top:10px">打不开？换个镜像：</div><div class="ops" id="aa-mirrors">${mirrors}</div></div>`;
 $('#aa-import').onclick=()=>$('#file-input').click();
 const _aaAuto=$('#aa-auto');
 if(_aaAuto){ if(!window.showDirectoryPicker) _aaAuto.style.display='none'; else _aaAuto.onclick=()=>enableAutoImport(); }
-box.querySelectorAll('#aa-mirrors button').forEach(b=>{ b.onclick=()=>{ aaSet(b.dataset.m); doAiSearch(q); }; });
-// Gutenberg：App 内直接出结果
-searchGB(q).then(rs=>{
-  const sec=$('#gb-sec');
-  if(!rs.length){ sec.innerHTML='<div class="t">Gutenberg</div><div class="a">没找到这本书，换个英文关键词试试</div>'; return; }
-  let h=`<div class="t">Gutenberg（${rs.length} 本，公版免费）</div>`;
-  rs.forEach(r=>{
-    h+=`<div class="s-book"><div class="inf"><div class="t">${esc(r.title)}</div><div class="a">${esc(r.author)}</div><div class="ops">`;
-    if(r.dl) h+=`<button class="btn-ghost sm" data-dl="${esc(r.dl)}">下载 EPUB</button>`;
-    h+=`</div></div></div>`;
-  });
-  sec.innerHTML=h;
-  sec.querySelectorAll('[data-dl]').forEach(b=>{ b.onclick=()=>window.open(b.dataset.dl,'_blank'); });
-}).catch(e=>{
-  const sec=$('#gb-sec');
-  if(sec) sec.innerHTML='<div class="t">Gutenberg</div><div class="a">搜索失败：'+esc(e.message)+'</div>';
-});
+box.querySelectorAll('#aa-mirrors button').forEach(b=>{ b.onclick=()=>{ aaSet(b.dataset.m); window.open(aaSearchURL(q),'_blank'); doAiSearch(q); }; });
+// 点搜索即跳转（按钮合一）
+window.open(aaSearchURL(q),'_blank');
 }
 /* ---------- 排版 ---------- */
 function applyType(){
@@ -1601,30 +1585,7 @@ async function renderHome(){
     cll.appendChild(d);
   });
   renderStats();
-  renderReco();
   updateMiniPlayer();
-}
-/* ---------- 猜你喜欢：基于书架推荐 ---------- */
-async function renderReco(){
-  const box = $('#reco-list');
-  if(!box || !books.length){ return; }
-  // 取阅读进度最高的书的关键词
-  const top = [...books].sort((a,b) => (b.progress?.idx||0) - (a.progress?.idx||0))[0];
-  const kw = ((top.author || '') + ' ' + (top.title || '')).split(/[,，\s]+/).filter(w => w.length > 1)[0] || 'novel';
-  try{
-    const rs = await searchGB(kw);
-    const seen = new Set(books.map(b => b.title));
-    const recs = rs.filter(r => !seen.has(r.title)).slice(0, 8);
-    if(!recs.length){ return; }
-    box.innerHTML = '';
-    recs.forEach(r => {
-      const d = document.createElement('div');
-      d.className = 'rd-bcard';
-      d.innerHTML = `<div class="cov"><div class="ct" style="background:linear-gradient(150deg,#5b4a8a,#8a4a6b)">${esc((r.title||'?').slice(0,10))}</div></div><div class="nm">${esc(r.title)}</div>`;
-      d.onclick = () => { go('search'); $('#search-q').value = r.title; $('#btn-search').click(); };
-      box.appendChild(d);
-    });
-  }catch(e){ /* 静默失败 */ }
 }
 $('#home-search').onclick=()=>{ go('search'); setTimeout(()=>$('#search-q').focus(),80); };
 $('#btn-mine').onclick=()=>go('mine');
