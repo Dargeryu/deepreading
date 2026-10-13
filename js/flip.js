@@ -79,10 +79,21 @@ function onFlipMove(e){
   if(e.cancelable) e.preventDefault();
 }
 
-function onFlipUp(){
+function onFlipUp(e){
   if(!Flip.tracking) return;
   Flip.tracking = false;
-  if(!Flip.dragging) return; // 轻触：交给句子的 click
+  if(!Flip.dragging){
+    // 轻触：左右边缘 1/4 区域点按翻页（滑动失灵时的兜底）
+    if(e && e.clientX != null && PG.ready && PG.total > 1 && !window.getSelection().toString()){
+      const W = (pagesEl().clientWidth || 1);
+      const x = e.clientX;
+      const rect = pagesEl().getBoundingClientRect();
+      const rx = x - rect.left;
+      if(rx < W * 0.25 && PG.page > 0){ setPage(PG.page - 1); return; }
+      if(rx > W * 0.75 && PG.page < PG.total - 1){ setPage(PG.page + 1); return; }
+    }
+    return; // 轻触：交给句子的 click
+  }
   Flip.dragging = false;
   if(Flip.edge){ edgeRelease(); Flip.edge = false; return; }
   const quick = Math.abs(Flip.vel) > 0.45 && Flip.progress > 0.04;
@@ -128,6 +139,7 @@ function beginLeaf(dir){
   Flip.leaf = leaf; Flip.shade = shade; Flip.spine = spine;
   Flip.fx = fx; Flip.hl = hl;
   Flip.active = true;
+  Flip._activeSince = Date.now();
   setAngle(0);
 }
 
@@ -183,7 +195,16 @@ function tween(from, to, dur, done){
   Flip.raf = requestAnimationFrame(step);
 }
 
+/* 看门狗：翻页动画卡住超过 3 秒强制重置，防止滑动彻底失灵 */
+setInterval(()=>{
+  if(Flip.active && Flip._activeSince && Date.now() - Flip._activeSince > 3000){
+    try{ endLeaf(); }catch(e){}
+    Flip.active = false; Flip.tracking = false; Flip.dragging = false;
+  }
+}, 1000);
+
 function endLeaf(){
+  Flip._activeSince = 0;
   if(Flip.leaf) Flip.leaf.remove();
   if(Flip.spine) Flip.spine.remove();
   if(Flip.fx) Flip.fx.remove();
