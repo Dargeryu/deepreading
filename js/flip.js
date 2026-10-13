@@ -17,17 +17,73 @@ const Flip = {
   queued: null,     // 翻页进行中时新到的目标页（朗读连续翻页）
 };
 
+/* v3.51 翻页模式：slide=原生滑动（默认，对标 Readify），curl=3D仿真，none=无动画 */
+function flipMode(){ return store.get('ts_flip', 'slide'); }
 function bindFlip(){
   const el = pagesEl();
-  if(!el || el._flipBound) return;
+  if(!el) return;
+  applyFlipMode();
+  if(el._flipBound) return;
   el._flipBound = true;
   el.addEventListener('pointerdown', onFlipDown);
   window.addEventListener('pointermove', onFlipMove, { passive: false });
   window.addEventListener('pointerup', onFlipUp, { passive: true });
   window.addEventListener('pointercancel', onFlipCancel, { passive: true });
+  // 滑动模式：点按左右边缘翻页（兜底）
+  el.addEventListener('click', (e)=>{
+    if(flipMode() !== 'slide' || !PG.ready || PG.total <= 1) return;
+    if(window.getSelection().toString()) return;
+    if(e.target.closest('button, a, .sel-tip')) return;
+    const W = el.clientWidth || 1;
+    const rect = el.getBoundingClientRect();
+    const rx = e.clientX - rect.left;
+    if(rx < W * 0.22 && PG.page > 0){ Flip.animateTo(PG.page - 1); }
+    else if(rx > W * 0.78 && PG.page < PG.total - 1){ Flip.animateTo(PG.page + 1); }
+  });
+  // 滑动模式：滚动结束吸附到最近页面；滑出预渲染窗口时自动扩展
+  let snapT = null;
+  el.addEventListener('scroll', ()=>{
+    if(flipMode() !== 'slide' || Flip.active) return;
+    // 预渲染窗口保护：接近边缘时扩展窗口
+    try{
+      const W = el.clientWidth || 1;
+      const local = Math.round(el.scrollLeft / W);
+      const gp = local + localPageOffset();
+      if(PG.ready && gp >= 0 && gp < PG.total){
+        const s0 = sentenceOfPage(gp);
+        if(s0 < winStart + 100 || s0 >= winStart + sentEls.length - 100){
+          ensureWindowForPage(gp);
+          // 窗口重渲染后重新对齐滚动位置
+          const nl = localPageOf(gp);
+          if(Math.abs(el.scrollLeft - nl * W) > W * 0.5) el.scrollTo({ left: nl * W, behavior: 'auto' });
+        }
+      }
+    }catch(e){}
+    clearTimeout(snapT);
+    snapT = setTimeout(snapToPage, 120);
+  }, { passive: true });
+}
+function applyFlipMode(){
+  const el = pagesEl(); if(!el) return;
+  el.classList.toggle('slide-mode', flipMode() === 'slide');
+}
+function snapToPage(){
+  if(flipMode() !== 'slide' || !PG.ready || PG.total <= 1) return;
+  const el = pagesEl(), W = el.clientWidth || 1;
+  const local = Math.round(el.scrollLeft / W);
+  const gp = Math.max(0, Math.min(PG.total - 1, local + localPageOffset()));
+  if(gp !== PG.page){
+    el.scrollTo({ left: local * W, behavior: 'smooth' });
+    PG.page = gp; commitPageState(); updateCount();
+  } else {
+    // 对齐到精确位置
+    const target = local * W;
+    if(Math.abs(el.scrollLeft - target) > 2) el.scrollTo({ left: target, behavior: 'smooth' });
+  }
 }
 
 function onFlipDown(e){
+  if(flipMode() !== 'curl') return; // 滑动/无动画模式不拦截，走原生
   if(Flip.active || !PG.ready || PG.total <= 1) return;
   clearStaleShift();
   if(e.pointerType === 'mouse' && e.button !== 0) return;
@@ -247,6 +303,16 @@ function drainQueue(){
 Flip.animateTo = function(gp){
   if(!PG.ready) return;
   gp = Math.max(0, Math.min(PG.total - 1, gp));
+  const mode = flipMode();
+  if(mode === 'none'){ showPageInstant(gp); return; }
+  if(mode === 'slide'){
+    // 原生平滑滚动（浏览器合成器线程，60fps）
+    const el = pagesEl(), W = el.clientWidth || 1;
+    ensureWindowForPage(gp);
+    el.scrollTo({ left: localPageOf(gp) * W, behavior: 'smooth' });
+    PG.page = gp; commitPageState(); updateCount();
+    return;
+  }
   if(Flip.active){ Flip.queued = gp; return; }
   if(gp === PG.page || PG.total <= 1){ showPageInstant(gp); return; }
   const dir = gp > PG.page ? 1 : -1;

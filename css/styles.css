@@ -474,6 +474,9 @@ textarea.txt.big{resize:vertical;min-height:150px;line-height:1.7}
 
 /* ===== v3.21 仿真翻页：真书触感 ===== */
 #reader-pages{position:relative;overflow-x:hidden;touch-action:pan-y;overflow-anchor:none;perspective:1600px}
+/* v3.51 丝滑滑动模式（对标 Readify 原生分页）：浏览器原生处理手势 */
+#reader-pages.slide-mode{overflow-x:auto;touch-action:pan-x pan-y;scrollbar-width:none;-ms-overflow-style:none}
+#reader-pages.slide-mode::-webkit-scrollbar{display:none}
 .flip-leaf{position:absolute;left:0;top:0;width:100%;height:100%;z-index:20;pointer-events:none;
   transform-style:preserve-3d;will-change:transform;background:#fff} /* 背面=纸色 */
 .flip-fx{position:absolute;top:0;bottom:0;left:0;width:110px;z-index:19;pointer-events:none;opacity:0;will-change:transform,opacity;

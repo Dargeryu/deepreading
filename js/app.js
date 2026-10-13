@@ -1422,6 +1422,7 @@ c.dataset.theme=theme;
 $('#ts-size').value=size; $('#ts-size-v').textContent=size;
 $('#ts-lh').value=lh; $('#ts-lh-v').textContent=(lh/10).toFixed(1);
 $('#ts-font').value=font; $('#ts-theme').value=theme;
+const tf=$('#ts-flip'); if(tf) tf.value=store.get('ts_flip','slide');
 }
 /* 排版按钮已并入目录抽屉（#dr-type） */
 $('#btn-type-close').onclick=()=>$('#typeset').classList.add('hidden');
@@ -1429,6 +1430,7 @@ $('#ts-size').addEventListener('input',e=>{store.set('ts_size',e.target.value);a
 $('#ts-lh').addEventListener('input',e=>{store.set('ts_lh',e.target.value);applyType();scheduleRepaginate();});
 $('#ts-font').addEventListener('change',e=>{store.set('ts_font',e.target.value);applyType();scheduleRepaginate();});
 $('#ts-theme').addEventListener('change',e=>{store.set('ts_theme',e.target.value);applyType();scheduleRepaginate();});
+$('#ts-flip').addEventListener('change',e=>{store.set('ts_flip',e.target.value);applyFlipMode();toast(e.target.selectedOptions[0].text+'已生效');});
 $('#ts-theme2').addEventListener('change',e=>{store.set('ts_theme',e.target.value);applyType();scheduleRepaginate();});
 
 /* ---------- 设置持久化 ---------- */
