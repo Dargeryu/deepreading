@@ -17,7 +17,7 @@ const Flip = {
   queued: null,     // 翻页进行中时新到的目标页（朗读连续翻页）
 };
 
-/* v3.52 翻页模式：slide=原生滑动（默认，对标 Readify），curl=3D仿真，none=无动画 */
+/* v3.53 翻页模式：slide=原生滑动（默认，对标 Readify），curl=3D仿真，none=无动画 */
 function flipMode(){ return store.get('ts_flip', 'slide'); }
 function bindFlip(){
   const el = pagesEl();
@@ -125,7 +125,7 @@ function onFlipMove(e){
     Flip.dragging = true; pageTouchMoved = true;
     try{ document.getElementById('content').style.userSelect='none'; }catch(_){} // 拖拽中禁选中，防蓝色高亮
     if(to < 0 || to >= PG.total){ Flip.edge = true; Flip.dir = dir; }
-    else { Flip.edge = false; beginLeaf(dir); }
+    else { Flip.edge = false; beginCurl(dir); }
     try{ pagesEl().setPointerCapture(e.pointerId); }catch(_){}
     if(e.cancelable) e.preventDefault();
     return;
@@ -167,6 +167,120 @@ function onFlipCancel(){
     if(Flip.edge){ edgeRelease(); Flip.edge = false; } else cancelFlip(); }
 }
 
+/* ============ v3.53 真卷页：分段圆柱弯曲（对标 Readify） ============ */
+const CURL_N = 16; // 切片数
+function paperColor(){
+  try{ return getComputedStyle(document.getElementById('content')).backgroundColor || '#fff'; }
+  catch(_){ return '#fff'; }
+}
+/* 开始一次翻页：静层先切到目标页，卷叶盖住显示当前页 */
+function beginCurl(dir){
+  const el = pagesEl();
+  const W = el.clientWidth || 1, H = el.clientHeight || 1;
+  Flip.W = W;
+  Flip.dir = dir; Flip.fromPage = PG.page; Flip.toPage = PG.page + dir; Flip.progress = 0;
+  ensureWindowForPage(Flip.toPage);
+  el.scrollTo({ left: localPageOf(Flip.toPage) * W, behavior: 'auto' });
+  const src = document.getElementById('content');
+  const bg = paperColor();
+  // 卷叶容器
+  const curl = document.createElement('div');
+  curl.className = 'flip-curl';
+  curl.style.cssText = `position:absolute;left:0;top:0;width:${W}px;height:${H}px;z-index:20;pointer-events:none;`;
+  // 切片：每条显示页面对应竖条，背面为纸色
+  const stripW = W / CURL_N;
+  Flip.strips = [];
+  // 只克隆一次作为模板
+  const tpl = src.cloneNode(true);
+  tpl.removeAttribute('id');
+  tpl.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));
+  for(let i=0;i<CURL_N;i++){
+    const strip = document.createElement('div');
+    strip.style.cssText = `position:absolute;left:${(i*stripW).toFixed(1)}px;top:0;width:${(stripW+1).toFixed(1)}px;height:100%;overflow:hidden;background:${bg};transform-origin:${dir===1?'left':'right'} center;will-change:transform;`;
+    const inner = document.createElement('div');
+    inner.style.cssText = `width:${W}px;height:100%;margin-left:${(-i*stripW).toFixed(1)}px;backface-visibility:hidden;-webkit-backface-visibility:hidden;`;
+    inner.appendChild(i===0 ? tpl : tpl.cloneNode(true));
+    // 定位到当前页
+    inner.scrollLeft = 0;
+    strip.appendChild(inner);
+    curl.appendChild(strip);
+    Flip.strips.push({el:strip, x:(i+0.5)*stripW});
+  }
+  // 卷页阴影（跟随卷曲前锋）
+  const shadow = document.createElement('div');
+  shadow.className = 'flip-curl-shadow';
+  shadow.style.cssText = `position:absolute;top:0;bottom:0;width:90px;pointer-events:none;opacity:0;will-change:transform,opacity;background:linear-gradient(${dir===1?'90deg':'270deg'},rgba(0,0,0,0),rgba(20,12,6,.28),rgba(0,0,0,0));`;
+  curl.appendChild(shadow);
+  el.appendChild(curl);
+  // 把每条 inner 滚动到当前页位置
+  const pageScroll = localPageOf(Flip.fromPage) * W;
+  Flip.strips.forEach(({el:strip})=>{
+    const inner = strip.firstChild;
+    inner.style.transform = `translateX(${-pageScroll}px)`;
+  });
+  Flip.curl = curl; Flip.curlShadow = shadow;
+  Flip.active = true; Flip._activeSince = Date.now();
+  setCurl(0);
+}
+/* 卷曲进度 p∈[0,1] → 每条切片的弯曲角度（圆柱模型近似） */
+function setCurl(p){
+  const W = Flip.W || 1, dir = Flip.dir || 1;
+  const strips = Flip.strips || [];
+  // 卷曲前锋位置：从右边缘（p=0）移到左边缘（p=1）
+  const front = dir === 1 ? W * (1 - p) : W * p;
+  const curlW = Math.max(60, W * 0.30); // 弯曲区宽度
+  for(const {el:strip, x} of strips){
+    let angle = 0;
+    if(dir === 1){
+      const d = x - front; // 前锋右侧为已卷起区
+      if(d > 0) angle = Math.min(180, (d / curlW) * 165);
+    }else{
+      const d = front - x;
+      if(d > 0) angle = Math.min(180, (d / curlW) * 165);
+    }
+    // 用 smoothstep 让弯曲更圆润
+    const t = Math.min(1, angle / 165);
+    const smooth = t * t * (3 - 2 * t);
+    const deg = smooth * 165 * (angle >= 165 ? 180/165 : 1);
+    const finalDeg = angle >= 165 ? 180 : deg;
+    strip.style.transform = `rotateY(${(dir===1?-finalDeg:finalDeg).toFixed(2)}deg)`;
+    // 弯曲区压暗，增强立体感
+    const shade = Math.sin(Math.min(1, finalDeg/180) * Math.PI);
+    strip.style.filter = shade > 0.02 ? `brightness(${(1 - shade*0.22).toFixed(3)})` : '';
+  }
+  if(Flip.curlShadow){
+    const sx = dir === 1 ? front - 45 : front - 45;
+    Flip.curlShadow.style.transform = `translateX(${sx.toFixed(1)}px)`;
+    Flip.curlShadow.style.opacity = (Math.sin(Math.min(1,p)*Math.PI)*0.85).toFixed(3);
+  }
+  Flip.progress = p;
+}
+function curlDragTo(dx){
+  const W = Flip.W || 1;
+  const p = Math.min(1, Math.max(0, Math.abs(dx) / (W * 0.9)));
+  setCurl(p);
+}
+function endCurl(){
+  if(Flip.curl) Flip.curl.remove();
+  if(Flip.strips) Flip.strips.length = 0;
+  Flip.curl = Flip.curlShadow = null; Flip.strips = null;
+  Flip.active = false; Flip.edge = false; Flip._activeSince = 0;
+  cancelAnimationFrame(Flip.raf);
+  try{ document.getElementById('content').style.userSelect=''; }catch(_){}
+  clearStaleShift();
+}
+function tweenCurl(from, to, dur, done){
+  const t0 = performance.now();
+  cancelAnimationFrame(Flip.raf);
+  const step = now => {
+    const t = Math.min(1, (now - t0) / dur);
+    const e = 1 - Math.pow(1 - t, 3);
+    setCurl(from + (to - from) * e);
+    if(t < 1) Flip.raf = requestAnimationFrame(step);
+    else done();
+  };
+  Flip.raf = requestAnimationFrame(step);
+}
 /* 开始一次翻页：静层先切到目标页，叶子盖住显示当前页 */
 function beginLeaf(dir){
   const el = pagesEl();
@@ -235,11 +349,7 @@ function clearStaleShift(){
   if(el.style.transform){ el.style.transition=''; el.style.transform=''; }
 }
 function dragTo(dx){
-  const W = Flip.W || 1;
-  const raw = Math.min(1, Math.abs(dx) / (W * 0.82));
-  const p = Math.pow(raw, 0.92);   // 纸张阻尼：起手稍沉
-  Flip.progress = p;
-  setAngle(Flip.dir === 1 ? -180 * p : 180 * p);
+  curlDragTo(dx); // 分段真卷页跟手
 }
 
 function tween(from, to, dur, done){
@@ -258,7 +368,7 @@ function tween(from, to, dur, done){
 /* 看门狗：翻页动画卡住超过 3 秒强制重置，防止滑动彻底失灵 */
 setInterval(()=>{
   if(Flip.active && Flip._activeSince && Date.now() - Flip._activeSince > 3000){
-    try{ endLeaf(); }catch(e){}
+    try{ if(Flip.curl) endCurl(); else endLeaf(); }catch(e){}
     Flip.active = false; Flip.tracking = false; Flip.dragging = false;
   }
 }, 1000);
@@ -277,22 +387,21 @@ function endLeaf(){
 }
 
 function completeFlip(){
-  const target = Flip.dir === 1 ? -180 : 180;
-  const cur = Flip.dir === 1 ? -180 * Flip.progress : 180 * Flip.progress;
+  const cur = Flip.progress;
   const dur = Math.max(120, Math.min(420, 230 * (1 - Flip.progress) / (0.35 + Math.abs(Flip.vel))));
-  tween(cur, target, dur, () => {
+  tweenCurl(cur, 1, dur, () => {
     const tp = Flip.toPage;
-    endLeaf();
+    endCurl();
     commitPage(tp);
     verifyPageAlignment(tp, pagesEl().clientWidth||1);
     drainQueue();
   });
 }
 function cancelFlip(){
-  const cur = Flip.dir === 1 ? -180 * Flip.progress : 180 * Flip.progress;
-  tween(cur, 0, 190, () => {
+  const cur = Flip.progress;
+  tweenCurl(cur, 0, 190, () => {
     const fp = Flip.fromPage;
-    endLeaf();
+    endCurl();
     showPageInstant(fp);   // 静层曾切到目标页，弹回时复原
   });
 }
@@ -321,10 +430,10 @@ Flip.animateTo = function(gp){
   if(gp === PG.page || PG.total <= 1){ showPageInstant(gp); return; }
   const dir = gp > PG.page ? 1 : -1;
   if(Math.abs(gp - PG.page) !== 1){ showPageInstant(gp); return; }
-  beginLeaf(dir);
-  tween(0, dir === 1 ? -180 : 180, 300, () => {
+  beginCurl(dir);
+  tweenCurl(0, 1, 300, () => {
     const tp = Flip.toPage;
-    endLeaf();
+    endCurl();
     commitPage(tp);
     drainQueue();
   });
