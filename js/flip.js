@@ -17,7 +17,7 @@ const Flip = {
   queued: null,     // 翻页进行中时新到的目标页（朗读连续翻页）
 };
 
-/* v3.53 翻页模式：slide=原生滑动（默认，对标 Readify），curl=3D仿真，none=无动画 */
+/* v3.54 翻页模式：slide=原生滑动（默认，对标 Readify），curl=3D仿真，none=无动画 */
 function flipMode(){ return store.get('ts_flip', 'slide'); }
 function bindFlip(){
   const el = pagesEl();
@@ -167,7 +167,7 @@ function onFlipCancel(){
     if(Flip.edge){ edgeRelease(); Flip.edge = false; } else cancelFlip(); }
 }
 
-/* ============ v3.53 真卷页：分段圆柱弯曲（对标 Readify） ============ */
+/* ============ v3.54 真卷页：分段圆柱弯曲（对标 Readify） ============ */
 const CURL_N = 16; // 切片数
 function paperColor(){
   try{ return getComputedStyle(document.getElementById('content')).backgroundColor || '#fff'; }
@@ -186,22 +186,24 @@ function beginCurl(dir){
   // 卷叶容器
   const curl = document.createElement('div');
   curl.className = 'flip-curl';
-  curl.style.cssText = `position:absolute;left:0;top:0;width:${W}px;height:${H}px;z-index:20;pointer-events:none;`;
+  curl.style.cssText = `position:absolute;left:0;top:0;width:${W}px;height:${H}px;z-index:20;pointer-events:none;overflow:hidden;`;
   // 切片：每条显示页面对应竖条，背面为纸色
   const stripW = W / CURL_N;
   Flip.strips = [];
-  // 只克隆一次作为模板
-  const tpl = src.cloneNode(true);
-  tpl.removeAttribute('id');
-  tpl.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));
+  // 模板：带完整多列布局上下文的页面快照（column-width/padding/gap 从 #reader-pages 复制）
+  const colW = el.style.columnWidth || (Math.max(200, W-44)+'px');
+  const tpl = document.createElement('div');
+  tpl.style.cssText = `box-sizing:border-box;padding:22px;column-gap:44px;column-fill:auto;column-width:${colW};width:max-content;height:${H}px;`;
+  const cc = src.cloneNode(true);
+  cc.removeAttribute('id');
+  cc.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));
+  tpl.appendChild(cc);
   for(let i=0;i<CURL_N;i++){
     const strip = document.createElement('div');
     strip.style.cssText = `position:absolute;left:${(i*stripW).toFixed(1)}px;top:0;width:${(stripW+1).toFixed(1)}px;height:100%;overflow:hidden;background:${bg};transform-origin:${dir===1?'left':'right'} center;will-change:transform;`;
     const inner = document.createElement('div');
-    inner.style.cssText = `width:${W}px;height:100%;margin-left:${(-i*stripW).toFixed(1)}px;backface-visibility:hidden;-webkit-backface-visibility:hidden;`;
+    inner.style.cssText = `width:${W}px;height:100%;margin-left:${(-i*stripW).toFixed(1)}px;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;`;
     inner.appendChild(i===0 ? tpl : tpl.cloneNode(true));
-    // 定位到当前页
-    inner.scrollLeft = 0;
     strip.appendChild(inner);
     curl.appendChild(strip);
     Flip.strips.push({el:strip, x:(i+0.5)*stripW});
