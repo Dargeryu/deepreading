@@ -206,9 +206,37 @@ async function parseFB2(buf){
 async function parseHTML(buf){
   const txt=new TextDecoder('utf-8').decode(buf);
   const doc=new DOMParser().parseFromString(txt,'text/html');
-  doc.querySelectorAll('script,style,nav,header,footer').forEach(e=>e.remove());
-  const text=(doc.body?doc.body.innerText:'').split('\n').map(x=>x.trim()).filter(x=>x).join('\n');
-  return {title:(doc.title||'').trim(), text};
+  doc.querySelectorAll('script,style,nav,header,footer,iframe,.ad,.ads,.advertisement,.sidebar,.comment,.comments').forEach(e=>e.remove());
+  // 小说站正文容器启发式：找最长的文本块
+  let best=null, bestLen=0;
+  const candidates=doc.querySelectorAll('article,#content,.content,#chapter,.chapter,#txt,.txt,.read-content,.novel-content,div');
+  for(const el of candidates){
+    const t=(el.innerText||'').trim();
+    if(t.length>bestLen && t.length<500000){ bestLen=t.length; best=el; }
+  }
+  const root=best||doc.body;
+  const text=(root.innerText||'').split('\n').map(x=>x.trim()).filter(x=>x).join('\n');
+  return {title:(doc.title||'').trim(), text, doc};
+}
+/* 小说章节目录检测：找页面上的章节链接 */
+function detectChapters(doc, baseUrl){
+  const links=[];
+  const seen=new Set();
+  doc.querySelectorAll('a[href]').forEach(a=>{
+    const href=a.getAttribute('href');
+    const t=(a.textContent||'').trim();
+    if(!href||!t||t.length>40||t.length<2) return;
+    // 章节标题模式：第X章/节/回/卷，或纯数字标题
+    if(!/第?[0-9一二三四五六七八九十百千万]+[章节回卷集]/.test(t) && !/^\d+[.、\s]/.test(t)) return;
+    try{
+      const u=new URL(href, baseUrl).href;
+      if(seen.has(u)) return;
+      seen.add(u);
+      links.push({title:t, url:u});
+    }catch(e){}
+  });
+  // 按 URL 排序（通常章节按顺序）
+  return links.slice(0,200);
 }
 async function finalizeImport(title, format, chapters, fileData, fileName){
   // 章节 → 句子
@@ -263,12 +291,47 @@ async function importFromURL(url){
     const html=await r.text();
     const buf=new TextEncoder().encode(html).buffer;
     const res=await parseHTML(buf);
-    const title=res.title||'网页文章';
-    const chapters=splitChapters(res.text);
+    const title=(res.title||'网页文章').split(/[-_|]/)[0].trim()||'网页文章';
+    // 小说目录检测
+    let chapters=null;
+    if(res.doc){
+      const found=detectChapters(res.doc, url);
+      if(found.length>=3){
+        const go=confirm(`检测到 ${found.length} 个章节，是否批量导入全书？\n\n点"确定"批量抓取（可能需要几分钟），点"取消"只导入当前页。`);
+        if(go){
+          chapters=await importNovelChapters(found, title);
+        }
+      }
+    }
+    if(!chapters){
+      chapters=splitChapters(res.text);
+    }
     return await finalizeImport(title, 'html', chapters, null, '');
   }catch(e){
     throw new Error(/Failed to fetch|NetworkError|CORS/i.test(e.message)?'该网页不允许跨域抓取，试试复制正文用「粘贴文本」导入':e.message);
   }finally{ loading(false); }
+}
+/* 批量抓取小说章节 */
+async function importNovelChapters(links, bookTitle){
+  const chapters=[];
+  const total=Math.min(links.length, 100); // 最多100章
+  for(let i=0;i<total;i++){
+    loading(true, `抓取章节 ${i+1}/${total}…`);
+    try{
+      const r=await fetch(links[i].url);
+      if(!r.ok) continue;
+      const html=await r.text();
+      const buf=new TextEncoder().encode(html).buffer;
+      const res=await parseHTML(buf);
+      if(res.text.length>200){
+        chapters.push({title:links[i].title, text:res.text});
+      }
+    }catch(e){ /* 跳过失败章节 */ }
+    // 礼貌间隔
+    await new Promise(r=>setTimeout(r, 500));
+  }
+  if(!chapters.length) throw new Error('章节抓取失败');
+  return chapters;
 }
 
 /* ---------- 书架 ---------- */
