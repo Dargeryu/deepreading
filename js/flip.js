@@ -17,7 +17,7 @@ const Flip = {
   queued: null,     // 翻页进行中时新到的目标页（朗读连续翻页）
 };
 
-/* v3.55 翻页模式：slide=原生滑动（默认，对标 Readify），curl=3D仿真，none=无动画 */
+/* v3.56 翻页模式：slide=原生滑动（默认，对标 Readify），curl=3D仿真，none=无动画 */
 function flipMode(){ return store.get('ts_flip', 'curl'); }
 function bindFlip(){
   const el = pagesEl();
@@ -167,7 +167,7 @@ function onFlipCancel(){
     if(Flip.edge){ edgeRelease(); Flip.edge = false; } else cancelFlip(); }
 }
 
-/* ============ v3.55 真卷页：分段圆柱弯曲（对标 Readify） ============ */
+/* ============ v3.56 真卷页：分段圆柱弯曲（对标 Readify） ============ */
 const CURL_N = 16; // 切片数
 function paperColor(){
   try{ return getComputedStyle(document.getElementById('content')).backgroundColor || '#fff'; }
@@ -175,6 +175,7 @@ function paperColor(){
 }
 /* 开始一次翻页：静层先切到目标页，卷叶盖住显示当前页 */
 function beginCurl(dir){
+  try{
   const el = pagesEl();
   const W = el.clientWidth || 1, H = el.clientHeight || 1;
   Flip.W = W;
@@ -183,7 +184,6 @@ function beginCurl(dir){
   el.scrollTo({ left: localPageOf(Flip.toPage) * W, behavior: 'auto' });
   const src = document.getElementById('content');
   const bg = paperColor();
-  const pageScroll = localPageOf(Flip.fromPage) * W;
   // 卷叶容器
   const curl = document.createElement('div');
   curl.className = 'flip-curl';
@@ -191,18 +191,26 @@ function beginCurl(dir){
   // 切片：每条显示页面对应竖条，背面为纸色
   const stripW = W / CURL_N;
   Flip.strips = [];
-  // 模板：带完整多列布局上下文的页面快照（column-width/padding/gap 从 #reader-pages 复制）
-  const colW = el.style.columnWidth || (Math.max(200, W-44)+'px');
-  const scrollW = el.scrollWidth || W * 3;
+  // 模板：只快照当前页的句子（轻量，避免16次全量克隆卡死）
   const tpl = document.createElement('div');
   tpl.style.cssText = `width:${W}px;height:${H}px;overflow:hidden;box-sizing:border-box;`;
-  const contentWrap = document.createElement('div');
-  contentWrap.style.cssText = `box-sizing:border-box;padding:22px;column-gap:44px;column-fill:auto;column-width:${colW};width:${scrollW}px;height:${H}px;transform:translateX(${-pageScroll}px);`;
-  const cc = src.cloneNode(true);
-  cc.removeAttribute('id');
-  cc.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));
-  contentWrap.appendChild(cc);
-  tpl.appendChild(contentWrap);
+  const pageWrap = document.createElement('div');
+  const srcStyle = getComputedStyle(src);
+  pageWrap.style.cssText = `box-sizing:border-box;padding:22px;width:${W}px;height:${H}px;overflow:hidden;font-size:${srcStyle.fontSize};line-height:${srcStyle.lineHeight};font-family:${srcStyle.fontFamily};color:${srcStyle.color};text-align:justify;background:${bg};`;
+  pageWrap.setAttribute('data-theme', src.dataset.theme || 'day');
+  try{
+    const s0 = (PG.starts && PG.starts[Flip.fromPage] != null) ? PG.starts[Flip.fromPage] : 0;
+    const s1 = (PG.starts && PG.starts[Flip.fromPage+1] != null) ? PG.starts[Flip.fromPage+1] : cur.total;
+    for(let gi=s0; gi<s1 && gi<cur.total; gi++){
+      const orig = sentEls[gi - winStart];
+      if(orig){
+        const c = orig.cloneNode(true);
+        c.classList.remove('active');
+        pageWrap.appendChild(c);
+      }
+    }
+  }catch(e){}
+  tpl.appendChild(pageWrap);
   for(let i=0;i<CURL_N;i++){
     const strip = document.createElement('div');
     strip.style.cssText = `position:absolute;left:${(i*stripW).toFixed(1)}px;top:0;width:${(stripW+1).toFixed(1)}px;height:100%;overflow:hidden;background:${bg};transform-origin:${dir===1?'left':'right'} center;will-change:transform;`;
@@ -222,6 +230,12 @@ function beginCurl(dir){
   Flip.curl = curl; Flip.curlShadow = shadow;
   Flip.active = true; Flip._activeSince = Date.now();
   setCurl(0);
+  }catch(e){
+    // 卷页构建失败时降级：直接切页，保证不卡死
+    try{ endCurl(); }catch(_){}
+    Flip.active = false; Flip.tracking = false; Flip.dragging = false;
+    showPageInstant(Flip.toPage != null ? Flip.toPage : PG.page);
+  }
 }
 /* 卷曲进度 p∈[0,1] → 每条切片的弯曲角度（圆柱模型近似） */
 function setCurl(p){
