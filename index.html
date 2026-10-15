@@ -44,13 +44,11 @@ if ('serviceWorker' in navigator) {
 <aside id="sidebar">
   <div class="sb-brand"><img src="icon-192.png" alt="Apo"><span>Apo</span></div>
   <button class="sb-item cur" data-v="home"><span class="ti">⌂</span>首页</button>
-  <button class="sb-item" data-v="search"><span class="ti">⌕</span>发现</button>
   <button class="sb-item" data-v="library"><span class="ti">▤</span>我的书架</button>
-  <button class="sb-item" data-v="voice"><span class="ti">◖</span>声音</button>
   <button class="sb-item" data-v="mine"><span class="ti">●</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.67</div>
+    <div class="sb-ver">Apo v3.68</div>
   </div>
 </aside>
 <div id="app">
@@ -68,12 +66,10 @@ if ('serviceWorker' in navigator) {
     <header class="rd-top">
       <div class="rd-logo">Apo</div>
       <div class="rd-top-icons">
-        <button class="rd-icbtn" id="btn-voice" title="声音">🎙</button>
         <button class="rd-avatar" id="btn-mine" title="我的">我</button>
       </div>
     </header>
 
-    <div class="rd-search" id="home-search"><span>✨</span><span>搜索书名、作者…</span></div>
 
     <div class="rd-banner" id="banner">
       <div class="rb-txt">
@@ -88,9 +84,6 @@ if ('serviceWorker' in navigator) {
       <div class="rd-sec"><h3>继续阅读</h3></div>
       <div class="rd-hscroll" id="cont-list"></div>
     </div>
-
-    <div class="rd-sec"><h3>经典必读 <small>›</small></h3></div>
-    <div class="rd-hscroll" id="classic-list"></div>
 
     <div class="rd-sec" id="home-stats-link"><h3>阅读统计 <small>›</small></h3></div>
     <div class="rd-stat">
@@ -123,7 +116,6 @@ if ('serviceWorker' in navigator) {
       <div class="t">书架</div>
       <div class="ics">
         <button id="tab-add" class="rd-icbtn rd-import" title="导入书籍"><span class="ti">＋</span></button>
-        <button id="btn-lib-search" class="rd-icbtn" title="搜书">⌕</button>
         <button id="btn-lib-sort" class="rd-icbtn" title="排序">⇅</button>
       </div>
     </header>
@@ -386,7 +378,7 @@ if ('serviceWorker' in navigator) {
         <button class="btn-ghost" id="mine-notes" style="width:100%;margin-bottom:8px">📝 划线与笔记</button>
         <button class="btn-ghost" id="mine-bookmarks" style="width:100%">🔖 我的书签</button>
       </div>
-      <div class="ver">Apo v3.67</div>
+      <div class="ver">Apo v3.68</div>
     </div>
   </main>
 
@@ -459,7 +451,6 @@ if ('serviceWorker' in navigator) {
     <div class="grab"></div>
     <div class="sheet-title serif">导入</div>
     <p class="sheet-sub">支持txt/pdf/epub/mobi/azw/docx/fb2/md</p>
-    <button class="imp-opt" id="imp-ai"><span class="io-ic">📚</span><span class="io-t">AI搜书</span><i>›</i></button>
     <button class="imp-opt" id="imp-file"><span class="io-ic">📁</span><span class="io-t">从文件导入</span><i>›</i></button>
     <button class="imp-opt" id="imp-url"><span class="io-ic">🌐</span><span class="io-t">从网页导入</span><i>›</i></button>
     <button class="imp-opt" id="imp-text"><span class="io-ic">📝</span><span class="io-t">输入或粘贴文本</span><i>›</i></button>
@@ -546,9 +537,7 @@ if ('serviceWorker' in navigator) {
   <!-- 底部导航 -->
   <nav id="tabbar" aria-label="主导航">
     <button class="tab cur" data-v="home"><span class="ti">⌂</span>首页</button>
-    <button class="tab" data-v="search"><span class="ti">⌕</span>发现</button>
     <button class="tab" data-v="library"><span class="ti">▤</span>书架</button>
-    <button class="tab" data-v="voice"><span class="ti">◖</span>声音</button>
     <button class="tab" data-v="mine"><span class="ti">●</span>我的</button>
   </nav>
 
