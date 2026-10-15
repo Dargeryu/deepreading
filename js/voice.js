@@ -170,6 +170,7 @@ async function renderCloneList(){
     d.querySelector('.del').onclick=async()=>{
       if(!confirm(`删除克隆音色「${v.name}」？`)) return;
       await idb.delVoice(v.id).catch(()=>{});
+      if(typeof idb.delFile==='function') await idb.delFile('voice-'+v.id).catch(()=>{});
       renderCloneList(); toast('已删除');
     };
     box.appendChild(d);
@@ -205,8 +206,17 @@ function useCloned(v){
 }
 /* ---------- 克隆流程 ---------- */
 let cloneBlob=null, cloneBlobName='';
-function openCloneSheet(){
+function discardCloneSource(){
   cloneBlob=null; cloneBlobName='';
+  const preview=$('#clone-file-url');
+  if(preview){
+    if(preview.src.startsWith('blob:')) URL.revokeObjectURL(preview.src);
+    preview.removeAttribute('src'); preview.load();
+  }
+}
+function openCloneSheet(){
+  discardCloneSource();
+  $('#clone-consent').checked=false;
   $('#clone-step1').classList.remove('hidden');
   $('#clone-step2').classList.add('hidden');
   $('#clone-name').value='';
@@ -297,7 +307,10 @@ function extractAudioFromVideo(file){
 }
 function setCloneSource(blob, name){
   cloneBlob=blob; cloneBlobName=name;
-  $('#clone-file-url').src=URL.createObjectURL(blob);
+  $('#clone-consent').checked=false;
+  const preview=$('#clone-file-url');
+  if(preview.src.startsWith('blob:')) URL.revokeObjectURL(preview.src);
+  preview.src=URL.createObjectURL(blob);
   $('#clone-src-name').textContent=name;
   $('#clone-step1').classList.add('hidden');
   $('#clone-step2').classList.remove('hidden');
@@ -306,6 +319,7 @@ function setCloneSource(blob, name){
 /* --- 执行克隆 --- */
 $('#btn-clone-do').onclick=async()=>{
   if(!cloneBlob){ toast('先准备参考音频'); return; }
+  if(!$('#clone-consent').checked){ toast('请先确认你拥有录音授权，并同意将音频发送给所选服务商'); return; }
   const provider=store.get('clone_provider','elevenlabs');
   const key=store.get('clone_key');
   if(!key){ toast('先在「我的 → 声音克隆服务」里填写 API Key'); return; }
@@ -337,7 +351,8 @@ $('#btn-clone-do').onclick=async()=>{
     if(!voiceId) throw new Error('接口返回中没有找到 voice id（检查「返回解析路径」设置）');
     const v={id:uid(), name, provider, voiceId:String(voiceId), createdAt:Date.now()};
     await idb.putVoice(v);
-    try{ await idb.putFile('voice-'+v.id, await cloneBlob.arrayBuffer(), cloneBlobName||'sample'); }catch(e){}
+    // 只保留服务商返回的 voice ID；不把原始录音持久化到本地书库。
+    discardCloneSource();
     closeSheets();
     toast(`克隆成功：「${name}」已加入我的音色`);
     renderCloneList();
