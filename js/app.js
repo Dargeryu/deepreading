@@ -350,7 +350,7 @@ async function loadBooks(){
     : {idx:0, updatedAt:b.addedAt}; });
   books.sort((a,b)=>b.progress.updatedAt-a.progress.updatedAt);
 }
-let shelfSort='recent', shelfFmt='';
+let shelfSort='recent', shelfFmt='all', shelfQuery='';
 /* ---------- 书架分类 ---------- */
 let shelfCat = '';
 const getCats = () => { try{ return JSON.parse(localStorage.getItem('dr_cats')||'[]'); }catch(e){ return []; } };
@@ -359,9 +359,9 @@ function renderCatBar(){
   const bar = $('#cat-bar');
   if(!bar) return;
   const cats = getCats();
-  let h = `<button class="chat-sugg${!shelfCat?'':' '}" data-c="" style="${!shelfCat?'background:#1890ff;color:#fff;border-color:#1890ff':''}">全部</button>`;
-  for(const c of cats) h += `<button class="chat-sugg" data-c="${esc(c)}" style="${shelfCat===c?'background:#1890ff;color:#fff;border-color:#1890ff':''}">${esc(c)}</button>`;
-  h += `<button class="chat-sugg" data-c="__new" style="border-style:dashed">＋新建</button>`;
+  let h = `<button class="shelf-chip${!shelfCat?' active':''}" data-c="">全部</button>`;
+  for(const c of cats) h += `<button class="shelf-chip${shelfCat===c?' active':''}" data-c="${esc(c)}">${esc(c)}</button>`;
+  h += `<button class="shelf-chip add-chip" data-c="__new">＋ 新建分类</button>`;
   bar.innerHTML = h;
   bar.querySelectorAll('[data-c]').forEach(b => {
     b.onclick = () => {
@@ -383,25 +383,49 @@ async function renderShelf(){
   await loadBooks();
   renderCatBar();
   const has=books.length>0;
-  $('#shelf-empty').classList.toggle('hidden', has);
-  $('#shelf-has').classList.toggle('hidden', !has);
+  $('#shelf-empty').classList.toggle('hidden',has);
+  $('#shelf-has').classList.toggle('hidden',!has);
+  $('#recent-section').classList.toggle('hidden',!has);
   if(!has){ updateMiniPlayer(); return; }
-  const filtered = shelfCat ? books.filter(b => (b.cat||'')===shelfCat) : books;
-  const sorted=[...filtered];
-  if(shelfSort==='title') sorted.sort((a,b)=>String(a.title).localeCompare(String(b.title),'zh'));
-  else sorted.sort((a,b)=>b.progress.updatedAt-a.progress.updatedAt);
-  const list=$('#shelf-list'); list.innerHTML='';
-  sorted.forEach(b=>{
-    const pct=Math.round(100*b.progress.idx/Math.max(1,b.total));
-    const done=b.progress.idx>=b.total-1&&b.total>1;
-    const el=document.createElement('div'); el.className='bk-row';
-    el.innerHTML=`<div class="cov"><div class="ct" style="background:${coverBG(b)}">${esc((b.title||'?').slice(0,10))}</div>
-      ${pct?`<span class="pbdg${done?' done':''}">${done?'✓':pct+'%'}</span>`:''}</div>
-      <div class="inf"><div class="t">${esc(b.title)}</div>
-      <div class="a">${esc(b.author||'未知作者')}</div>
-      <span class="fb">${esc((b.format||'').toUpperCase()||'BOOK')}</span></div>`;
+
+  const recent=[...books].sort((a,b)=>(b.progress?.updatedAt||0)-(a.progress?.updatedAt||0)).slice(0,8);
+  const recentList=$('#recent-list');
+  recentList.innerHTML=recent.map(b=>{
+    const pct=Math.round(100*(b.progress?.idx||0)/Math.max(1,b.total||1));
+    const done=(b.progress?.idx||0)>=((b.total||1)-1)&&(b.total||1)>1;
+    return `<button class="recent-card" data-book-index="${recent.indexOf(b)}">
+      <span class="recent-cover"><span class="ct" style="background:${coverBG(b)}">${esc((b.title||'?').slice(0,10))}</span></span>
+      <span class="recent-info"><strong>${esc(b.title||'未命名书籍')}</strong><small>${esc(b.author||'未知作者')}</small><span class="recent-progress">${done?'已读完':pct+'%'}</span></span>
+    </button>`;
+  }).join('');
+  recentList.querySelectorAll('[data-book-index]').forEach(el=>el.onclick=()=>openDetail(recent[Number(el.dataset.bookIndex)].id));
+  $('#recent-count').textContent=recent.length?String(recent.length):'';
+
+  const query=($('#shelf-filter')?.value||shelfQuery).trim().toLocaleLowerCase();
+  shelfQuery=query;
+  const format=$('#shelf-format')?.value||shelfFmt;
+  shelfFmt=format;
+  let filtered=shelfCat?books.filter(b=>(b.cat||'')===shelfCat):[...books];
+  if(format&&format!=='all') filtered=filtered.filter(b=>String(b.format||'').toLowerCase().includes(format));
+  if(query) filtered=filtered.filter(b=>String(b.title||'').toLocaleLowerCase().includes(query)||String(b.author||'').toLocaleLowerCase().includes(query));
+  if(shelfSort==='title') filtered.sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'zh'));
+  else if(shelfSort==='added') filtered.sort((a,b)=>(b.addedAt||b.createdAt||b.progress?.updatedAt||0)-(a.addedAt||a.createdAt||a.progress?.updatedAt||0));
+  else filtered.sort((a,b)=>(b.progress?.updatedAt||0)-(a.progress?.updatedAt||0));
+
+  $('#shelf-count').textContent=`${filtered.length} 本`;
+  $('#shelf-no-results').classList.toggle('hidden',filtered.length>0);
+  const list=$('#shelf-list'); list.classList.toggle('hidden',filtered.length===0); list.innerHTML='';
+  filtered.forEach(b=>{
+    const pct=Math.round(100*(b.progress?.idx||0)/Math.max(1,b.total||1));
+    const done=(b.progress?.idx||0)>=((b.total||1)-1)&&(b.total||1)>1;
+    const el=document.createElement('button'); el.type='button'; el.className='bk-row';
+    el.innerHTML=`<span class="cov"><span class="ct" style="background:${coverBG(b)}">${esc((b.title||'?').slice(0,10))}</span>
+      ${pct?`<span class="pbdg${done?' done':''}">${done?'✓':pct+'%'}</span>`:''}</span>
+      <span class="inf"><span class="t">${esc(b.title||'未命名书籍')}</span>
+      <span class="a">${esc(b.author||'未知作者')}</span>
+      <span class="fb">${esc((b.format||'').toUpperCase()||'BOOK')}</span></span>`;
     el.onclick=()=>openDetail(b.id);
-    el.oncontextmenu=e=>{ e.preventDefault(); openBookMenu(b); };
+    el.oncontextmenu=e=>{e.preventDefault();openBookMenu(b);};
     list.appendChild(el);
   });
   updateMiniPlayer();
@@ -436,7 +460,10 @@ $('#bm-cat').onclick=()=>{
 };
 $('#bm-del').onclick=async()=>{ const b=menuBook; closeSheets(); if(!b) return;
   if(confirm(`删除《${b.title}》？`)){ await idb.del(b.id); if(cur&&cur.id===b.id){cur=null;stopSpeak();} renderShelf(); } };
-$('#btn-lib-sort').onclick=()=>{ shelfSort=shelfSort==='title'?'recent':'title'; toast(shelfSort==='title'?'按书名排序':'按最近阅读排序'); renderShelf(); };
+$('#shelf-filter').addEventListener('input',e=>{shelfQuery=e.currentTarget.value;renderShelf();});
+$('#shelf-format').addEventListener('change',e=>{shelfFmt=e.currentTarget.value;renderShelf();});
+$('#shelf-sort').addEventListener('change',e=>{shelfSort=e.currentTarget.value;renderShelf();});
+$('#recent-next').onclick=()=>$('#recent-list').scrollBy({left:Math.max(260,$('#recent-list').clientWidth*.8),behavior:'smooth'});
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 async function downloadBook(b){
   const f=await idb.getFile(b.id).catch(()=>null);
@@ -707,6 +734,10 @@ function updatePlayer(){
   const fill=$('#rp-fill'); if(fill) fill.style.width=pct+'%';
   const ch=cur.chapters[chapterOf(cur.progress.idx)];
   const rh=$('#reader-chapter'); if(rh) rh.textContent=ch?ch.title:cur.title;
+  const title=$('#reader-title'); if(title) title.textContent=cur.title||'';
+  const type=$('#reader-format'); if(type) type.textContent=(cur.format||'TXT').toUpperCase();
+  const rpTitle=$('#rp-title'); if(rpTitle) rpTitle.textContent=cur.title||'';
+  const rpAuthor=$('#rp-author'); if(rpAuthor) rpAuthor.textContent=cur.author||'未知作者';
   const spt=$('#rp-speed');
   if(spt) spt.textContent=fmtRate(cur.rate/100);
   const cv=$('#rp-cover'); if(cv) cv.style.background=coverBG(cur);
@@ -851,6 +882,11 @@ $('#rp-progress').addEventListener('click',e=>{
 });
 $('#btn-back').onclick=()=>go(returnView);
 $('#reader-chapter').onclick=()=>{ renderChapters(); $('#chapter-drawer').classList.remove('hidden'); };
+$('#btn-reader-toc').onclick=()=>$('#reader-chapter').click();
+$('#btn-reader-more').onclick=()=>$('#reader-chapter').click();
+$('#btn-reader-typeset').onclick=()=>$('#typeset').classList.remove('hidden');
+$('#btn-reader-translate').onclick=()=>{ $('#chapter-drawer').classList.remove('hidden'); $('#dr-bilingual').click(); };
+$('#btn-reader-notes').onclick=()=>{ returnView='reader'; go('notes'); };
 function renderReaderFindResults(){
   const list=$('#reader-find-results'), count=$('#reader-find-count');
   if(!list||!count) return;
@@ -1066,7 +1102,7 @@ async function renderNotesList(){
     };
   });
 }
-$('#notes-back').onclick = () => go('mine');
+$('#notes-back').onclick = () => go(returnView||'mine');
 
 /* ---------- 书签 ---------- */
 $('#btn-bookmark').onclick = async () => {
@@ -1153,7 +1189,7 @@ async function renderBookmarksList(){
   });
 }
 $('#bookmarks-back').onclick = () => go('mine');
-$('#mine-notes').onclick = () => go('notes');
+$('#mine-notes').onclick = () => { returnView='mine'; go('notes'); };
 $('#mine-bookmarks').onclick = () => go('bookmarks');
 
 /* ---------- 翻译持久化 ---------- */
@@ -1418,7 +1454,7 @@ async function scanDownloads(){
 
 /* ---------- 底部导航 ---------- */
 document.querySelectorAll('#tabbar .tab').forEach(t=>{ t.onclick=()=>go(t.dataset.v); });
-document.querySelectorAll('#sidebar .sb-item').forEach(b=>{ b.onclick=()=>go(b.dataset.v); });
+document.querySelectorAll('#sidebar .sb-item').forEach(b=>{ b.onclick=()=>{ if(b.dataset.v==='notes') returnView=curView; go(b.dataset.v); }; });
 $('#sb-add').onclick=()=>openImportSheet();
 $('#tab-add').onclick=()=>openImportSheet();
 

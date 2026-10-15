@@ -45,10 +45,11 @@ if ('serviceWorker' in navigator) {
   <div class="sb-brand"><img src="icon-192.png" alt="Apo"><span>Apo</span></div>
   <button class="sb-item cur" data-v="home"><span class="ti">⌂</span>首页</button>
   <button class="sb-item" data-v="library"><span class="ti">▤</span>我的书架</button>
+  <button class="sb-item" data-v="notes"><span class="ti">☷</span>划线与笔记</button>
   <button class="sb-item" data-v="mine"><span class="ti">●</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.68</div>
+    <div class="sb-ver">Apo v3.69</div>
   </div>
 </aside>
 <div id="app">
@@ -113,22 +114,49 @@ if ('serviceWorker' in navigator) {
   <!-- 书架 -->
   <main id="view-library" class="view hidden">
     <header class="rd-lib-top">
-      <div class="t">书架</div>
+      <div class="library-title-wrap">
+        <div class="t">我的书架</div>
+        <div class="library-subtitle">你的阅读，都在这里</div>
+      </div>
       <div class="ics">
-        <button id="tab-add" class="rd-icbtn rd-import" title="导入书籍"><span class="ti">＋</span></button>
-        <button id="btn-lib-sort" class="rd-icbtn" title="排序">⇅</button>
+        <button id="tab-add" class="btn-primary library-add" title="添加书籍">＋ 添加</button>
       </div>
     </header>
     <div id="view-shelf">
-      <div id="cat-bar" style="padding:4px 20px 8px;overflow-x:auto;white-space:nowrap"></div>
-      <div id="shelf-has">
-        <div id="shelf-list"></div>
-      </div>
-      <div id="shelf-empty" class="empty hidden">
-        <p class="serif">书架还是空的</p>
-        <p class="sub">导入 PDF / EPUB / DOCX / TXT，把书听成故事</p>
-        <button id="btn-import-empty" class="btn-primary">导入第一本书</button>
-      </div>
+      <section id="recent-section" class="shelf-section recent-section">
+        <div class="shelf-section-head"><h2>最近阅读</h2><span id="recent-count"></span></div>
+        <div class="recent-viewport">
+          <div id="recent-list" class="recent-list"></div>
+          <button id="recent-next" class="recent-next" aria-label="查看更多最近阅读">›</button>
+        </div>
+      </section>
+      <section id="all-books-section" class="shelf-section all-books-section">
+        <div class="all-books-head">
+          <div><h2>全部书籍</h2><span id="shelf-count" class="shelf-count"></span></div>
+          <div class="shelf-toolbar">
+            <label class="shelf-find" title="只搜索本机书架">
+              <span aria-hidden="true">⌕</span><input id="shelf-filter" type="search" placeholder="搜索我的书架">
+            </label>
+            <select id="shelf-format" aria-label="按文件类型筛选">
+              <option value="all">全部文件</option><option value="pdf">PDF</option><option value="epub">EPUB</option><option value="txt">TXT</option><option value="docx">DOCX</option><option value="mobi">MOBI</option>
+            </select>
+            <select id="shelf-sort" aria-label="书籍排序">
+              <option value="recent">最近阅读</option><option value="added">添加时间</option><option value="title">书名</option>
+            </select>
+          </div>
+        </div>
+        <div id="cat-bar" aria-label="书架分类"></div>
+        <div id="shelf-has">
+          <div id="shelf-list"></div>
+          <div id="shelf-no-results" class="empty hidden">没有符合条件的书籍</div>
+        </div>
+        <div id="shelf-empty" class="empty hidden">
+          <div class="empty-icon">▤</div>
+          <p class="serif">书架还是空的</p>
+          <p class="sub">导入 PDF / EPUB / DOCX / TXT，把书听成故事</p>
+          <button id="btn-import-empty" class="btn-primary">＋ 添加第一本书</button>
+        </div>
+      </section>
     </div>
     <input type="file" id="ocr-input" accept="image/*" hidden>
     <input type="file" id="file-input" accept=".pdf,.epub,.txt,.docx,.md,.html,.htm,.fb2,.mobi,.azw" multiple hidden>
@@ -174,12 +202,24 @@ if ('serviceWorker' in navigator) {
   <!-- 阅读器 -->
   <main id="view-reader" class="view hidden">
     <header id="reader-bar">
-      <button id="btn-back" class="icon-btn">‹</button>
-      <div id="reader-chapter" class="reader-ch" title="目录"></div>
-      <button id="btn-reader-find" class="icon-btn" title="在本书中搜索">⌕</button>
-      <button id="btn-bookmark" class="icon-btn" title="书签">🔖</button>
-      <button id="btn-bookchat" class="icon-btn" title="AI书伴">💬</button>
-      <div id="reader-count" class="reader-count"></div>
+      <div class="reader-leading">
+        <button id="btn-back" class="icon-btn" aria-label="返回">‹</button>
+        <button id="btn-reader-toc" class="icon-btn" title="目录">☰</button>
+        <button id="btn-bookmark" class="icon-btn" title="书签">♧</button>
+        <span id="reader-format" class="reader-format">TXT</span>
+      </div>
+      <div class="reader-doc">
+        <strong id="reader-title"></strong>
+        <div class="reader-doc-meta"><span id="reader-chapter" class="reader-ch" title="打开目录"></span><span id="reader-count" class="reader-count"></span></div>
+      </div>
+      <div class="reader-actions">
+        <button id="btn-reader-find" class="icon-btn" title="在本书中搜索">⌕</button>
+        <button id="btn-reader-translate" class="icon-btn" title="双语阅读">A文</button>
+        <button id="btn-reader-notes" class="icon-btn" title="划线与笔记">▤</button>
+        <button id="btn-reader-typeset" class="icon-btn" title="排版设置">Aa</button>
+        <button id="btn-reader-more" class="icon-btn" title="更多">···</button>
+        <button id="btn-bookchat" class="icon-btn reader-ai" title="AI书伴">✦</button>
+      </div>
     </header>
     <section id="reader-find" class="reader-find hidden" aria-label="在本书中搜索">
       <div class="reader-find-top">
@@ -219,14 +259,20 @@ if ('serviceWorker' in navigator) {
     <footer id="reader-player">
       <div id="rp-progress"><div id="rp-fill"></div></div>
       <div class="rp-row">
-        <div class="cover sm rp-cover" id="rp-cover"></div>
-        <button id="rp-back" class="rp-btn" title="快退15秒">↺</button>
-        <button id="rp-play" class="rp-play" title="播放/暂停">▶</button>
-        <button id="rp-fwd" class="rp-btn" title="快进15秒">↻</button>
-        <button id="rp-speed" class="rp-speed" title="倍速">1.0x</button>
-        <span style="flex:1"></span>
-        <button id="rp-full" class="rp-btn" title="更多控制"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2.2" fill="#fff"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2.2" fill="#fff"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="7" cy="17" r="2.2" fill="#fff"/></svg></button>
-        <button id="rp-close" class="rp-btn" title="关闭">✕</button>
+        <div class="rp-track">
+          <div class="cover sm rp-cover" id="rp-cover"></div>
+          <div class="rp-meta"><strong id="rp-title"></strong><span id="rp-author"></span></div>
+        </div>
+        <div class="rp-controls">
+          <button id="rp-back" class="rp-btn" title="快退15秒">↺</button>
+          <button id="rp-play" class="rp-play" title="播放/暂停">▶</button>
+          <button id="rp-fwd" class="rp-btn" title="快进15秒">↻</button>
+          <button id="rp-speed" class="rp-speed" title="倍速">1.0x</button>
+        </div>
+        <div class="rp-tools">
+          <button id="rp-full" class="rp-btn" title="更多控制"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2.2" fill="#fff"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2.2" fill="#fff"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="7" cy="17" r="2.2" fill="#fff"/></svg></button>
+          <button id="rp-close" class="rp-btn" title="关闭">✕</button>
+        </div>
       </div>
     </footer>
   </main>
@@ -378,7 +424,7 @@ if ('serviceWorker' in navigator) {
         <button class="btn-ghost" id="mine-notes" style="width:100%;margin-bottom:8px">📝 划线与笔记</button>
         <button class="btn-ghost" id="mine-bookmarks" style="width:100%">🔖 我的书签</button>
       </div>
-      <div class="ver">Apo v3.68</div>
+      <div class="ver">Apo v3.69</div>
     </div>
   </main>
 
