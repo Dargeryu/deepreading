@@ -18,10 +18,20 @@ const Flip = {
 };
 
 /* v3.57 翻页模式：slide=原生滑动（默认，对标 Readify），curl=3D仿真，none=无动画 */
-function flipMode(){ return store.get('ts_flip', 'curl'); }
+function flipMode(){ return store.get('ts_flip', 'slide'); }
 function bindFlip(){
   const el = pagesEl();
   if(!el) return;
+  [['reader-prev',-1],['reader-next',1]].forEach(([id,dir])=>{
+    const button=document.getElementById(id);
+    if(button && !button._turnBound){
+      button._turnBound=true;
+      button.addEventListener('click',()=>{
+        if(!PG.ready || Flip.active) return;
+        Flip.animateTo(PG.page+dir);
+      });
+    }
+  });
   applyFlipMode();
   if(el._flipBound) return;
   el._flipBound = true;
@@ -88,6 +98,7 @@ function snapToPage(){
 
 function onFlipDown(e){
   if(flipMode() !== 'curl') return; // 滑动/无动画模式不拦截，走原生
+  if(e.target.closest('button, a, input, textarea, select, .reader-find')) return;
   if(Flip.active || !PG.ready || PG.total <= 1) return;
   clearStaleShift();
   if(e.pointerType === 'mouse' && e.button !== 0) return;

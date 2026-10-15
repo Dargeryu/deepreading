@@ -659,8 +659,8 @@ function bindReaderGestures(){
     if(curView!=='reader'||!cur||!PG.ready||Flip.active) return;
     const tag=(document.activeElement&&document.activeElement.tagName)||'';
     if(/INPUT|TEXTAREA|SELECT/.test(tag)) return;
-    if(e.key==='ArrowRight') setPage(PG.page+1,{animate:true});
-    else if(e.key==='ArrowLeft') setPage(PG.page-1,{animate:true});
+    if(e.key==='ArrowRight'){ e.preventDefault(); setPage(PG.page+1,{animate:true}); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); setPage(PG.page-1,{animate:true}); }
   });
 }
 function renderChapters(){
@@ -1574,7 +1574,7 @@ async function doAiSearch(q){
 /* ---------- 排版 ---------- */
 function applyType(){
 const c=$('#content'); if(!c) return;
-const size=store.get('ts_size','18'), lh=store.get('ts_lh','20'),
+const size=store.get('ts_size','18'), lh=store.get('ts_lh','18'),
 font=store.get('ts_font','serif'), theme=store.get('ts_theme','day');
 c.style.fontSize=size+'px'; c.style.lineHeight=(lh/10);
 c.style.fontFamily=font==='serif'?'Georgia,"Songti SC","Noto Serif CJK SC",serif':'-apple-system,"PingFang SC","Microsoft YaHei",sans-serif';
@@ -1582,7 +1582,7 @@ c.dataset.theme=theme;
 $('#ts-size').value=size; $('#ts-size-v').textContent=size;
 $('#ts-lh').value=lh; $('#ts-lh-v').textContent=(lh/10).toFixed(1);
 $('#ts-font').value=font; $('#ts-theme').value=theme;
-const tf=$('#ts-flip'); if(tf) tf.value=store.get('ts_flip','curl');
+const tf=$('#ts-flip'); if(tf) tf.value=store.get('ts_flip','slide');
 }
 /* 排版按钮已并入目录抽屉（#dr-type） */
 $('#btn-type-close').onclick=()=>$('#typeset').classList.add('hidden');
