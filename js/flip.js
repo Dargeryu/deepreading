@@ -18,8 +18,8 @@ const Flip = {
   dragRaf: 0, pendingDx: 0, // 合并高频指针事件，最多每帧更新一次卷页
 };
 
-/* v3.66 翻页模式：slide=原生滑动（默认，对标 Readify），curl=3D仿真，none=无动画 */
-function flipMode(){ return store.get('ts_flip', 'slide'); }
+/* v3.67 翻页模式：slide=原生滑动（默认，对标 Readify），curl=3D仿真，none=无动画 */
+function flipMode(){ return store.get('ts_flip', 'curl'); }
 function bindFlip(){
   const el = pagesEl();
   if(!el) return;
@@ -60,6 +60,16 @@ function bindFlip(){
   }, { passive: true });
 }
 function applyFlipMode(){
+  // v3.67 一次性迁移：之前存了 slide 的老用户切到 curl（3D 卷页），之后用户手动改的优先
+  try{
+    if(!localStorage.getItem('ts_flip_migrated_367')){
+      const cur = store.get('ts_flip', null);
+      if(cur === 'slide'){ store.set('ts_flip', 'curl'); }
+      localStorage.setItem('ts_flip_migrated_367', '1');
+      const tf = document.getElementById('ts-flip');
+      if(tf) tf.value = store.get('ts_flip', 'curl');
+    }
+  }catch(e){}
   const el = pagesEl(); if(!el) return;
   el.classList.toggle('slide-mode', flipMode() === 'slide');
 }
@@ -175,7 +185,7 @@ function onFlipCancel(){
     if(Flip.edge){ edgeRelease(); Flip.edge = false; } else cancelFlip(); }
 }
 
-/* ============ v3.66 真卷页：分段圆柱弯曲（对标 Readify） ============ */
+/* ============ v3.67 真卷页：分段圆柱弯曲（对标 Readify） ============ */
 const CURL_N = 16; // 切片数
 function paperColor(){
   try{ return getComputedStyle(document.getElementById('content')).backgroundColor || '#fff'; }

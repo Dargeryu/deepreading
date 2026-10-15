@@ -1599,7 +1599,7 @@ c.dataset.theme=theme;
 $('#ts-size').value=size; $('#ts-size-v').textContent=size;
 $('#ts-lh').value=lh; $('#ts-lh-v').textContent=(lh/10).toFixed(1);
 $('#ts-font').value=font; $('#ts-theme').value=theme;
-const tf=$('#ts-flip'); if(tf) tf.value=store.get('ts_flip','slide');
+const tf=$('#ts-flip'); if(tf) tf.value=store.get('ts_flip','curl');
 }
 /* 排版按钮已并入目录抽屉（#dr-type） */
 $('#btn-type-close').onclick=()=>$('#typeset').classList.add('hidden');
