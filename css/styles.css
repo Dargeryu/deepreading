@@ -1005,6 +1005,8 @@ button,.icon-btn,.rd-icbtn,.tab,.fp-tool,.fp-skip{color:#111}button:focus-visibl
 
 .flip-curl{transform-style:preserve-3d}
 .flip-curl>div{transform-style:preserve-3d}
+.flip-curl-page .ch-title{display:block;break-inside:avoid;text-align:center;font-family:Georgia,'Songti SC','STSong',serif;font-size:23px;font-weight:700;margin:0 0 1em;line-height:1.5}
+.flip-curl-back{background:linear-gradient(180deg,rgba(250,249,247,.96),#fff 48%,rgba(245,243,239,.96));box-shadow:inset 0 0 10px rgba(65,54,38,.1)}
 
 
 /* v3.68：已移除发现与声音中心入口 */
