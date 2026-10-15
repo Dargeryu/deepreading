@@ -1151,11 +1151,13 @@ async function translateWholeBook(){
   if(!key){ toast('请先在设置里填写 Gemini API Key'); go('mine'); return; }
   trRunning = true; trProgress = 0;
   const total = cur.total;
-  const BATCH = 8;
-  let done = 0, failed = 0;
+  const BATCH = 20;
+  const bookId = cur.id;
+  let done = 0, failed = 0, backoff = 0;
   toast('开始整书翻译，共'+total+'句，后台进行中…');
   updateTrProgress();
   for(let i = 0; i < total && trRunning; i += BATCH){
+    if(!cur || cur.id !== bookId) break; // 换书则停
     const batch = [];
     for(let j = i; j < Math.min(i+BATCH, total); j++){
       if(trCache[j]){ done++; continue; }
@@ -1165,20 +1167,21 @@ async function translateWholeBook(){
     }
     if(batch.length){
       try{
-        const txt = batch.map(([k,t]) => `[${k}]${t}`).join('\n');
-        const r = await geminiAsk(`将以下句子翻译成中文（如果是中文则译成英文）。每行格式保持 [序号]译文，只输出译文行：\n\n${txt.slice(0,3000)}`);
-        for(const line of r.split('\n')){
-          const m = line.match(/^\[(\d+)\](.*)/);
-          if(m){ trCache[+m[1]] = m[2].trim(); done++; }
+        const txt = batch.map(([k,t]) => `[${k}]${t}`).join('\\n');
+        const r = await geminiAsk(`将以下句子翻译成中文（如果是中文则译成英文）。每行格式保持 [序号]译文，只输出译文行：\\n\\n${txt.slice(0,6000)}`);
+        for(const line of r.split('\\n')){
+          const m = line.match(/^\\[(\\d+)\\](.*)/);
+          if(m && m[2].trim()){ trCache[+m[1]] = m[2].trim(); done++; }
         }
-      }catch(e){ failed += batch.length; }
-      // 每批保存一次
-      try{ await idbTr.save(cur.id, {...trCache}); }catch(e){}
+        backoff = 0;
+      }catch(e){
+        failed += batch.length;
+        if(/429|rate|quota|limit/i.test(e.message)){ backoff = Math.min(backoff+1,4); await new Promise(r=>setTimeout(r, 2000*backoff)); }
+      }
+      scheduleTrSave();
     }
     trProgress = Math.round(done/total*100);
     updateTrProgress();
-    // 礼貌间隔，避免触发限流
-    await new Promise(r => setTimeout(r, 800));
   }
   trRunning = false;
   updateTrProgress();
@@ -1194,8 +1197,12 @@ function updateTrProgress(){
     if(stop) stop.onclick = () => { trRunning = false; toast('已停止翻译'); };
   }
 }
+let trPageSeq = 0; // 翻页翻译序号：丢弃过期请求
 async function translatePage(){
-  if(!cur || !PG.ready) return;
+  if(!cur || !PG.ready || !bilingualOn) return;
+  const mySeq = ++trPageSeq;
+  const bookId = cur.id;
+  const pageAtReq = PG.page;
   const s0 = sentenceOfPage(PG.page), s1 = sentenceOfPage(Math.min(PG.total-1, PG.page+1));
   const batch = [];
   for(let i = s0; i < Math.min(s1, s0+12); i++){
@@ -1206,14 +1213,24 @@ async function translatePage(){
   }
   if(!batch.length){ applyTranslations(); return; }
   try{
-    const txt = batch.map(([i,t]) => `[${i}]${t}`).join('\n');
-    const r = await geminiAsk(`将以下句子翻译成中文（如果是中文则译成英文）。每行格式保持 [序号]译文，只输出译文行：\n\n${txt.slice(0,3000)}`);
-    for(const line of r.split('\n')){
-      const m = line.match(/^\[(\d+)\](.*)/);
-      if(m) trCache[+m[1]] = m[2].trim();
+    const txt = batch.map(([i,t]) => `[${i}]${t}`).join('\\n');
+    const r = await geminiAsk(`将以下句子翻译成中文（如果是中文则译成英文）。每行格式保持 [序号]译文，只输出译文行：\\n\\n${txt.slice(0,3000)}`);
+    if(mySeq !== trPageSeq || !cur || cur.id !== bookId) return; // 已翻页/换书：丢弃
+    let added = false;
+    for(const line of r.split('\\n')){
+      const m = line.match(/^\\[(\\d+)\\](.*)/);
+      if(m && m[2].trim()){ trCache[+m[1]] = m[2].trim(); added = true; }
     }
-  }catch(e){ toast('翻译失败：'+e.message); }
+    if(added) scheduleTrSave();
+  }catch(e){ if(mySeq === trPageSeq) toast('翻译失败：'+e.message); }
   applyTranslations();
+}
+// 防抖保存翻译缓存（2秒），避免频繁全量写 IDB
+let trSaveT = null;
+function scheduleTrSave(){
+  if(!cur) return;
+  clearTimeout(trSaveT);
+  trSaveT = setTimeout(()=>{ try{ idbTr.save(cur.id, {...trCache}); }catch(e){} }, 2000);
 }
 function applyTranslations(){
   if(!bilingualOn) return;

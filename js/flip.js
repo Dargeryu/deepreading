@@ -17,7 +17,7 @@ const Flip = {
   queued: null,     // 翻页进行中时新到的目标页（朗读连续翻页）
 };
 
-/* v3.57 翻页模式：slide=原生滑动（默认，对标 Readify），curl=3D仿真，none=无动画 */
+/* v3.66 翻页模式：slide=原生滑动（默认，对标 Readify），curl=3D仿真，none=无动画 */
 function flipMode(){ return store.get('ts_flip', 'curl'); }
 function bindFlip(){
   const el = pagesEl();
@@ -167,7 +167,7 @@ function onFlipCancel(){
     if(Flip.edge){ edgeRelease(); Flip.edge = false; } else cancelFlip(); }
 }
 
-/* ============ v3.57 真卷页：分段圆柱弯曲（对标 Readify） ============ */
+/* ============ v3.66 真卷页：分段圆柱弯曲（对标 Readify） ============ */
 const CURL_N = 16; // 切片数
 function paperColor(){
   try{ return getComputedStyle(document.getElementById('content')).backgroundColor || '#fff'; }

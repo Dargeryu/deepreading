@@ -702,5 +702,6 @@ mark.hl.has-note{background:linear-gradient(transparent 55%,#ffd666 55%);border-
 .chat-msg.ai{background:#fff;color:#333;box-shadow:0 1px 3px rgba(0,0,0,.08);border-bottom-left-radius:4px}
 .chat-sugg{display:inline-block;font-size:12px;background:#f0f7ff;color:#1890ff;border:1px solid #d6e9ff;border-radius:16px;padding:6px 12px;margin:0 6px 8px 0}
 
-.sent .tr{display:block;font-size:.82em;color:#888;margin-top:2px;line-height:1.5}
+.sent .tr{display:block;font-size:.82em;color:#888;margin-top:2px;line-height:1.5;animation:trIn .45s ease both}
+@keyframes trIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 #content[data-theme=ink] .sent .tr,#content[data-theme=night] .sent .tr,#content[data-theme=darkblue] .sent .tr{color:#999}
