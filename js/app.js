@@ -1585,6 +1585,28 @@ async function runBookSearch(){
   const q=$('#search-q').value.trim(); if(!q){toast('输入书名、作者或找书描述');return;}
   rememberBookSearch(q); await doAiSearch(q);
 }
+/* Anna's Archive 镜像 */
+const AA_MIRRORS=['https://annas-archive.pk','https://annas-archive.gl','https://annas-archive.gd'];
+function aaBase(){ return store.get('aa_mirror') || AA_MIRRORS[0]; }
+/* AI 搜书：点搜索直接在 Anna's Archive 全网搜书 */
+async function searchAnnasArchive(){
+  const q=$('#search-q').value.trim();
+  if(!q){ toast('输入书名、作者或找书描述'); return; }
+  rememberBookSearch(q);
+  let query=q;
+  // AI 扩展检索词（勾选且有 Key 时）
+  if($('#search-ai')?.checked && (store.get('gemini_key')||'').trim()){
+    toast('AI 理解中…');
+    try{
+      const expanded=await expandBookSearchQuery(q);
+      if(expanded.length) query=expanded[0];
+    }catch(e){}
+  }
+  const url=aaBase()+'/search?q='+encodeURIComponent(query);
+  window.open(url, '_blank', 'noopener');
+  toast('已在 Anna\'s Archive 打开搜索');
+}
+$('#btn-anna').onclick=searchAnnasArchive;
 async function doAiSearch(q){
   const box=$('#search-results'); box.innerHTML='<div class="search-loading">正在查找书目…</div>';
   const useAI=$('#search-ai')?.checked;

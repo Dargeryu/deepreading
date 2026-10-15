@@ -49,7 +49,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">●</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.69</div>
+    <div class="sb-ver">Apo v3.70</div>
   </div>
 </aside>
 <div id="app">
@@ -169,7 +169,8 @@ if ('serviceWorker' in navigator) {
       <input class="s-input" id="search-q" placeholder="搜书名、作者，或描述你想找的书">
       <button class="s-go" id="btn-search" aria-label="搜索书目">➤</button>
     </div>
-    <div class="search-note">目录检索会向 Open Library 与 Project Gutenberg 发送关键词。勾选 Gemini 后，描述也会发给 Google Gemini 做检索词扩展。</div>
+    <button id="btn-anna" class="anna-btn">📚 在 Anna's Archive 搜书 <span>↗</span></button>
+    <div class="search-note">目录检索会向 Open Library 与 Project Gutenberg 发送关键词。勾选 Gemini 后，描述也会发给 Google Gemini 做检索词扩展。点上方按钮直接在 Anna's Archive 全网搜书。</div>
     <label class="search-ai-toggle"><input id="search-ai" type="checkbox"><span>✦ 用 Gemini 理解我的描述</span></label>
     <div id="search-history" class="search-history"></div>
     <div id="search-results"></div>
@@ -424,7 +425,7 @@ if ('serviceWorker' in navigator) {
         <button class="btn-ghost" id="mine-notes" style="width:100%;margin-bottom:8px">📝 划线与笔记</button>
         <button class="btn-ghost" id="mine-bookmarks" style="width:100%">🔖 我的书签</button>
       </div>
-      <div class="ver">Apo v3.69</div>
+      <div class="ver">Apo v3.70</div>
     </div>
   </main>
 
