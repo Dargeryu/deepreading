@@ -1009,8 +1009,8 @@ button,.icon-btn,.rd-icbtn,.tab,.fp-tool,.fp-skip{color:#111}button:focus-visibl
 .flip-curl-back{background:linear-gradient(180deg,rgba(250,249,247,.96),#fff 48%,rgba(245,243,239,.96));box-shadow:inset 0 0 10px rgba(65,54,38,.1)}
 
 
-/* v3.68：已移除发现与声音中心入口 */
-#view-search,#view-voice{display:none!important}
+/* v3.75：恢复搜书入口（AI 搜书功能需要） */
+#view-voice{display:none!important}
 
 /* v3.69：参考悦读AI结构，桌面书架左侧导航与最近阅读 */
 @media(min-width:960px){

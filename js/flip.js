@@ -185,7 +185,7 @@ function onFlipCancel(){
     if(Flip.edge){ edgeRelease(); Flip.edge = false; } else cancelFlip(); }
 }
 
-/* ============ v3.74 跟手卷页：按视口自适应分段，减少小屏重绘 ============ */
+/* ============ v3.75 跟手卷页：按视口自适应分段，减少小屏重绘 ============ */
 function curlSliceCount(width){ return Math.max(10, Math.min(16, Math.round(width / 42))); }
 function paperColor(){
   try{ return getComputedStyle(document.getElementById('content')).backgroundColor || '#fff'; }
