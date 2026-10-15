@@ -144,9 +144,12 @@ if ('serviceWorker' in navigator) {
   <main id="view-search" class="view hidden">
     <div class="s-top">
       <button class="s-back" id="search-back">‹</button>
-      <input class="s-input" id="search-q" placeholder="搜索书名、作者">
-      <button class="s-go" id="btn-search">➤</button>
+      <input class="s-input" id="search-q" placeholder="搜书名、作者，或描述你想找的书">
+      <button class="s-go" id="btn-search" aria-label="搜索书目">➤</button>
     </div>
+    <div class="search-note">目录检索会向 Open Library 与 Project Gutenberg 发送关键词。勾选 Gemini 后，描述也会发给 Google Gemini 做检索词扩展。</div>
+    <label class="search-ai-toggle"><input id="search-ai" type="checkbox"><span>✦ 用 Gemini 理解我的描述</span></label>
+    <div id="search-history" class="search-history"></div>
     <div id="search-results"></div>
   </main>
 
@@ -179,10 +182,23 @@ if ('serviceWorker' in navigator) {
     <header id="reader-bar">
       <button id="btn-back" class="icon-btn">‹</button>
       <div id="reader-chapter" class="reader-ch" title="目录"></div>
+      <button id="btn-reader-find" class="icon-btn" title="在本书中搜索">⌕</button>
       <button id="btn-bookmark" class="icon-btn" title="书签">🔖</button>
       <button id="btn-bookchat" class="icon-btn" title="AI书伴">💬</button>
       <div id="reader-count" class="reader-count"></div>
     </header>
+    <section id="reader-find" class="reader-find hidden" aria-label="在本书中搜索">
+      <div class="reader-find-top">
+        <input id="reader-find-q" type="search" placeholder="搜索本书内容" aria-label="搜索本书内容">
+        <button id="reader-find-close" class="btn-ghost" aria-label="关闭搜索">✕</button>
+      </div>
+      <div class="reader-find-tools">
+        <span id="reader-find-count">输入关键词搜索整本书</span>
+        <button id="reader-find-prev" class="btn-ghost sm" title="上一个结果">↑</button>
+        <button id="reader-find-next" class="btn-ghost sm" title="下一个结果">↓</button>
+      </div>
+      <div id="reader-find-results"></div>
+    </section>
     <div id="chapter-drawer" class="drawer hidden">
       <div class="drawer-head"><span class="serif">目录</span> <button id="btn-chapters-close" class="btn-ghost">✕</button></div>
       <div class="drawer-tools">
@@ -497,6 +513,7 @@ if ('serviceWorker' in navigator) {
       <audio id="clone-file-url" controls style="width:100%"></audio>
       <label style="margin-top:12px"><span class="k">音色名字</span><input id="clone-name" class="txt" placeholder="如：我的声音"></label>
       <p class="hint" id="clone-provider-note" style="padding:8px 0"></p>
+      <label class="clone-consent"><input id="clone-consent" type="checkbox"><span>我确认已获得录音中说话人的授权，并同意将这段音频发送给上方选择的语音服务商创建音色。</span></label>
       <button class="btn-primary" id="btn-clone-do" style="width:100%">开始克隆</button>
       <button class="btn-ghost" id="btn-clone-back" style="width:100%;margin-top:10px">‹ 返回重选</button>
     </div>
