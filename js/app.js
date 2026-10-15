@@ -1607,6 +1607,7 @@ async function searchAnnasArchive(){
   toast('已在 Anna\'s Archive 打开搜索');
 }
 $('#btn-anna').onclick=searchAnnasArchive;
+$('#home-search').onclick=()=>{ go('search'); setTimeout(()=>$('#search-q').focus(),80); };
 async function doAiSearch(q){
   const box=$('#search-results'); box.innerHTML='<div class="search-loading">正在查找书目…</div>';
   const useAI=$('#search-ai')?.checked;
