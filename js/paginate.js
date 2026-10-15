@@ -19,7 +19,7 @@ function pageHash(){
   const el = $('#reader-pages');
   const w = el ? Math.round(el.clientWidth) : 0;
   const h = el ? Math.round(el.clientHeight) : 0;
-  return [store.get('ts_size','18'), store.get('ts_lh','20'),
+  return [store.get('ts_size','18'), store.get('ts_lh','18'),
           store.get('ts_font','serif'), w, h].join('|');
 }
 
