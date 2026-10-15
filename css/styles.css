@@ -933,13 +933,13 @@ button.btn-ghost:hover{background:#303036}
 #reader-find .reader-find-top input{background:#242428;color:#f5f3f1}
 #sel-tip{background:#26262b;color:#f4f2f0;border:1px solid #3e3e44;box-shadow:0 8px 24px rgba(0,0,0,.35)}
 @media(min-width:720px){
-  #reader-pages{width:min(900px,calc(100% - 48px));margin:18px auto 16px;padding:30px 34px}
+  #reader-pages{width:min(900px,calc(100% - 48px));margin:18px auto 16px;padding:22px}
   #reader-bar{padding-left:max(20px,calc((100% - 980px)/2));padding-right:max(20px,calc((100% - 980px)/2))}
   .reader-turn{width:42px;height:70px;opacity:.38}
   .reader-turn-controls:hover .reader-turn{opacity:.84}
 }
 @media(max-width:480px){
-  #reader-pages{width:calc(100% - 12px);margin:5px auto 8px;padding:18px 16px;border-radius:7px}
+  #reader-pages{width:calc(100% - 12px);margin:5px auto 8px;padding:22px;border-radius:7px}
   .reader-turn-controls{left:5px;right:5px}
   .reader-turn{width:30px;height:52px;opacity:.48}
   #reader-bar{gap:6px;padding-left:9px;padding-right:9px}
