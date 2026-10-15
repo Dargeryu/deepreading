@@ -50,25 +50,10 @@ function bindFlip(){
     if(rx < W * 0.22 && PG.page > 0){ Flip.animateTo(PG.page - 1); }
     else if(rx > W * 0.78 && PG.page < PG.total - 1){ Flip.animateTo(PG.page + 1); }
   });
-  // 滑动模式：滚动结束吸附到最近页面；滑出预渲染窗口时自动扩展
+  // 滑动模式：滚动时只做轻量防抖；分页窗口调整延后到手势停下后。
   let snapT = null;
   el.addEventListener('scroll', ()=>{
     if(flipMode() !== 'slide' || Flip.active) return;
-    // 预渲染窗口保护：接近边缘时扩展窗口
-    try{
-      const W = el.clientWidth || 1;
-      const local = Math.round(el.scrollLeft / W);
-      const gp = local + localPageOffset();
-      if(PG.ready && gp >= 0 && gp < PG.total){
-        const s0 = sentenceOfPage(gp);
-        if(s0 < winStart + 100 || s0 >= winStart + sentEls.length - 100){
-          ensureWindowForPage(gp);
-          // 窗口重渲染后重新对齐滚动位置
-          const nl = localPageOf(gp);
-          if(Math.abs(el.scrollLeft - nl * W) > W * 0.5) el.scrollTo({ left: nl * W, behavior: 'auto' });
-        }
-      }
-    }catch(e){}
     clearTimeout(snapT);
     snapT = setTimeout(snapToPage, 120);
   }, { passive: true });
@@ -85,6 +70,16 @@ function snapToPage(){
   // 用力猛滑也只允许翻一页（Readify 式单页步进）
   if(gp > PG.page + 1) gp = PG.page + 1;
   if(gp < PG.page - 1) gp = PG.page - 1;
+  // 接近渲染窗口边缘时，等滚动停止再扩展 DOM，避免在手指跟随期间重建上千个节点。
+  const s0 = sentenceOfPage(gp);
+  if(s0 < winStart + 100 || s0 >= winStart + sentEls.length - 100){
+    const previousStart = winStart;
+    ensureWindowForPage(gp);
+    if(winStart !== previousStart){
+      // renderWindow 会清空旧列；先把当前页恢复到原来的屏幕位置，再执行吸附动画。
+      el.scrollTo({ left: localPageOf(PG.page) * W, behavior: 'auto' });
+    }
+  }
   const targetLocal = gp - localPageOffset();
   if(gp !== PG.page){
     el.scrollTo({ left: targetLocal * W, behavior: 'smooth' });
