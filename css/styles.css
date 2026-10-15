@@ -1005,3 +1005,7 @@ button,.icon-btn,.rd-icbtn,.tab,.fp-tool,.fp-skip{color:#111}button:focus-visibl
 
 .flip-curl{transform-style:preserve-3d}
 .flip-curl>div{transform-style:preserve-3d}
+
+
+/* v3.68：已移除发现与声音中心入口 */
+#view-search,#view-voice{display:none!important}

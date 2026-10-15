@@ -436,7 +436,6 @@ $('#bm-cat').onclick=()=>{
 };
 $('#bm-del').onclick=async()=>{ const b=menuBook; closeSheets(); if(!b) return;
   if(confirm(`删除《${b.title}》？`)){ await idb.del(b.id); if(cur&&cur.id===b.id){cur=null;stopSpeak();} renderShelf(); } };
-$('#btn-lib-search').onclick=()=>go('search');
 $('#btn-lib-sort').onclick=()=>{ shelfSort=shelfSort==='title'?'recent':'title'; toast(shelfSort==='title'?'按书名排序':'按最近阅读排序'); renderShelf(); };
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 async function downloadBook(b){
@@ -452,9 +451,10 @@ async function downloadBook(b){
 let cur=null, sentEls=[];
 let readerFindMatches=[], readerFindIndex=0, readerFindQuery='', readerMatchSet=new Set();
 /* ---------- v3 导航 ---------- */
-const VIEWS=['splash','home','library','search','detail','reader','mine','voice','notes','bookchat','bookmarks','stats'];
+const VIEWS=['splash','home','library','detail','reader','mine','notes','bookchat','bookmarks','stats'];
 let curView='home', returnView='library';
 function go(name){
+  if(name==='search'||name==='voice'||!VIEWS.includes(name)) name='home';
   curView=name;
   VIEWS.forEach(v=>{ const el=$('#view-'+v); if(el) el.classList.toggle('hidden', v!==name); });
   document.body.classList.toggle('in-reader', name==='reader');
@@ -464,8 +464,6 @@ function go(name){
   document.querySelectorAll('#sidebar .sb-item').forEach(t=>t.classList.toggle('cur', t.dataset.v===name));
   if(name==='library'){ stopSpeak(); renderShelf(); }
   else if(name==='home'){ stopSpeak(); renderHome(); }
-  else if(name==='voice'){ stopSpeak(); renderVoice(); }
-  else if(name==='search'){ stopSpeak(); $('#search-results').innerHTML=''; }
   else if(name==='mine'){ stopSpeak(); }
   else if(name==='notes'){ stopSpeak(); renderNotesList(); }
   else if(name==='bookchat'){ stopSpeak(); }
@@ -1475,7 +1473,6 @@ function closeSheets(){ $('#scrim').classList.add('hidden');
   if(typeof discardCloneSource==='function'){ try{discardCloneSource();}catch(e){} } }
 function openImportSheet(){ openSheet('import-sheet'); }
 $('#scrim').onclick=closeSheets;
-$('#imp-ai').onclick=()=>{ closeSheets(); go('search'); };
 $('#imp-file').onclick=()=>{ closeSheets(); doImport(); };
 $('#imp-url').onclick=()=>{ $('#import-sheet').classList.add('hidden'); openSheet('url-sheet'); setTimeout(()=>$('#url-input').focus(),100); };
 $('#imp-text').onclick=()=>{ $('#import-sheet').classList.add('hidden'); openSheet('text-sheet'); setTimeout(()=>$('#text-input').focus(),100); };
@@ -1739,14 +1736,6 @@ function greetWord(){
   return '晚上好，';
 }
 /* ================= v3.5：Readify 式首页 ================= */
-const CLASSICS=[
-  {title:'红楼梦', q:'红楼梦 曹雪芹', c:['#5a2e28','#8a4a3a']},
-  {title:'三国演义', q:'三国演义 罗贯中', c:['#2e3a5a','#4a5a8a']},
-  {title:'论语', q:'论语 孔子', c:['#3a3a2e','#6a6a4a']},
-  {title:'道德经', q:'道德经 老子', c:['#2e4a3e','#4a7a5e']},
-  {title:'唐诗三百首', q:'唐诗三百首', c:['#4a2e4a','#7a4a7a']},
-  {title:'孙子兵法', q:'孙子兵法', c:['#5a4a2e','#8a7a4a']},
-];
 function rdCardHTML(b){
   const pct=Math.round(100*b.progress.idx/Math.max(1,b.total));
   const done=b.progress.idx>=b.total-1&&b.total>1;
@@ -1769,20 +1758,10 @@ async function renderHome(){
     d.onclick=()=>{ returnView='home'; openDetail(b.id); };
     cl.appendChild(d);
   });
-  // 经典必读
-  const cll=$('#classic-list'); cll.innerHTML='';
-  CLASSICS.forEach(c=>{
-    const d=document.createElement('div'); d.className='rd-bcard'; d.dataset.q=c.q;
-    d.innerHTML=`<div class="cov"><div class="ct" style="background:linear-gradient(150deg,${c.c[0]},${c.c[1]})">${esc(c.title)}</div></div><div class="nm">${esc(c.title)}</div>`;
-    d.onclick=()=>{ go('search'); $('#search-q').value=c.q; $('#btn-search').click(); };
-    cll.appendChild(d);
-  });
   renderStats();
   updateMiniPlayer();
 }
-$('#home-search').onclick=()=>{ go('search'); setTimeout(()=>$('#search-q').focus(),80); };
 $('#btn-mine').onclick=()=>go('mine');
-$('#btn-voice').onclick=()=>go('voice');
 $('#mine-back').onclick=()=>go('home');
 $('#banner-btn').onclick=()=>{ go('library'); setTimeout(()=>openImportSheet(),300); };
 /* 横幅轮播 */
