@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#101012">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -43,10 +43,11 @@ if ('serviceWorker' in navigator) {
 <body>
 <aside id="sidebar">
   <div class="sb-brand"><img src="icon-192.png" alt="Apo"><span>Apo</span></div>
-  <button class="sb-item cur" data-v="home"><span class="ti">🏠</span>首页</button>
-  <button class="sb-item" data-v="voice"><span class="ti">🎙</span>声音</button>
-  <button class="sb-item" data-v="library"><span class="ti">📚</span>书架</button>
-  <button class="sb-item" data-v="mine"><span class="ti">👤</span>我的</button>
+  <button class="sb-item cur" data-v="home"><span class="ti">⌂</span>首页</button>
+  <button class="sb-item" data-v="search"><span class="ti">⌕</span>发现</button>
+  <button class="sb-item" data-v="library"><span class="ti">▤</span>我的书架</button>
+  <button class="sb-item" data-v="voice"><span class="ti">◖</span>声音</button>
+  <button class="sb-item" data-v="mine"><span class="ti">●</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
     <div class="sb-ver">Apo v3.58</div>
@@ -76,9 +77,9 @@ if ('serviceWorker' in navigator) {
 
     <div class="rd-banner" id="banner">
       <div class="rb-txt">
-        <div class="rb-t">✦ AI 排版上新</div>
-        <div class="rb-d">智能断行修复 · 标点规范 · 一键校对</div>
-        <button class="rb-btn" id="banner-btn">去看看 ›</button>
+        <div class="rb-t">下一本好书，正在等你</div>
+        <div class="rb-d">导入喜爱的书，马上开始阅读与聆听。</div>
+        <button class="rb-btn" id="banner-btn">＋ 添加一本书</button>
       </div>
       <div class="rb-bg"></div>
     </div>
@@ -121,7 +122,8 @@ if ('serviceWorker' in navigator) {
     <header class="rd-lib-top">
       <div class="t">书架</div>
       <div class="ics">
-        <button id="btn-lib-search" class="rd-icbtn" title="搜书">🔍</button>
+        <button id="tab-add" class="rd-icbtn rd-import" title="导入书籍"><span class="ti">＋</span></button>
+        <button id="btn-lib-search" class="rd-icbtn" title="搜书">⌕</button>
         <button id="btn-lib-sort" class="rd-icbtn" title="排序">⇅</button>
       </div>
     </header>
@@ -538,10 +540,12 @@ if ('serviceWorker' in navigator) {
   <div id="scrim" class="scrim hidden"></div>
 
   <!-- 底部导航 -->
-  <nav id="tabbar">
+  <nav id="tabbar" aria-label="主导航">
     <button class="tab cur" data-v="home"><span class="ti">⌂</span>首页</button>
-    <button id="tab-add" class="tab-add" title="导入">＋</button>
-    <button class="tab" data-v="library"><span class="ti">📖</span>书架</button>
+    <button class="tab" data-v="search"><span class="ti">⌕</span>发现</button>
+    <button class="tab" data-v="library"><span class="ti">▤</span>书架</button>
+    <button class="tab" data-v="voice"><span class="ti">◖</span>声音</button>
+    <button class="tab" data-v="mine"><span class="ti">●</span>我的</button>
   </nav>
 
   <div id="toast" class="toast hidden"></div>
