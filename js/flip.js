@@ -103,7 +103,7 @@ function snapToPage(){
 }
 
 function onFlipDown(e){
-  if(flipMode() !== 'curl') return; // 滑动/无动画模式不拦截，走原生
+  if(flipMode() !== 'curl' || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return; // 无动画偏好下用阅读器按钮翻页
   if(e.target.closest('button, a, input, textarea, select, .reader-find')) return;
   if(Flip.active || !PG.ready || PG.total <= 1) return;
   clearStaleShift();
@@ -185,8 +185,8 @@ function onFlipCancel(){
     if(Flip.edge){ edgeRelease(); Flip.edge = false; } else cancelFlip(); }
 }
 
-/* ============ v3.67 真卷页：分段圆柱弯曲（对标 Readify） ============ */
-const CURL_N = 16; // 切片数
+/* ============ v3.70 跟手卷页：按视口自适应分段，减少小屏重绘 ============ */
+function curlSliceCount(width){ return Math.max(10, Math.min(16, Math.round(width / 42))); }
 function paperColor(){
   try{ return getComputedStyle(document.getElementById('content')).backgroundColor || '#fff'; }
   catch(_){ return '#fff'; }
@@ -207,37 +207,61 @@ function beginCurl(dir){
   curl.className = 'flip-curl';
   curl.style.cssText = `position:absolute;left:0;top:0;width:${W}px;height:${H}px;z-index:20;pointer-events:none;overflow:hidden;`;
   // 切片：每条显示页面对应竖条，背面为纸色
-  const stripW = W / CURL_N;
+  const sliceCount = curlSliceCount(W);
+  const stripW = W / sliceCount;
   Flip.strips = [];
-  // 模板：只快照当前页的句子（轻量，避免16次全量克隆卡死）
+  // 模板：只快照当前页句子，不复制整本书或整个虚拟窗口。
   const tpl = document.createElement('div');
   tpl.style.cssText = `width:${W}px;height:${H}px;overflow:hidden;box-sizing:border-box;`;
   const pageWrap = document.createElement('div');
-  const srcStyle = getComputedStyle(src);
-  pageWrap.style.cssText = `box-sizing:border-box;padding:22px;width:${W}px;height:${H}px;overflow:hidden;font-size:${srcStyle.fontSize};line-height:${srcStyle.lineHeight};font-family:${srcStyle.fontFamily};color:${srcStyle.color};text-align:justify;background:${bg};`;
+  pageWrap.className = 'flip-curl-page';
+  pageWrap.setAttribute('aria-hidden','true');
+  const srcStyle = getComputedStyle(src), pageStyle = getComputedStyle(el);
+  const padTop = parseFloat(pageStyle.paddingTop) || 0;
+  const padRight = parseFloat(pageStyle.paddingRight) || 0;
+  const padBottom = parseFloat(pageStyle.paddingBottom) || 0;
+  const padLeft = parseFloat(pageStyle.paddingLeft) || 0;
+  pageWrap.style.cssText = 'box-sizing:border-box;width:'+W+'px;height:'+H+'px;padding:'+padTop+'px '+padRight+'px '+padBottom+'px '+padLeft+'px;overflow:hidden;margin:0;font-size:'+srcStyle.fontSize+';line-height:'+srcStyle.lineHeight+';font-family:'+srcStyle.fontFamily+';font-weight:'+srcStyle.fontWeight+';font-style:'+srcStyle.fontStyle+';letter-spacing:'+srcStyle.letterSpacing+';word-spacing:'+srcStyle.wordSpacing+';color:'+srcStyle.color+';text-align:'+srcStyle.textAlign+';background:'+bg+';';
   pageWrap.setAttribute('data-theme', src.dataset.theme || 'day');
   try{
     const s0 = (PG.starts && PG.starts[Flip.fromPage] != null) ? PG.starts[Flip.fromPage] : 0;
     const s1 = (PG.starts && PG.starts[Flip.fromPage+1] != null) ? PG.starts[Flip.fromPage+1] : cur.total;
-    for(let gi=s0; gi<s1 && gi<cur.total; gi++){
-      const orig = sentEls[gi - winStart];
-      if(orig){
-        const c = orig.cloneNode(true);
-        c.classList.remove('active');
-        pageWrap.appendChild(c);
+    const headingRef = src.querySelector('.ch-title');
+    const headingStyle = headingRef ? getComputedStyle(headingRef) : null;
+    let chapter = s0 > 0 && cur.sentences[s0-1] ? cur.sentences[s0-1].c : -1;
+    for(let gi=s0;gi<s1 && gi<cur.total;gi++){
+      const sentence = cur.sentences[gi];
+      if(!sentence) continue;
+      if(sentence.c !== chapter){
+        chapter = sentence.c;
+        const title = document.createElement('span');
+        title.className = 'ch-title';
+        title.textContent = cur.chapters[chapter] ? cur.chapters[chapter].title : `第${chapter+1}章`;
+        if(headingStyle) title.style.cssText = 'display:block;text-align:'+headingStyle.textAlign+';font-family:'+headingStyle.fontFamily+';font-size:'+headingStyle.fontSize+';font-weight:'+headingStyle.fontWeight+';margin:'+headingStyle.margin+';line-height:'+headingStyle.lineHeight+';';
+        pageWrap.appendChild(title);
       }
+      const orig = sentEls[gi - winStart];
+      const sentenceEl = orig ? orig.cloneNode(true) : document.createElement('span');
+      if(!orig){ sentenceEl.className='sent'; sentenceEl.textContent=sentence.t; sentenceEl.dataset.g=gi; }
+      sentenceEl.classList.remove('active');
+      pageWrap.appendChild(sentenceEl);
+      pageWrap.appendChild(document.createTextNode(' '));
     }
   }catch(e){}
   tpl.appendChild(pageWrap);
-  for(let i=0;i<CURL_N;i++){
+  for(let i=0;i<sliceCount;i++){
     const strip = document.createElement('div');
     strip.style.cssText = `position:absolute;left:${(i*stripW).toFixed(1)}px;top:0;width:${(stripW+1).toFixed(1)}px;height:100%;overflow:hidden;background:${bg};transform-origin:${dir===1?'left':'right'} center;will-change:transform;`;
     const inner = document.createElement('div');
-    inner.style.cssText = `width:${W}px;height:100%;margin-left:${(-i*stripW).toFixed(1)}px;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;`;
+    inner.style.cssText = `width:${W}px;height:100%;margin-left:${(-i*stripW).toFixed(1)}px;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;transform:translateZ(.25px);`;
     inner.appendChild(i===0 ? tpl : tpl.cloneNode(true));
     strip.appendChild(inner);
+    const back = document.createElement('div');
+    back.className = 'flip-curl-back';
+    back.style.cssText = 'position:absolute;inset:0;z-index:2;pointer-events:none;transform:rotateY(180deg) translateZ(.4px);backface-visibility:hidden;-webkit-backface-visibility:hidden;';
+    strip.appendChild(back);
     curl.appendChild(strip);
-    Flip.strips.push({el:strip, x:(i+0.5)*stripW});
+    Flip.strips.push({el:strip, x:(i+0.5)*stripW, front:inner, back});
   }
   // 卷页阴影（跟随卷曲前锋）
   const shadow = document.createElement('div');
@@ -262,7 +286,7 @@ function setCurl(p){
   // 卷曲前锋位置：从右边缘（p=0）移到左边缘（p=1）
   const front = dir === 1 ? W * (1 - p) : W * p;
   const curlW = Math.max(60, W * 0.30); // 弯曲区宽度
-  for(const {el:strip, x} of strips){
+  for(const {el:strip, x, front:frontFace, back:backFace} of strips){
     let angle = 0;
     if(dir === 1){
       const d = x - front; // 前锋右侧为已卷起区
@@ -275,7 +299,10 @@ function setCurl(p){
     const t = Math.min(1, angle / 165);
     const smooth = t * t * (3 - 2 * t);
     const deg = smooth * 165 * (angle >= 165 ? 180/165 : 1);
-    const finalDeg = angle >= 165 ? 180 : deg;
+    const finalDeg = p >= 0.999 || angle >= 165 ? 180 : deg;
+    const turned = finalDeg >= 90;
+    if(frontFace) frontFace.style.visibility = turned ? 'hidden' : 'visible';
+    if(backFace) backFace.style.visibility = turned ? 'visible' : 'hidden';
     strip.style.transform = `rotateY(${(dir===1?-finalDeg:finalDeg).toFixed(2)}deg)`;
   }
   if(Flip.curlShadow){
@@ -458,7 +485,8 @@ Flip.animateTo = function(gp){
   if(!PG.ready) return;
   gp = Math.max(0, Math.min(PG.total - 1, gp));
   const mode = flipMode();
-  if(mode === 'none'){ showPageInstant(gp); return; }
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(mode === 'none' || reduceMotion){ showPageInstant(gp); return; }
   if(mode === 'slide'){
     // 原生平滑滚动（浏览器合成器线程，60fps）
     const el = pagesEl(), W = el.clientWidth || 1;
@@ -476,6 +504,7 @@ Flip.animateTo = function(gp){
     const tp = Flip.toPage;
     endCurl();
     commitPage(tp);
+    verifyPageAlignment(tp, pagesEl().clientWidth||1);
     drainQueue();
   });
 };
