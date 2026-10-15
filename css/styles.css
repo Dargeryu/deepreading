@@ -946,3 +946,25 @@ button.btn-ghost:hover{background:#303036}
   #reader-bar .icon-btn{width:34px;height:34px}
   .reader-count{font-size:10px;padding:4px 7px}
 }
+
+
+/* ---------- v3.61 阅读界面：白底黑字 ---------- */
+#view-reader{background:#fff;color:#111}
+#reader-bar{background:#fff;color:#111;border-bottom:1px solid #eee}
+#reader-bar .icon-btn{color:#111}
+.reader-ch,.reader-count{color:#333}
+.reader-count{background:#f5f5f5;border-radius:999px;padding:4px 9px}
+#reader-pages{background:#fff;border:1px solid #eee;box-shadow:0 4px 18px rgba(0,0,0,.06)}
+#content[data-theme=day]{background:#fff;color:#111}
+#content[data-theme=day] .ch-title{color:#111}
+#reader-player{background:#fff;color:#111;border-top:1px solid #e8e8e8;box-shadow:0 -6px 20px rgba(0,0,0,.06)}
+#rp-progress{background:#e5e5e5}
+#rp-fill{background:#e5484d}
+#reader-player .rp-btn{background:#f2f2f2;color:#111}
+#reader-player .rp-speed{color:#333}
+#reader-player .rp-play{background:#111;color:#fff}
+.reader-turn{border-color:#e2e2e2;background:rgba(255,255,255,.94);color:#111;box-shadow:0 3px 12px rgba(0,0,0,.12)}
+.reader-turn:hover{background:#f4f4f4}
+#voice-fab{background:#fff;color:#111;border:1px solid #e5e5e5;box-shadow:0 5px 16px rgba(0,0,0,.14)}
+#reader-find .reader-find-top input{background:#fff;color:#111}
+#sel-tip{background:#fff;color:#111;border:1px solid #e5e5e5;box-shadow:0 6px 20px rgba(0,0,0,.14)}
