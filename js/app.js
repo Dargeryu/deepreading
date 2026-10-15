@@ -481,7 +481,7 @@ let readerFindMatches=[], readerFindIndex=0, readerFindQuery='', readerMatchSet=
 const VIEWS=['splash','home','library','detail','reader','mine','notes','bookchat','bookmarks','stats'];
 let curView='home', returnView='library';
 function go(name){
-  if(name==='search'||name==='voice'||!VIEWS.includes(name)) name='home';
+  if(name==='voice'||!VIEWS.includes(name)) name='home';
   curView=name;
   VIEWS.forEach(v=>{ const el=$('#view-'+v); if(el) el.classList.toggle('hidden', v!==name); });
   document.body.classList.toggle('in-reader', name==='reader');
