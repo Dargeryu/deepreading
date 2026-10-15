@@ -968,3 +968,8 @@ button.btn-ghost:hover{background:#303036}
 #voice-fab{background:#fff;color:#111;border:1px solid #e5e5e5;box-shadow:0 5px 16px rgba(0,0,0,.14)}
 #reader-find .reader-find-top input{background:#fff;color:#111}
 #sel-tip{background:#fff;color:#111;border:1px solid #e5e5e5;box-shadow:0 6px 20px rgba(0,0,0,.14)}
+
+/* v3.62: keep the page and book text white/black across saved themes */
+#content[data-theme]{background:#fff;color:#111}
+#content[data-theme] .ch-title{color:#111}
+#content[data-theme] .sent.active{background:#efefef;box-shadow:0 0 0 3px #efefef}
