@@ -50,7 +50,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">●</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.59</div>
+    <div class="sb-ver">Apo v3.60</div>
   </div>
 </aside>
 <div id="app">
@@ -213,6 +213,10 @@ if ('serviceWorker' in navigator) {
       <div id="chapter-list"></div>
     </div>
     <div id="reader-pages"><article id="content"></article></div>
+    <div class="reader-turn-controls" aria-label="翻页控制">
+      <button id="reader-prev" class="reader-turn" type="button" aria-label="上一页" title="上一页">‹</button>
+      <button id="reader-next" class="reader-turn" type="button" aria-label="下一页" title="下一页">›</button>
+    </div>
     <div id="sel-tip" class="sel-tip hidden">已选中 <button id="btn-hl" class="btn-ghost sm">划线</button><button id="btn-note" class="btn-ghost sm">笔记</button><button id="btn-tr" class="btn-ghost sm">翻译</button><button id="btn-ai-ask" class="btn-primary sm">AI 讲解</button></div>
     <button id="voice-fab" title="挑选音色">🎙</button>
     <div id="voice-sheet" class="sheet hidden">
@@ -343,7 +347,7 @@ if ('serviceWorker' in navigator) {
         <label><span class="k">字号</span><input type="range" id="ts-size" min="14" max="26" value="18"><span id="ts-size-v">18</span></label>
         <label><span class="k">字体</span><select id="ts-font"><option value="serif">衬线（宋体）</option><option value="sans">无衬线（黑体）</option></select></label>
         <label><span class="k">行高</span><input type="range" id="ts-lh" min="16" max="28" value="20"><span id="ts-lh-v">2.0</span></label>
-        <label><span class="k">翻页效果</span><select id="ts-flip"><option value="curl">仿真翻书</option><option value="slide">丝滑滑动</option><option value="none">无动画</option></select></label>
+        <label><span class="k">翻页效果</span><select id="ts-flip"><option value="slide">横向翻页 · 推荐</option><option value="curl">3D 卷页</option><option value="none">无动画</option></select></label>
         <label><span class="k">主题</span><select id="ts-theme"><option value="day">白天</option><option value="sepia">暖纸</option><option value="yellow">鹅黄</option><option value="green">豆绿</option><option value="blue">雾蓝</option><option value="pink">樱粉</option><option value="gray">浅灰</option><option value="ink">墨黑</option><option value="darkblue">深蓝</option><option value="night">夜间</option></select></label>
       </div>
       <div class="set-group" id="engine-eleven">
