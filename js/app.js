@@ -461,6 +461,7 @@ function go(name){
   document.body.classList.toggle('in-splash', name==='splash');
   document.querySelectorAll('#tabbar .tab').forEach(t=>t.classList.toggle('cur', t.dataset.v===name));
   document.querySelectorAll('#sidebar .sb-item').forEach(t=>t.classList.toggle('cur', t.dataset.v===name));
+  document.querySelectorAll('#sidebar .sb-item').forEach(t=>t.classList.toggle('cur', t.dataset.v===name));
   if(name==='library'){ stopSpeak(); renderShelf(); }
   else if(name==='home'){ stopSpeak(); renderHome(); }
   else if(name==='voice'){ stopSpeak(); renderVoice(); }
