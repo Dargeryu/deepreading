@@ -478,7 +478,7 @@ async function downloadBook(b){
 let cur=null, sentEls=[];
 let readerFindMatches=[], readerFindIndex=0, readerFindQuery='', readerMatchSet=new Set();
 /* ---------- v3 导航 ---------- */
-const VIEWS=['splash','home','library','detail','reader','mine','notes','bookchat','bookmarks','stats'];
+const VIEWS=['splash','home','library','detail','reader','mine','notes','bookchat','bookmarks','stats','search'];
 let curView='home', returnView='library';
 function go(name){
   if(name==='voice'||!VIEWS.includes(name)) name='home';
