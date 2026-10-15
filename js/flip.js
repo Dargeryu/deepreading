@@ -15,6 +15,7 @@ const Flip = {
   leaf: null, shade: null, spine: null,
   startX: 0, startY: 0, lastX: 0, lastT: 0, vel: 0, W: 0,
   queued: null,     // 翻页进行中时新到的目标页（朗读连续翻页）
+  dragRaf: 0, pendingDx: 0, // 合并高频指针事件，最多每帧更新一次卷页
 };
 
 /* v3.57 翻页模式：slide=原生滑动（默认，对标 Readify），curl=3D仿真，none=无动画 */
@@ -50,25 +51,10 @@ function bindFlip(){
     if(rx < W * 0.22 && PG.page > 0){ Flip.animateTo(PG.page - 1); }
     else if(rx > W * 0.78 && PG.page < PG.total - 1){ Flip.animateTo(PG.page + 1); }
   });
-  // 滑动模式：滚动结束吸附到最近页面；滑出预渲染窗口时自动扩展
+  // 滑动模式：滚动时只做轻量防抖；分页窗口调整延后到手势停下后。
   let snapT = null;
   el.addEventListener('scroll', ()=>{
     if(flipMode() !== 'slide' || Flip.active) return;
-    // 预渲染窗口保护：接近边缘时扩展窗口
-    try{
-      const W = el.clientWidth || 1;
-      const local = Math.round(el.scrollLeft / W);
-      const gp = local + localPageOffset();
-      if(PG.ready && gp >= 0 && gp < PG.total){
-        const s0 = sentenceOfPage(gp);
-        if(s0 < winStart + 100 || s0 >= winStart + sentEls.length - 100){
-          ensureWindowForPage(gp);
-          // 窗口重渲染后重新对齐滚动位置
-          const nl = localPageOf(gp);
-          if(Math.abs(el.scrollLeft - nl * W) > W * 0.5) el.scrollTo({ left: nl * W, behavior: 'auto' });
-        }
-      }
-    }catch(e){}
     clearTimeout(snapT);
     snapT = setTimeout(snapToPage, 120);
   }, { passive: true });
@@ -85,6 +71,16 @@ function snapToPage(){
   // 用力猛滑也只允许翻一页（Readify 式单页步进）
   if(gp > PG.page + 1) gp = PG.page + 1;
   if(gp < PG.page - 1) gp = PG.page - 1;
+  // 接近渲染窗口边缘时，等滚动停止再扩展 DOM，避免在手指跟随期间重建上千个节点。
+  const s0 = sentenceOfPage(gp);
+  if(s0 < winStart + 100 || s0 >= winStart + sentEls.length - 100){
+    const previousStart = winStart;
+    ensureWindowForPage(gp);
+    if(winStart !== previousStart){
+      // renderWindow 会清空旧列；先把当前页恢复到原来的屏幕位置，再执行吸附动画。
+      el.scrollTo({ left: localPageOf(PG.page) * W, behavior: 'auto' });
+    }
+  }
   const targetLocal = gp - localPageOffset();
   if(gp !== PG.page){
     el.scrollTo({ left: targetLocal * W, behavior: 'smooth' });
@@ -165,8 +161,9 @@ function onFlipUp(e){
     }
     return; // 轻触：交给句子的 click
   }
+  if(Flip.edge){ Flip.dragging = false; edgeRelease(); Flip.edge = false; return; }
+  flushDrag();
   Flip.dragging = false;
-  if(Flip.edge){ edgeRelease(); Flip.edge = false; return; }
   const quick = Math.abs(Flip.vel) > 0.45 && Flip.progress > 0.04;
   if(Flip.progress > 0.24 || quick) completeFlip();
   else cancelFlip();
@@ -179,7 +176,7 @@ function onFlipCancel(){
 }
 
 /* ============ v3.57 真卷页：分段圆柱弯曲（对标 Readify） ============ */
-const CURL_N = 16; // 切片数
+const CURL_N = 12; // 减少切片数，减轻移动设备上的合成负担
 function paperColor(){
   try{ return getComputedStyle(document.getElementById('content')).backgroundColor || '#fff'; }
   catch(_){ return '#fff'; }
@@ -270,9 +267,6 @@ function setCurl(p){
     const deg = smooth * 165 * (angle >= 165 ? 180/165 : 1);
     const finalDeg = angle >= 165 ? 180 : deg;
     strip.style.transform = `rotateY(${(dir===1?-finalDeg:finalDeg).toFixed(2)}deg)`;
-    // 弯曲区压暗，增强立体感
-    const shade = Math.sin(Math.min(1, finalDeg/180) * Math.PI);
-    strip.style.filter = shade > 0.02 ? `brightness(${(1 - shade*0.22).toFixed(3)})` : '';
   }
   if(Flip.curlShadow){
     const sx = dir === 1 ? front - 45 : front - 45;
@@ -287,6 +281,7 @@ function curlDragTo(dx){
   setCurl(p);
 }
 function endCurl(){
+  if(Flip.dragRaf){ cancelAnimationFrame(Flip.dragRaf); Flip.dragRaf=0; }
   if(Flip.curl) Flip.curl.remove();
   if(Flip.strips) Flip.strips.length = 0;
   Flip.curl = Flip.curlShadow = null; Flip.strips = null;
@@ -375,7 +370,17 @@ function clearStaleShift(){
   if(el.style.transform){ el.style.transition=''; el.style.transform=''; }
 }
 function dragTo(dx){
-  curlDragTo(dx); // 分段真卷页跟手
+  Flip.pendingDx = dx;
+  if(Flip.dragRaf) return;
+  Flip.dragRaf = requestAnimationFrame(()=>{
+    Flip.dragRaf = 0;
+    if(Flip.active && Flip.dragging && !Flip.edge) curlDragTo(Flip.pendingDx);
+  });
+}
+function flushDrag(){
+  if(!Flip.dragRaf) return;
+  cancelAnimationFrame(Flip.dragRaf); Flip.dragRaf = 0;
+  if(Flip.active && Flip.dragging && !Flip.edge) curlDragTo(Flip.pendingDx);
 }
 
 function tween(from, to, dur, done){
