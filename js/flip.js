@@ -161,9 +161,9 @@ function onFlipUp(e){
     }
     return; // 轻触：交给句子的 click
   }
-  Flip.dragging = false;
-  if(Flip.edge){ edgeRelease(); Flip.edge = false; return; }
+  if(Flip.edge){ Flip.dragging = false; edgeRelease(); Flip.edge = false; return; }
   flushDrag();
+  Flip.dragging = false;
   const quick = Math.abs(Flip.vel) > 0.45 && Flip.progress > 0.04;
   if(Flip.progress > 0.24 || quick) completeFlip();
   else cancelFlip();
