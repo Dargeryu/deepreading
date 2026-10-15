@@ -1323,6 +1323,7 @@ const _showPageInstant = showPageInstant;
 showPageInstant = function(gp){ _showPageInstant(gp); if(bilingualOn) setTimeout(translatePage, 400); };
 
 /* ---------- OCR 拍照识字导入 ---------- */
+$('#imp-aisearch').onclick=()=>{ closeSheets(); go('search'); setTimeout(()=>$('#search-q').focus(),80); };
 $('#imp-ocr').onclick = () => { closeSheets(); $('#ocr-input').click(); };
 $('#ocr-input').onchange = async e => {
   const f = e.target.files[0]; e.target.value = '';
@@ -1603,8 +1604,8 @@ async function searchAnnasArchive(){
     }catch(e){}
   }
   const url=aaBase()+'/search?q='+encodeURIComponent(query);
-  window.open(url, '_blank', 'noopener');
-  toast('已在 Anna\'s Archive 打开搜索');
+  try{ const a=document.createElement('a'); a.href=url; a.target='_blank'; a.rel='noopener'; document.body.appendChild(a); a.click(); a.remove(); }catch(e){ location.href=url; }
+  toast('正在打开 Anna\'s Archive…');
 }
 $('#btn-anna').onclick=searchAnnasArchive;
 $('#home-search').onclick=()=>{ go('search'); setTimeout(()=>$('#search-q').focus(),80); };
