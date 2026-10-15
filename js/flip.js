@@ -103,7 +103,7 @@ function snapToPage(){
 }
 
 function onFlipDown(e){
-  if(flipMode() !== 'curl') return; // 滑动/无动画模式不拦截，走原生
+  if(flipMode() !== 'curl' || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return; // 无动画偏好下用阅读器按钮翻页
   if(e.target.closest('button, a, input, textarea, select, .reader-find')) return;
   if(Flip.active || !PG.ready || PG.total <= 1) return;
   clearStaleShift();
@@ -210,7 +210,7 @@ function beginCurl(dir){
   const sliceCount = curlSliceCount(W);
   const stripW = W / sliceCount;
   Flip.strips = [];
-  // 模板：只快照当前页的句子（轻量，避免16次全量克隆卡死）
+  // 模板：只快照当前页句子，不复制整本书或整个虚拟窗口。
   const tpl = document.createElement('div');
   tpl.style.cssText = `width:${W}px;height:${H}px;overflow:hidden;box-sizing:border-box;`;
   const pageWrap = document.createElement('div');
@@ -261,7 +261,7 @@ function beginCurl(dir){
     back.style.cssText = 'position:absolute;inset:0;z-index:2;pointer-events:none;transform:rotateY(180deg) translateZ(.4px);backface-visibility:hidden;-webkit-backface-visibility:hidden;';
     strip.appendChild(back);
     curl.appendChild(strip);
-    Flip.strips.push({el:strip, x:(i+0.5)*stripW});
+    Flip.strips.push({el:strip, x:(i+0.5)*stripW, front:inner, back});
   }
   // 卷页阴影（跟随卷曲前锋）
   const shadow = document.createElement('div');
@@ -286,7 +286,7 @@ function setCurl(p){
   // 卷曲前锋位置：从右边缘（p=0）移到左边缘（p=1）
   const front = dir === 1 ? W * (1 - p) : W * p;
   const curlW = Math.max(60, W * 0.30); // 弯曲区宽度
-  for(const {el:strip, x} of strips){
+  for(const {el:strip, x, front:frontFace, back:backFace} of strips){
     let angle = 0;
     if(dir === 1){
       const d = x - front; // 前锋右侧为已卷起区
@@ -300,6 +300,9 @@ function setCurl(p){
     const smooth = t * t * (3 - 2 * t);
     const deg = smooth * 165 * (angle >= 165 ? 180/165 : 1);
     const finalDeg = p >= 0.999 || angle >= 165 ? 180 : deg;
+    const turned = finalDeg >= 90;
+    if(frontFace) frontFace.style.visibility = turned ? 'hidden' : 'visible';
+    if(backFace) backFace.style.visibility = turned ? 'visible' : 'hidden';
     strip.style.transform = `rotateY(${(dir===1?-finalDeg:finalDeg).toFixed(2)}deg)`;
   }
   if(Flip.curlShadow){
