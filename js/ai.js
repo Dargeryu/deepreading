@@ -27,11 +27,21 @@ analogy:t=>`请把下面这个概念用一个生动的日常类比讲清楚，�
 };
 
 
-/* ---------- Anna's Archive 镜像（.org/.se 已被扣押，.li 已停放；.pk 国内最稳） ---------- */
-const AA_MIRRORS=['https://annas-archive.pk','https://annas-archive.gl','https://annas-archive.gd'];
-function aaBase(){ try{ return localStorage.getItem('dr_aa_mirror')||AA_MIRRORS[0]; }catch(e){ return AA_MIRRORS[0]; } }
-function aaSet(m){ try{ localStorage.setItem('dr_aa_mirror', m); }catch(e){} }
-function aaSearchURL(q){ return aaBase()+'/search?q='+encodeURIComponent(q); }
+/* ---------- AI 搜书：只扩展检索词，书目仍由公开目录返回 ---------- */
+async function expandBookSearchQuery(query){
+  if(!(store.get('gemini_key')||'').trim()) return [];
+  const prompt=[
+    '你是图书目录检索词助手。把用户的自然语言找书描述改写为最多 2 个适合 Open Library 和 Project Gutenberg 的短检索词。',
+    '只返回 JSON：{"queries":["检索词1","检索词2"]}。不要推荐或编造书名，不要解释。',
+    '用户描述：'+String(query).slice(0,500)
+  ].join('\n');
+  const raw=await geminiAsk(prompt);
+  const m=raw.match(/\{[\s\S]*\}/);
+  if(!m) return [];
+  const parsed=JSON.parse(m[0]);
+  return [...new Set((Array.isArray(parsed.queries)?parsed.queries:[])
+    .filter(x=>typeof x==='string').map(x=>x.trim()).filter(Boolean))].slice(0,2);
+}
 /* ---------- ElevenLabs 连接诊断 ---------- */
 async function elevenDiag(){
   const key=(store.get('eleven_key')||'').trim();

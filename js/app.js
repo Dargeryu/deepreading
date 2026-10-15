@@ -86,6 +86,7 @@ const idb={
   all:()=>new Promise((res,rej)=>{const t=_tx('books').getAll();t.onsuccess=()=>res(t.result||[]);t.onerror=()=>rej(t.error);}),
   putFile:(id,data,name)=>new Promise((res,rej)=>{const t=_tx('files','readwrite').put({id,data,name});t.onsuccess=res;t.onerror=()=>rej(t.error);}),
   getFile:id=>new Promise((res,rej)=>{const t=_tx('files').get(id);t.onsuccess=()=>res(t.result||null);t.onerror=()=>rej(t.error);}),
+  delFile:id=>new Promise((res,rej)=>{const t=_tx('files','readwrite').delete(id);t.onsuccess=()=>res();t.onerror=()=>rej(t.error);}),
   putProgress:(id,idx,page)=>new Promise((res,rej)=>{const t=_tx('progress','readwrite').put({bookId:id,idx,page:page==null?0:page,updatedAt:Date.now()});t.onsuccess=res;t.onerror=()=>rej(t.error);}),
   getProgress:id=>new Promise((res,rej)=>{const t=_tx('progress').get(id);t.onsuccess=()=>res(t.result||null);t.onerror=()=>rej(t.error);}),
   getPageCache:key=>new Promise((res,rej)=>{const t=_tx('pagecache').get(key);t.onsuccess=()=>res(t.result||null);t.onerror=()=>rej(t.error);}),
@@ -449,6 +450,7 @@ async function downloadBook(b){
 
 /* ---------- 阅读器 ---------- */
 let cur=null, sentEls=[];
+let readerFindMatches=[], readerFindIndex=0, readerFindQuery='', readerMatchSet=new Set();
 /* ---------- v3 导航 ---------- */
 const VIEWS=['splash','home','library','search','detail','reader','mine','voice','notes','bookchat','bookmarks','stats'];
 let curView='home', returnView='library';
@@ -458,6 +460,7 @@ function go(name){
   document.body.classList.toggle('in-reader', name==='reader');
   document.body.classList.toggle('in-splash', name==='splash');
   document.querySelectorAll('#tabbar .tab').forEach(t=>t.classList.toggle('cur', t.dataset.v===name));
+  document.querySelectorAll('#sidebar .sb-item').forEach(t=>t.classList.toggle('cur', t.dataset.v===name));
   document.querySelectorAll('#sidebar .sb-item').forEach(t=>t.classList.toggle('cur', t.dataset.v===name));
   if(name==='library'){ stopSpeak(); renderShelf(); }
   else if(name==='home'){ stopSpeak(); renderHome(); }
@@ -474,6 +477,9 @@ function go(name){
 function showView(name){ go(name); } // 兼容旧调用
 async function openBook(id){
   cur=books.find(b=>b.id===id); if(!cur) return;
+  readerFindMatches=[]; readerFindIndex=0; readerFindQuery=''; readerMatchSet.clear();
+  const rf=$('#reader-find-q'), rfPanel=$('#reader-find');
+  if(rf) rf.value=''; if(rfPanel) rfPanel.classList.add('hidden');
   document.title='Apo · '+cur.title;
   // 清空上本书的翻译缓存，加载这本的
   for(const k in trCache) delete trCache[k];
@@ -511,7 +517,7 @@ function renderWindow(centerIdx){
       const h=document.createElement('span'); h.className='ch-title';
       h.textContent=cur.chapters[ci]?cur.chapters[ci].title:`第${ci+1}章`; c.appendChild(h);
     }
-    const sp=document.createElement('span'); sp.className='sent'; sp.textContent=sn.t; sp.dataset.g=i;
+    const sp=document.createElement('span'); sp.className='sent'+(readerFindQuery&&readerMatchSet.has(i)?' find-hit':''); sp.textContent=sn.t; sp.dataset.g=i;
     sp.onclick=(()=>{ const g=i; return ()=>{ if(pageTouchMoved) return; seekTo(g); }; })();
     c.appendChild(sp); c.appendChild(document.createTextNode(' ')); sentEls.push(sp);
   }
@@ -653,8 +659,8 @@ function bindReaderGestures(){
     if(curView!=='reader'||!cur||!PG.ready||Flip.active) return;
     const tag=(document.activeElement&&document.activeElement.tagName)||'';
     if(/INPUT|TEXTAREA|SELECT/.test(tag)) return;
-    if(e.key==='ArrowRight') setPage(PG.page+1,{animate:true});
-    else if(e.key==='ArrowLeft') setPage(PG.page-1,{animate:true});
+    if(e.key==='ArrowRight'){ e.preventDefault(); setPage(PG.page+1,{animate:true}); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); setPage(PG.page-1,{animate:true}); }
   });
 }
 function renderChapters(){
@@ -847,6 +853,41 @@ $('#rp-progress').addEventListener('click',e=>{
 });
 $('#btn-back').onclick=()=>go(returnView);
 $('#reader-chapter').onclick=()=>{ renderChapters(); $('#chapter-drawer').classList.remove('hidden'); };
+function renderReaderFindResults(){
+  const list=$('#reader-find-results'), count=$('#reader-find-count');
+  if(!list||!count) return;
+  count.textContent=readerFindQuery?`共 ${readerFindMatches.length} 条`:'输入关键词搜索整本书';
+  list.innerHTML=readerFindMatches.slice(0,60).map((idx,n)=>{
+    const s=cur.sentences[idx], chapter=cur.chapters[s.c]?.title||`第${s.c+1}章`;
+    return `<button class="reader-find-row${n===readerFindIndex?' current':''}" data-match="${n}"><span class="reader-find-ch">${esc(chapter)} · 第${idx+1}句</span><span>${esc(s.t.slice(0,150))}</span></button>`;
+  }).join('')+(readerFindMatches.length>60?'<div class="search-empty-source">仅显示前 60 条；上下按钮可浏览全部结果。</div>':'');
+  list.querySelectorAll('[data-match]').forEach(b=>b.onclick=()=>jumpReaderFind(Number(b.dataset.match)));
+}
+function jumpReaderFind(n){
+  if(!cur||!readerFindMatches.length) return;
+  readerFindIndex=(n+readerFindMatches.length)%readerFindMatches.length;
+  const idx=readerFindMatches[readerFindIndex];
+  stopSpeak(); cur.progress.idx=idx; cur._lastSpk=null;
+  markActive(); scrollToActive(); saveProgress(); renderReaderFindResults();
+}
+function runReaderFind(){
+  if(!cur) return;
+  readerFindQuery=$('#reader-find-q').value.trim().toLocaleLowerCase();
+  readerFindMatches=[];
+  if(readerFindQuery) cur.sentences.forEach((s,i)=>{ if(String(s.t||'').toLocaleLowerCase().includes(readerFindQuery)) readerFindMatches.push(i); });
+  readerMatchSet=new Set(readerFindMatches);
+  readerFindIndex=0;
+  renderWindow(cur.progress.idx); markActive(); renderReaderFindResults();
+}
+$('#btn-reader-find').onclick=()=>{ $('#reader-find').classList.remove('hidden'); $('#reader-find-q').focus(); $('#reader-find-q').select(); };
+$('#reader-find-close').onclick=()=>$('#reader-find').classList.add('hidden');
+$('#reader-find-q').addEventListener('input',runReaderFind);
+$('#reader-find-q').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){ e.preventDefault(); jumpReaderFind(readerFindIndex+(e.shiftKey?-1:1)); }
+  else if(e.key==='Escape') $('#reader-find').classList.add('hidden');
+});
+$('#reader-find-prev').onclick=()=>jumpReaderFind(readerFindIndex-1);
+$('#reader-find-next').onclick=()=>jumpReaderFind(readerFindIndex+1);
 $('#btn-chapters-close').onclick=()=>$('#chapter-drawer').classList.add('hidden');
 $('#dr-ai').onclick=()=>{ $('#chapter-drawer').classList.add('hidden'); $('#aisheet').classList.remove('hidden'); };
 $('#dr-type').onclick=()=>{ $('#chapter-drawer').classList.add('hidden'); $('#typeset').classList.remove('hidden'); };
@@ -1430,7 +1471,8 @@ setInterval(()=>{ if(typeof wantPlay!=='undefined' && wantPlay && !document.hidd
 function openSheet(id){ $('#scrim').classList.remove('hidden'); $('#'+id).classList.remove('hidden'); }
 function closeSheets(){ $('#scrim').classList.add('hidden');
   ['import-sheet','url-sheet','text-sheet','clone-sheet','cast-sheet','voice-sheet'].forEach(id=>{const el=$('#'+id); if(el) el.classList.add('hidden');});
-  if(typeof stopRecord==='function'){ try{stopRecord();}catch(e){} } }
+  if(typeof stopRecord==='function'){ try{stopRecord();}catch(e){} }
+  if(typeof discardCloneSource==='function'){ try{discardCloneSource();}catch(e){} } }
 function openImportSheet(){ openSheet('import-sheet'); }
 $('#scrim').onclick=closeSheets;
 $('#imp-ai').onclick=()=>{ closeSheets(); go('search'); };
@@ -1454,31 +1496,102 @@ $('#btn-text-do').onclick=async()=>{
   if(b){ books.unshift(b); go('library'); }
 };
 
-/* ---------- 搜书：直接 AI 搜书（Anna's Archive） ---------- */
-$('#btn-search').onclick=()=>{
-const q=$('#search-q').value.trim(); if(!q){toast('输入书名或作者');return;}
-doAiSearch(q);
-};
-/* AI搜索：点搜索直接跳 Anna's Archive（按钮合一），无 Gutenberg */
-function doAiSearch(q){
-const box=$('#search-results');
-const cur=aaBase();
-const mirrors=AA_MIRRORS.map(m=>`<button class="btn-ghost sm${m===cur?' btn-primary':''}" data-m="${m}">${m.replace('https://','')}</button>`).join('');
-box.innerHTML=`<div class="sr"><div class="t">已在 Anna's Archive 搜索「${esc(q)}」</div>
-<div class="a">下载 EPUB/PDF 后，点击文件选择"用 Apo 打开"，自动加入书架。</div>
-<div class="ops"><button class="btn-ghost sm" id="aa-import">导入已下载的文件</button><button class="btn-ghost sm" id="aa-auto">开启下载自动上架</button></div>
-<div class="sub" style="margin-top:10px">打不开？换个镜像：</div><div class="ops" id="aa-mirrors">${mirrors}</div></div>`;
-$('#aa-import').onclick=()=>$('#file-input').click();
-const _aaAuto=$('#aa-auto');
-if(_aaAuto){ if(!window.showDirectoryPicker) _aaAuto.style.display='none'; else _aaAuto.onclick=()=>enableAutoImport(); }
-box.querySelectorAll('#aa-mirrors button').forEach(b=>{ b.onclick=()=>{ aaSet(b.dataset.m); window.open(aaSearchURL(q),'_blank'); doAiSearch(q); }; });
-// 点搜索即跳转（按钮合一）
-window.open(aaSearchURL(q),'_blank');
+/* ---------- 书目搜索：Open Library + Project Gutenberg ---------- */
+$('#btn-search').onclick=()=>runBookSearch();
+$('#search-q').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); runBookSearch(); } });
+renderBookSearchHistory();
+
+function readSearchHistory(){
+  try{ const h=JSON.parse(store.get('book_search_history','[]')); return Array.isArray(h)?h.filter(x=>typeof x==='string'):[]; }catch(e){ return []; }
+}
+function renderBookSearchHistory(){
+  const el=$('#search-history'); if(!el) return;
+  const history=readSearchHistory();
+  el.innerHTML=history.length?'<span class="search-history-label">最近搜索</span>'+history.map(q=>`<button class="search-history-chip" data-q="${esc(q)}">${esc(q)}</button>`).join(''):'';
+  el.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{ $('#search-q').value=b.dataset.q; runBookSearch(); });
+}
+function rememberBookSearch(q){
+  const h=[q,...readSearchHistory().filter(x=>x!==q)].slice(0,6);
+  store.set('book_search_history',JSON.stringify(h)); renderBookSearchHistory();
+}
+async function searchOpenLibrary(q){
+  const url='https://openlibrary.org/search.json?q='+encodeURIComponent(q)+'&limit=8&fields=key,title,author_name,first_publish_year,edition_count,cover_i';
+  const r=await fetch(url,{headers:{'Accept':'application/json'}});
+  if(!r.ok) throw new Error('Open Library HTTP '+r.status);
+  const j=await r.json(); return Array.isArray(j.docs)?j.docs:[];
+}
+async function searchGutenberg(q){
+  const r=await fetch('https://gutendex.com/books/?search='+encodeURIComponent(q));
+  if(!r.ok) throw new Error('Gutenberg HTTP '+r.status);
+  const j=await r.json(); return Array.isArray(j.results)?j.results:[];
+}
+function safeGutenbergEpub(formats){
+  for(const [type,value] of Object.entries(formats||{})){
+    if(!type.toLowerCase().startsWith('application/epub+zip')||typeof value!=='string') continue;
+    try{ const u=new URL(value); if(u.protocol==='https:'&&['gutenberg.org','www.gutenberg.org'].includes(u.hostname)) return u.href; }catch(e){}
+  }
+  return '';
+}
+function openLibraryCard(b){
+  const key=typeof b.key==='string'&&/^\/works\/OL\d+W$/.test(b.key)?b.key:'';
+  const title=esc(b.title||'未命名');
+  const authors=esc((b.author_name||[]).slice(0,3).join('、')||'作者信息暂无');
+  const details=[b.first_publish_year||'',b.edition_count?b.edition_count+' 个版本':''].filter(Boolean).join(' · ');
+  const cover=Number.isInteger(b.cover_i)&&b.cover_i>0?`<img class="search-cover" src="https://covers.openlibrary.org/b/id/${b.cover_i}-M.jpg" alt="" loading="lazy">`:'<div class="search-cover search-cover-empty">📖</div>';
+  return `<article class="sr search-book-card">${cover}<div class="search-book-main"><div class="t">${title}</div><div class="a">${authors}</div><div class="search-book-meta">${esc(details)}</div><div class="ops"><a class="btn-ghost sm" href="https://openlibrary.org${key}" target="_blank" rel="noopener noreferrer">查看书目 / 借阅信息 ↗</a></div></div></article>`;
+}
+function gutenbergCard(b){
+  const id=Number(b.id); if(!Number.isInteger(id)||id<1) return '';
+  const title=esc(b.title||'未命名');
+  const authors=esc((b.authors||[]).map(a=>a.name).slice(0,3).join('、')||'作者信息暂无');
+  const epub=safeGutenbergEpub(b.formats);
+  const page='https://www.gutenberg.org/ebooks/'+id;
+  return `<article class="sr search-book-card"><div class="search-cover search-cover-empty">公版</div><div class="search-book-main"><div class="t">${title}</div><div class="a">${authors}</div><div class="search-book-meta">Project Gutenberg · 公版书目</div><div class="ops"><a class="btn-ghost sm" href="${page}" target="_blank" rel="noopener noreferrer">查看书目 ↗</a>${epub?`<a class="btn-primary sm" href="${esc(epub)}" target="_blank" rel="noopener noreferrer">下载 EPUB</a>`:''}</div></div></article>`;
+}
+async function runBookSearch(){
+  const q=$('#search-q').value.trim(); if(!q){toast('输入书名、作者或找书描述');return;}
+  rememberBookSearch(q); await doAiSearch(q);
+}
+async function doAiSearch(q){
+  const box=$('#search-results'); box.innerHTML='<div class="search-loading">正在查找书目…</div>';
+  const useAI=$('#search-ai')?.checked;
+  let terms=[q], aiNote='';
+  if(useAI){
+    if(!(store.get('gemini_key')||'').trim()) aiNote='Gemini Key 未配置，已按原始关键词搜索。';
+    else{
+      try{
+        const expanded=await expandBookSearchQuery(q);
+        terms=[...new Set([q,...expanded])].slice(0,3);
+        aiNote=expanded.length?'Gemini 已扩展检索词。':'Gemini 未生成额外检索词，已按原始关键词搜索。';
+      }catch(e){ aiNote='AI 扩展暂不可用，已按原始关键词搜索。'; }
+    }
+  }
+  const tasks=terms.flatMap(term=>[
+    {source:'open',run:()=>searchOpenLibrary(term)},
+    {source:'gutenberg',run:()=>searchGutenberg(term)}
+  ]);
+  const settled=await Promise.allSettled(tasks.map(t=>t.run()));
+  const open=[], gutenberg=[], errors=[];
+  settled.forEach((r,i)=>{
+    if(r.status!=='fulfilled'){ errors.push(tasks[i].source); return; }
+    (tasks[i].source==='open'?open:gutenberg).push(...r.value);
+  });
+  const openUnique=[...new Map(open.filter(b=>b&&b.key).map(b=>[b.key,b])).values()].slice(0,8);
+  const gutUnique=[...new Map(gutenberg.filter(b=>b&&b.id).map(b=>[String(b.id),b])).values()].slice(0,8);
+  let html=aiNote?`<div class="search-note search-ai-status">${esc(aiNote)}</div>`:'';
+  if(openUnique.length) html+='<h3 class="search-source-heading">Open Library <small>书目与借阅信息</small></h3>'+openUnique.map(openLibraryCard).join('');
+  else if(!errors.includes('open')) html+='<div class="search-empty-source">Open Library 暂无匹配书目。</div>';
+  if(gutUnique.length) html+='<h3 class="search-source-heading">Project Gutenberg <small>公版图书</small></h3>'+gutUnique.map(gutenbergCard).join('');
+  else if(!errors.includes('gutenberg')) html+='<div class="search-empty-source">Project Gutenberg 暂无匹配公版书。</div>';
+  if(errors.length===tasks.length) html+='<div class="search-error">书目服务暂时无法连接。检查网络后重试。</div>';
+  else if(errors.length) html+='<div class="search-error">部分书目服务暂不可用；已显示其余来源结果。</div>';
+  if(!openUnique.length&&!gutUnique.length&&!errors.length) html+='<div class="search-empty-source">没有找到匹配书目，试试更短的书名或作者名。</div>';
+  box.innerHTML=html;
 }
 /* ---------- 排版 ---------- */
 function applyType(){
 const c=$('#content'); if(!c) return;
-const size=store.get('ts_size','18'), lh=store.get('ts_lh','20'),
+const size=store.get('ts_size','18'), lh=store.get('ts_lh','18'),
 font=store.get('ts_font','serif'), theme=store.get('ts_theme','day');
 c.style.fontSize=size+'px'; c.style.lineHeight=(lh/10);
 c.style.fontFamily=font==='serif'?'Georgia,"Songti SC","Noto Serif CJK SC",serif':'-apple-system,"PingFang SC","Microsoft YaHei",sans-serif';
@@ -1486,7 +1599,7 @@ c.dataset.theme=theme;
 $('#ts-size').value=size; $('#ts-size-v').textContent=size;
 $('#ts-lh').value=lh; $('#ts-lh-v').textContent=(lh/10).toFixed(1);
 $('#ts-font').value=font; $('#ts-theme').value=theme;
-const tf=$('#ts-flip'); if(tf) tf.value=store.get('ts_flip','curl');
+const tf=$('#ts-flip'); if(tf) tf.value=store.get('ts_flip','slide');
 }
 /* 排版按钮已并入目录抽屉（#dr-type） */
 $('#btn-type-close').onclick=()=>$('#typeset').classList.add('hidden');
