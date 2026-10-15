@@ -1,5 +1,5 @@
 {
-  "background_color": "#101012",
+  "background_color": "#ffffff",
   "description": "本地听书：导入 PDF/EPUB/TXT/DOCX/FB2/HTML/MD，语音朗读、AI 伴读",
   "display": "standalone",
   "icons": [
@@ -21,7 +21,7 @@
   "scope": "./",
   "short_name": "Apo",
   "start_url": "./index.html",
-  "theme_color": "#101012",
+  "theme_color": "#ffffff",
   "file_handlers": [
     {
       "action": "./index.html",
