@@ -50,7 +50,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">●</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.83</div>
+    <div class="sb-ver">Apo v3.84</div>
   </div>
 </aside>
 <div id="app">
@@ -369,7 +369,7 @@ if ('serviceWorker' in navigator) {
       <button id="mine-back" class="icon-btn">‹</button>
       <span style="width:34px"></span>
     </header>
-    <div id="view-mine-body" style="padding:6px 18px 170px">
+    <div id="view-mine-body" style="padding:6px 18px 150px">
       <div class="mine-head">
         <div class="avatar-btn lg">忆宁</div>
         <div><div class="t serif">余忆宁</div></div>
@@ -389,64 +389,7 @@ if ('serviceWorker' in navigator) {
         <button class="menu-row" id="st-settings"><span class="mi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1"/></svg></span><span class="mt">设置</span><i>›</i></button>
         <button class="menu-row" id="st-about"><span class="mi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.4 2.4 0 1 1 3.3 2.3c-.7.4-.9.9-.9 1.7"/><path d="M12 17h.01"/></svg></span><span class="mt">关于 Apo</span><i>›</i></button>
       </div>
-      <div class="set-group">
-        <div class="sec">朗读引擎</div>
-        <label><span class="k">引擎</span><select id="sel-engine"><option value="system">系统语音（免费/离线）</option><option value="elevenlabs">ElevenLabs 云端（百变音色）</option><option value="custom">自定义 TTS API（含克隆音色）</option></select></label>
-        <div id="engine-custom">
-          <label><span class="k">API 地址</span><input id="tts-endpoint" class="txt" placeholder="https://api.xxx.com/v1/text-to-speech"></label>
-          <label><span class="k">API Key</span><input id="tts-key" type="password" class="txt" placeholder="只存本机"></label>
-          <label><span class="k">Voice ID</span><input id="tts-voice" class="txt" placeholder="克隆/预置音色的 ID"></label>
-          <p class="hint">按 {text} 发送 POST JSON，返回音频流。音色克隆在你自己的服务商侧完成（如 ElevenLabs / MiniMax），本应用只负责调用。</p>
-        </div>
-        <label><span class="k">音色</span><select id="sel-voice"></select></label>
-        <label><span class="k">语速</span><input type="range" id="rng-rate" min="50" max="400" value="100"><span id="rate-val">1.0x</span></label>
-        <label><input type="checkbox" id="chk-dialog"><span class="k">对白音色</span><select id="sel-voice2"></select></label>
-      </div>
-      <div class="set-group">
-        <div class="sec">背景音</div>
-        <label><span class="k">背景音</span><select id="sel-amb"><option value="">关闭</option><option value="rain">雨声</option><option value="cafe">咖啡馆</option><option value="white">白噪音</option><option value="forest">森林夜晚</option></select></label>
-        <label><span class="k">音量</span><input type="range" id="rng-amb" min="0" max="100" value="30"></label>
-      </div>
-      <div class="set-group">
-        <div class="sec">排版</div>
-        <label><span class="k">字号</span><input type="range" id="ts-size" min="14" max="26" value="18"><span id="ts-size-v">18</span></label>
-        <label><span class="k">字体</span><select id="ts-font"><option value="serif">衬线（宋体）</option><option value="sans">无衬线（黑体）</option></select></label>
-        <label><span class="k">行高</span><input type="range" id="ts-lh" min="16" max="28" value="18"><span id="ts-lh-v">1.8</span></label>
-        <label><span class="k">翻页效果</span><select id="ts-flip"><option value="curl">3D 卷页 · 推荐</option><option value="slide">横向翻页</option><option value="none">无动画</option></select></label>
-        <label><span class="k">主题</span><select id="ts-theme"><option value="day">白天</option><option value="sepia">暖纸</option><option value="yellow">鹅黄</option><option value="green">豆绿</option><option value="blue">雾蓝</option><option value="pink">樱粉</option><option value="gray">浅灰</option><option value="ink">墨黑</option><option value="darkblue">深蓝</option><option value="night">夜间</option></select></label>
-      </div>
-      <div class="set-group" id="engine-eleven">
-        <div class="sec">ElevenLabs 云端语音</div>
-        <label><span class="k">API Key</span><input id="eleven-key" type="password" class="txt" placeholder="elevenlabs.io 获取，只存本机"></label>
-        <p class="hint">免费版每月 1 万字符（约半小时中文朗读），超出后需付费。Key 只存本机。云端音色去「声音 → 云端」试听选用；你在 ElevenLabs 克隆的音色会自动出现在云端列表里。</p>
-        <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <button class="btn-ghost sm" id="btn-eleven-test">测试连接</button>
-          <span class="sub" id="eleven-test-out"></span>
-        </div>
-      </div>
-      <div class="set-group">
-        <div class="sec">声音克隆服务</div>
-        <label><span class="k">服务商</span><select id="sel-clone-provider">
-          <option value="elevenlabs">ElevenLabs</option>
-          <option value="custom">自定义接口</option>
-        </select></label>
-        <label><span class="k">API Key</span><input id="clone-key" type="password" class="txt" placeholder="只存本机"></label>
-        <div id="clone-custom" class="hidden">
-          <label><span class="k">克隆接口</span><input id="clone-ep" class="txt" placeholder="https://…/v1/voice_clone"></label>
-          <label><span class="k">名称字段</span><input id="clone-field-name" class="txt" value="name"></label>
-          <label><span class="k">文件字段</span><input id="clone-field-file" class="txt" value="file"></label>
-          <label><span class="k">ID 路径</span><input id="clone-id-path" class="txt" value="voice_id"></label>
-        </div>
-        <p class="hint">ElevenLabs：POST /v1/voices/add（multipart：name + files），Key 为 xi-api-key。自定义：按服务商文档填接口与字段，返回 JSON 中 voice id 的路径（如 data.voice_id）。克隆出的音色走「自定义 TTS API」引擎朗读。</p>
-      </div>
-      <div class="set-group">
-        <div class="sec">Gemini 辅助阅读</div>
-        <label><span class="k">API Key</span><input id="gemini-key" type="password" class="txt" placeholder="Google AI Studio 获取，只存本机"></label>
-        <label><span class="k">模型</span><input id="gemini-model" class="txt" value="gemini-3.8-flash"></label>
-        <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
-        <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
-      </div>
-      <div class="ver">Apo v3.83</div>
+
     </div>
   </main>
 
@@ -531,6 +474,68 @@ if ('serviceWorker' in navigator) {
       <button id="btn-ai-speak" class="btn-ghost">🔊 朗读讲解</button>
       <button id="btn-ai-story" class="btn-ghost hidden">▶ 播放分镜</button>
     </div>
+  </div>
+
+  <!-- 设置（v3.84：从我的页挪出来，我的页只留参考图四块） -->
+  <div id="settings-sheet" class="sheet hidden">
+    <div class="sheet-head"><span class="serif">设置</span> <button id="btn-settings-close" class="btn-ghost">✕</button></div>
+      <div class="set-group">
+        <div class="sec">朗读引擎</div>
+        <label><span class="k">引擎</span><select id="sel-engine"><option value="system">系统语音（免费/离线）</option><option value="elevenlabs">ElevenLabs 云端（百变音色）</option><option value="custom">自定义 TTS API（含克隆音色）</option></select></label>
+        <div id="engine-custom">
+          <label><span class="k">API 地址</span><input id="tts-endpoint" class="txt" placeholder="https://api.xxx.com/v1/text-to-speech"></label>
+          <label><span class="k">API Key</span><input id="tts-key" type="password" class="txt" placeholder="只存本机"></label>
+          <label><span class="k">Voice ID</span><input id="tts-voice" class="txt" placeholder="克隆/预置音色的 ID"></label>
+          <p class="hint">按 {text} 发送 POST JSON，返回音频流。音色克隆在你自己的服务商侧完成（如 ElevenLabs / MiniMax），本应用只负责调用。</p>
+        </div>
+        <label><span class="k">音色</span><select id="sel-voice"></select></label>
+        <label><span class="k">语速</span><input type="range" id="rng-rate" min="50" max="400" value="100"><span id="rate-val">1.0x</span></label>
+        <label><input type="checkbox" id="chk-dialog"><span class="k">对白音色</span><select id="sel-voice2"></select></label>
+      </div>
+      <div class="set-group">
+        <div class="sec">背景音</div>
+        <label><span class="k">背景音</span><select id="sel-amb"><option value="">关闭</option><option value="rain">雨声</option><option value="cafe">咖啡馆</option><option value="white">白噪音</option><option value="forest">森林夜晚</option></select></label>
+        <label><span class="k">音量</span><input type="range" id="rng-amb" min="0" max="100" value="30"></label>
+      </div>
+      <div class="set-group">
+        <div class="sec">排版</div>
+        <label><span class="k">字号</span><input type="range" id="ts-size" min="14" max="26" value="18"><span id="ts-size-v">18</span></label>
+        <label><span class="k">字体</span><select id="ts-font"><option value="serif">衬线（宋体）</option><option value="sans">无衬线（黑体）</option></select></label>
+        <label><span class="k">行高</span><input type="range" id="ts-lh" min="16" max="28" value="18"><span id="ts-lh-v">1.8</span></label>
+        <label><span class="k">翻页效果</span><select id="ts-flip"><option value="curl">3D 卷页 · 推荐</option><option value="slide">横向翻页</option><option value="none">无动画</option></select></label>
+        <label><span class="k">主题</span><select id="ts-theme"><option value="day">白天</option><option value="sepia">暖纸</option><option value="yellow">鹅黄</option><option value="green">豆绿</option><option value="blue">雾蓝</option><option value="pink">樱粉</option><option value="gray">浅灰</option><option value="ink">墨黑</option><option value="darkblue">深蓝</option><option value="night">夜间</option></select></label>
+      </div>
+      <div class="set-group" id="engine-eleven">
+        <div class="sec">ElevenLabs 云端语音</div>
+        <label><span class="k">API Key</span><input id="eleven-key" type="password" class="txt" placeholder="elevenlabs.io 获取，只存本机"></label>
+        <p class="hint">免费版每月 1 万字符（约半小时中文朗读），超出后需付费。Key 只存本机。云端音色去「声音 → 云端」试听选用；你在 ElevenLabs 克隆的音色会自动出现在云端列表里。</p>
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn-ghost sm" id="btn-eleven-test">测试连接</button>
+          <span class="sub" id="eleven-test-out"></span>
+        </div>
+      </div>
+      <div class="set-group">
+        <div class="sec">声音克隆服务</div>
+        <label><span class="k">服务商</span><select id="sel-clone-provider">
+          <option value="elevenlabs">ElevenLabs</option>
+          <option value="custom">自定义接口</option>
+        </select></label>
+        <label><span class="k">API Key</span><input id="clone-key" type="password" class="txt" placeholder="只存本机"></label>
+        <div id="clone-custom" class="hidden">
+          <label><span class="k">克隆接口</span><input id="clone-ep" class="txt" placeholder="https://…/v1/voice_clone"></label>
+          <label><span class="k">名称字段</span><input id="clone-field-name" class="txt" value="name"></label>
+          <label><span class="k">文件字段</span><input id="clone-field-file" class="txt" value="file"></label>
+          <label><span class="k">ID 路径</span><input id="clone-id-path" class="txt" value="voice_id"></label>
+        </div>
+        <p class="hint">ElevenLabs：POST /v1/voices/add（multipart：name + files），Key 为 xi-api-key。自定义：按服务商文档填接口与字段，返回 JSON 中 voice id 的路径（如 data.voice_id）。克隆出的音色走「自定义 TTS API」引擎朗读。</p>
+      </div>
+      <div class="set-group">
+        <div class="sec">Gemini 辅助阅读</div>
+        <label><span class="k">API Key</span><input id="gemini-key" type="password" class="txt" placeholder="Google AI Studio 获取，只存本机"></label>
+        <label><span class="k">模型</span><input id="gemini-model" class="txt" value="gemini-3.8-flash"></label>
+        <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
+        <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
+      </div>
   </div>
 
   <!-- 导入底部弹窗 -->

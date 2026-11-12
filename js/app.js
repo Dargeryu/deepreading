@@ -1313,8 +1313,9 @@ $('#badges-back').onclick = () => go('mine');
 $('#btn-invite').onclick = () => shareApo();
 $('#st-share').onclick = () => shareApo();
 $('#st-bookmarks').onclick = () => go('bookmarks');
-$('#st-settings').onclick = () => { const g=document.querySelector('#view-mine-body .set-group'); if(g) g.scrollIntoView({behavior:'smooth', block:'start'}); };
-$('#st-about').onclick = () => { const v=document.querySelector('#about-ver'); if(v) v.textContent=document.querySelector('.ver')?.textContent||''; openSheet('about-sheet'); };
+$('#st-settings').onclick = () => openSheet('settings-sheet');
+$('#btn-settings-close').onclick = () => closeSheets();
+$('#st-about').onclick = () => { const v=document.querySelector('#about-ver'); if(v) v.textContent=document.querySelector('.sb-ver')?.textContent||''; openSheet('about-sheet'); };
 $('#btn-about-close').onclick = () => closeSheets();
 
 /* ---------- 翻译持久化 ---------- */
@@ -1646,7 +1647,7 @@ setInterval(()=>{ if(document.hidden) return;
 /* ================= v3.5：导入弹窗 ================= */
 function openSheet(id){ $('#scrim').classList.remove('hidden'); $('#'+id).classList.remove('hidden'); }
 function closeSheets(){ $('#scrim').classList.add('hidden');
-  ['import-sheet','url-sheet','text-sheet','clone-sheet','cast-sheet','voice-sheet','about-sheet','book-menu','typeset-sheet'].forEach(id=>{const el=$('#'+id); if(el) el.classList.add('hidden');});
+  ['import-sheet','url-sheet','text-sheet','clone-sheet','cast-sheet','voice-sheet','about-sheet','book-menu','typeset-sheet','settings-sheet'].forEach(id=>{const el=$('#'+id); if(el) el.classList.add('hidden');});
   if(typeof stopRecord==='function'){ try{stopRecord();}catch(e){} }
   if(typeof discardCloneSource==='function'){ try{discardCloneSource();}catch(e){} } }
 function openImportSheet(){ openSheet('import-sheet'); }
