@@ -1143,3 +1143,73 @@ body.in-reader #tabbar{display:none!important}
 /* v3.85：浮钮（Ai/■）固定在播放器上方 132px，正文最后一行会伸到它下面（实测遮 21px，1 句被盖住）。
    把阅读区底部内边距加到 96px，让每页最后一行停在浮钮上方；测量器抄 live padding，分页自动适配。 */
 #view-reader #reader-pages{padding-bottom:96px!important} /* !important：移动端 @media(max-width:700px) 里有 padding:24px!important，桌面层有 clamp()!important，不加盖不过去 */
+
+/* ============ v3.86：Readify 式阅读器 UI（··· 菜单 / 排版弹窗 / 目录抽屉三段 / PDF 原版） ============ */
+/* --- 顶栏“切到PDF” --- */
+.pdf-btn{font-weight:800;border:1.5px solid currentColor;border-radius:6px;width:26px;height:26px;font-size:14px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+/* --- ··· 书菜单 --- */
+.rbm-head{display:flex;gap:12px;align-items:center;padding:14px 0 10px;border-bottom:1px solid var(--line)}
+.rbm-cover{width:52px;height:70px;flex:none;border-radius:6px;font-size:20px}
+.rbm-info{min-width:0}
+.rbm-title{font-size:16px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rbm-sub{font-size:12px;color:var(--sub);margin-top:4px}
+.rbm-list{padding:4px 0}
+.rbm-row{display:flex;align-items:center;gap:12px;width:100%;padding:13px 2px;background:none;border:0;border-bottom:1px solid var(--line);font-size:15px;color:inherit;text-align:left;cursor:pointer}
+.rbm-row:last-child{border-bottom:0}
+.rbm-ic{width:22px;text-align:center;font-size:16px;flex:none}
+.rbm-t{flex:1}
+.rbm-chev{color:#b0b0b5;font-size:18px}
+.rbm-n{color:var(--sub);font-size:13px}
+.rbm-beta{font-style:normal;font-size:10px;color:#fff;background:#8e8e93;border-radius:4px;padding:1px 5px;vertical-align:1px;margin-left:2px}
+.rbm-danger{color:#d70015}
+.rbm-toggle-row{cursor:default}
+.rbm-switch{margin-left:auto;width:46px;height:28px;border-radius:14px;background:#d9d9de;border:0;position:relative;flex:none;cursor:pointer;transition:background .2s}
+.rbm-switch .rbm-knob{position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .2s}
+.rbm-switch[aria-checked="true"]{background:#34c759}
+.rbm-switch[aria-checked="true"] .rbm-knob{left:20px}
+.rbm-hint{padding:10px 0 4px;font-size:12px}
+/* --- 排版弹窗（Readify 式） --- */
+.ts-sec{padding:14px 0 4px;border-bottom:1px solid var(--line)}
+.ts-sec:last-of-type{border-bottom:0}
+.ts-size-top{display:flex;align-items:flex-end;justify-content:space-between;padding:0 4px}
+.ts-a{font-size:15px;color:#666}
+.ts-a.big{font-size:26px}
+.ts-bubble{background:#1d1d1f;color:#fff;font-size:13px;font-weight:700;border-radius:8px;padding:3px 9px}
+.ts-range{width:100%;margin:10px 0 4px}
+.ts-row{display:flex;align-items:center;width:100%;padding:14px 0;background:none;border:0;border-bottom:1px solid var(--line);font-size:15px;color:inherit;cursor:pointer;text-align:left}
+.ts-label{font-size:15px}
+.ts-val{margin-left:auto;color:var(--sub);font-size:14px}
+.ts-chev{margin-left:8px;color:#b0b0b5;font-size:18px}
+.ts-pills{display:flex;gap:8px;flex-wrap:wrap;padding:10px 0 14px}
+.ts-pills button{border:1px solid var(--line);background:#f5f5f7;border-radius:999px;padding:7px 14px;font-size:14px;color:inherit;cursor:pointer}
+.ts-pills button.cur{background:#1d1d1f;color:#fff;border-color:#1d1d1f}
+.ts-swatches{display:flex;gap:14px;flex-wrap:wrap;padding:12px 0 16px}
+.ts-swatches button{width:38px;height:38px;border-radius:50%;background:var(--sw);border:1px solid rgba(0,0,0,.12);cursor:pointer;position:relative}
+.ts-swatches button.cur{box-shadow:0 0 0 2px #fff,0 0 0 4px #1d1d1f}
+/* --- 目录抽屉三段切换 --- */
+.cd-seg{display:flex;gap:6px;padding:12px 16px 0}
+.cd-seg-btn{flex:1;padding:8px 0;border:0;border-radius:999px;background:#f5f5f7;font-size:14px;color:#666;cursor:pointer}
+.cd-seg-btn.cur{background:#1d1d1f;color:#fff}
+.cd-pane{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-height:0}
+.cd-pane.hidden{display:none}
+.cd-search-top{display:flex;gap:8px;padding:12px 16px 0}
+.cd-search-top input{flex:1;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px;background:#f5f5f7;min-width:0}
+.cd-search-count{padding:10px 16px 4px;font-size:12px;color:var(--sub)}
+#cd-search-results{padding:0 8px 16px}
+#cd-search-results .reader-find-row{display:block;width:100%;text-align:left;padding:12px 8px;border:0;border-bottom:1px solid var(--line);background:none;font-size:14px;color:inherit;cursor:pointer}
+#cd-search-results .reader-find-row.current{background:#f5f5f7}
+#cd-search-results .reader-find-ch{display:block;font-size:12px;color:var(--sub);margin-bottom:3px}
+#cd-marks-list{padding:4px 8px 16px}
+.cd-mark{display:block;width:100%;text-align:left;padding:12px 8px;border:0;border-bottom:1px solid var(--line);background:none;font-size:14px;color:inherit;cursor:pointer}
+.cd-mark .cd-mark-meta{display:block;font-size:12px;color:var(--sub);margin-bottom:3px}
+.cd-empty{padding:24px 16px;text-align:center;color:var(--sub);font-size:14px}
+/* --- PDF 原版视图 --- */
+#pdf-view{position:fixed;inset:0;z-index:80;background:#2b2b2e;display:flex;flex-direction:column}
+#pdf-view.hidden{display:none}
+.pdf-bar{display:flex;align-items:center;gap:10px;padding:10px 12px;color:#fff}
+.pdf-bar .icon-btn{color:#fff}
+.pdf-title{flex:1;font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pdf-stage{flex:1;overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:8px}
+#pdf-canvas{max-width:100%;background:#fff;box-shadow:0 4px 24px rgba(0,0,0,.4)}
+.pdf-foot{display:flex;align-items:center;justify-content:center;gap:18px;padding:12px;color:#fff;font-size:14px}
+.pdf-foot .icon-btn{color:#fff;font-size:20px}

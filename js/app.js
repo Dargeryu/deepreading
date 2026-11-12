@@ -546,6 +546,7 @@ let cur=null, sentEls=[];
 let readerFindMatches=[], readerFindIndex=0, readerFindQuery='', readerMatchSet=new Set();
 /* ---------- v3 导航 ---------- */
 const VIEWS=['splash','home','library','detail','reader','mine','notes','bookchat','bookmarks','stats','search','voice','badges'];
+const CLASSICS=['红楼梦','西游记','三国演义','水浒传','聊斋志异','儒林外史','镜花缘','老残游记']; // v3.86：提前声明，启动 go('home') 在 CLASSICS 原位置之前，防 TDZ
 let curView='home', returnView='library';
 function go(name){
   if(!VIEWS.includes(name)) name='home';
@@ -585,8 +586,9 @@ async function openBook(id){
     else { toast('找不到这本书'); return; }
   }
   readerFindMatches=[]; readerFindIndex=0; readerFindQuery=''; readerMatchSet.clear();
-  const rf=$('#reader-find-q'), rfPanel=$('#reader-find');
-  if(rf) rf.value=''; if(rfPanel) rfPanel.classList.add('hidden');
+  const rf=$('#cd-search-q'); if(rf) rf.value='';
+  const drw=$('#chapter-drawer'); if(drw) drw.classList.add('hidden');
+  const pdfBtn=$('#btn-reader-pdf'); if(pdfBtn) pdfBtn.classList.toggle('hidden', !(cur.format==='pdf' && cur.hasFile));
   document.title='Apo · '+cur.title;
   // 清空上本书的翻译缓存，加载这本的
   for(const k in trCache) delete trCache[k];
@@ -663,7 +665,9 @@ function showPageInstant(gp){
   PG.page=gp; commitPageState();
   verifyPageAlignment(gp, W);
 }
-// 实测纠偏：目标页首句应在列首 x≈22（padding），偏差则直接纠正
+// 实测纠偏：目标页首句应在列首 x≈padding，偏差则直接纠正
+// v3.86 修：先算首句实际在第几列——只有它确实在目标列时才纠（列进位 4px/页的累积漂移）；
+// 若首句在别的列，说明分页与实际排版脱节，硬挪滚动只会造出「半页+半页」的错位，这时不动，等重排。
 function verifyPageAlignment(gp, W){
   if(!PG.ready || !W || W<=10) return;
   requestAnimationFrame(()=>{
@@ -675,9 +679,16 @@ function verifyPageAlignment(gp, W){
       const el = pagesEl();
       const r = node.getBoundingClientRect(), cr = el.getBoundingClientRect();
       if(r.width < 1) return; // 未布局完成，跳过
-      const pad = parseFloat(getComputedStyle(el).paddingLeft) || 0;
+      const ps = getComputedStyle(el);
+      const pad = parseFloat(ps.paddingLeft) || 0;
+      const padR = parseFloat(ps.paddingRight) || 0;
+      const gap = parseFloat(ps.columnGap) || 44;
+      const advance = Math.max(1, (W - pad - padR) + gap);
+      const absX = (r.left - cr.left) + el.scrollLeft; // 句子在滚动坐标系下的 x
+      const actualCol = Math.max(0, Math.round((absX - pad) / advance));
+      const expectCol = localPageOf(gp);
       const err = (r.left - cr.left) - pad;
-      if(Math.abs(err) > 3 && Math.abs(err) < W/2){
+      if(actualCol === expectCol && Math.abs(err) > 3 && Math.abs(err) < W/2){
         el.scrollTo({left: el.scrollLeft + err, behavior:'auto'});
       }
     }catch(e){}
@@ -739,7 +750,8 @@ async function paginateInBackground(h, idx, attempt){
   PG.starts=res.starts; PG.total=res.total; PG.ready=true; pgVer++;
   try{ await idb.putPageCache({key:cur.id+'|'+h, bookId:cur.id, hash:h, starts:res.starts, total:res.total, updatedAt:Date.now()}); }catch(e){}
   const target=pageOfSentence(Math.max(0,Math.min(cur.total-1,idx||0)));
-  if(target!==PG.page) showPageInstant(target); else updateCount();
+  if(target!==PG.page) showPageInstant(target);
+  else { updateCount(); verifyPageAlignment(target, pagesEl().clientWidth||1); } // v3.86：即使页码相同，也要验一次粗定位（positionNearSentence）的滚动是否对齐
 }
 let _pgT=null;
 function scheduleRepaginate(){ clearTimeout(_pgT); _pgT=setTimeout(()=>{ repaginate(); },300); }
@@ -919,6 +931,12 @@ function speakCurrent(){
   }
   if(v) u.voice=v;
   u.rate=(cur.rate/100)*pr.rate; u.pitch=pr.pitch;
+  if(store.get('tts_emotion','0')==='1'){
+    const _t=(s.t||'').trim();
+    if(/[？?]\s*$/.test(_t)){ u.pitch=Math.min(1.5,(pr.pitch||1)+0.15); u.rate=u.rate*1.05; }
+    else if(/[！!]\s*$/.test(_t)){ u.pitch=Math.min(1.5,(pr.pitch||1)+0.2); u.rate=u.rate*1.1; }
+    else if(/…\s*$/.test(_t)){ u.pitch=Math.max(0.5,(pr.pitch||1)-0.05); u.rate=u.rate*0.85; }
+  }
   u.onend=()=>{ if(!wantPlay) return; sysTtsErrs=0;
     if(cur.progress.idx<cur.total-1){ cur.progress.idx++; markActive(); saveProgress(); speakCurrent(); }
     else { wantPlay=false; setPlayUI(); saveProgress(); toast('本章播完'); }
@@ -991,15 +1009,88 @@ $('#rp-speed').onclick=cycleSpeed;
 $('#rp-cover').onclick=()=>openFullPlayer();
 $('#rp-seek').addEventListener('change',e=>{ if(!cur)return; seekTo(Math.round(e.target.value/1000*(cur.total-1))); });
 $('#btn-back').onclick=()=>go(returnView);
-$('#reader-chapter').onclick=()=>{ renderChapters(); $('#chapter-drawer').classList.remove('hidden'); };
+$('#reader-chapter').onclick=()=>{ renderChapters(); $('#chapter-drawer').classList.remove('hidden'); setDrawerTab('toc'); };
 $('#btn-reader-toc').onclick=()=>$('#reader-chapter').click();
-$('#btn-reader-more').onclick=()=>{ $('#chapter-drawer').classList.add('hidden'); $('#aisheet').classList.remove('hidden'); };
+$('#btn-reader-more').onclick=()=>{ openReaderBookMenu(); };
+/* ---------- v3.86：阅读器 ··· 书菜单 ---------- */
+function syncEmotionSwitch(){
+  const sw=$('#rbm-emotion'); if(!sw) return;
+  sw.setAttribute('aria-checked', store.get('tts_emotion','0')==='1'?'true':'false');
+}
+function openReaderBookMenu(){
+  if(!cur) return;
+  $('#chapter-drawer').classList.add('hidden');
+  setCoverEl($('#rbm-cover'), cur, 1);
+  $('#rbm-title').textContent=cur.title;
+  const fmt=(cur.format||'').toUpperCase();
+  $('#rbm-sub').textContent=[fmt, cur.lang==='zh'?'中文':'英文', '共 '+(cur.total||cur.sentences.length)+' 句'].filter(Boolean).join(' · ');
+  idbMarks.byBook(cur.id).then(ms=>{ const n=(ms||[]).filter(m=>m.note).length; const el=$('#rbm-notes-n'); if(el) el.textContent=n; }).catch(()=>{});
+  syncEmotionSwitch();
+  openSheet('reader-book-menu');
+}
+$('#rbm-search').onclick=()=>{ closeSheets(); $('#chapter-drawer').classList.remove('hidden'); setDrawerTab('search'); };
+$('#rbm-bookmark').onclick=()=>{ closeSheets(); toggleBookmark(); };
+$('#rbm-notes').onclick=()=>{ closeSheets(); returnView='reader'; go('notes'); };
+$('#rbm-emotion').onclick=()=>{ const on=store.get('tts_emotion','0')!=='1'; store.set('tts_emotion', on?'1':'0'); syncEmotionSwitch(); toast(on?'情感增强已开启':'情感增强已关闭'); };
+$('#rbm-tr').onclick=()=>{ closeSheets(); $('#chapter-drawer').classList.remove('hidden'); setDrawerTab('toc'); toast('双语 / 整书翻译在目录页'); };
+$('#rbm-rename').onclick=async()=>{ if(!cur) return; const n=prompt('重命名：', cur.title); if(n==null) return; const t=n.trim(); if(!t||t===cur.title) return; cur.title=t; try{ await idb.put(stripBook(cur)); }catch(e){} document.title='Apo · '+t; const rt=$('#rbm-title'); if(rt) rt.textContent=t; toast('已重命名'); };
+$('#rbm-del').onclick=async()=>{ if(!cur) return; const b=cur; closeSheets(); if(confirm(`删除《${b.title}》？`)){ await idb.del(b.id); cur=null; stopSpeak(); go('library'); renderShelf(); } };
+/* ---------- v3.86：PDF 原版视图 ---------- */
+let pdfDoc=null, pdfPage=1;
+async function openPdfView(){
+  if(!cur||cur.format!=='pdf'){ toast('只有 PDF 书可以切到原版'); return; }
+  const f=await idb.getFile(cur.id).catch(()=>null);
+  if(!f||!f.data){ toast('这本书没有保存原文件，无法查看原版'); return; }
+  try{
+    pdfDoc=await pdfjsLib.getDocument({data:f.data}).promise;
+    const frac=cur.total? Math.min(1, Math.max(0, (cur.progress.idx||0)/cur.total)) : 0;
+    pdfPage=Math.max(1, Math.min(pdfDoc.numPages, Math.round(frac*pdfDoc.numPages)||1));
+    const t=$('#pdf-title'); if(t) t.textContent=cur.title;
+    $('#pdf-view').classList.remove('hidden');
+    await renderPdfPage();
+  }catch(e){ toast('打开 PDF 原版失败：'+(e&&e.message?e.message:e)); }
+}
+async function renderPdfPage(){
+  if(!pdfDoc) return;
+  const page=await pdfDoc.getPage(pdfPage);
+  const stage=document.querySelector('.pdf-stage');
+  const maxW=Math.max(200, Math.min((stage?stage.clientWidth:390)-16, 900));
+  const vp1=page.getViewport({scale:1});
+  const vp=page.getViewport({scale:maxW/vp1.width});
+  const cv=$('#pdf-canvas');
+  cv.width=Math.round(vp.width); cv.height=Math.round(vp.height);
+  await page.render({canvasContext:cv.getContext('2d'), viewport:vp}).promise;
+  const lab=$('#pdf-page-label'); if(lab) lab.textContent=`第 ${pdfPage} 页 / 共 ${pdfDoc.numPages} 页`;
+}
+function closePdfView(){ const v=$('#pdf-view'); if(v) v.classList.add('hidden'); if(pdfDoc){ try{pdfDoc.destroy();}catch(e){} pdfDoc=null; } }
+$('#btn-reader-pdf').onclick=()=>{ openPdfView(); };
+$('#pdf-back').onclick=closePdfView;
+$('#pdf-to-text').onclick=closePdfView;
+$('#pdf-prev').onclick=async()=>{ if(!pdfDoc||pdfPage<=1) return; pdfPage--; await renderPdfPage(); };
+$('#pdf-next').onclick=async()=>{ if(!pdfDoc||pdfPage>=pdfDoc.numPages) return; pdfPage++; await renderPdfPage(); };
 $('#btn-reader-typeset').onclick=()=>$('#typeset').classList.remove('hidden');
 $('#btn-ai-typeset').onclick=()=>$('#typeset').classList.remove('hidden');
-$('#dr-find').onclick=()=>{ $('#chapter-drawer').classList.add('hidden'); $('#reader-find').classList.remove('hidden'); $('#reader-find-q').focus(); $('#reader-find-q').select(); };
+/* v3.86：目录抽屉三段切换（搜索/目录/书签） */
+function setDrawerTab(tab){
+  document.querySelectorAll('.cd-seg-btn').forEach(b=>b.classList.toggle('cur', b.dataset.tab===tab));
+  const pS=$('#cd-pane-search'), pT=$('#cd-pane-toc'), pM=$('#cd-pane-marks');
+  if(pS) pS.classList.toggle('hidden', tab!=='search');
+  if(pT) pT.classList.toggle('hidden', tab!=='toc');
+  if(pM) pM.classList.toggle('hidden', tab!=='marks');
+  if(tab==='marks') renderDrawerMarks();
+  if(tab==='search'){ const q=$('#cd-search-q'); if(q) setTimeout(()=>q.focus(),80); }
+}
+document.querySelectorAll('.cd-seg-btn').forEach(b=>b.onclick=()=>setDrawerTab(b.dataset.tab));
+async function renderDrawerMarks(){
+  const box=$('#cd-marks-list'); if(!box||!cur) return;
+  const ms=await idbBookmarks.byBook(cur.id).catch(()=>[]);
+  if(!ms.length){ box.innerHTML='<div class="cd-empty">还没有书签，在阅读器点 ··· → 添加书签。</div>'; return; }
+  box.innerHTML=ms.map((m,i)=>`<button class="cd-mark" data-i="${i}"><span class="cd-mark-meta">第${(m.page||0)+1}页 · ${new Date(m.createdAt||Date.now()).toLocaleDateString()}</span>${esc(m.snippet||'')}</button>`).join('');
+  box.querySelectorAll('.cd-mark').forEach(b=>b.onclick=()=>{ const m=ms[Number(b.dataset.i)]; $('#chapter-drawer').classList.add('hidden'); if(!m) return; stopSpeak(); cur.progress.idx=m.sentence; cur._lastSpk=null; markActive(); scrollToActive(); saveProgress(); });
+}
 $('#dr-notes').onclick=()=>{ returnView='reader'; go('notes'); };
 function renderReaderFindResults(){
-  const list=$('#reader-find-results'), count=$('#reader-find-count');
+  const list=$('#cd-search-results'), count=$('#cd-search-count');
   if(!list||!count) return;
   count.textContent=readerFindQuery?`共 ${readerFindMatches.length} 条`:'输入关键词搜索整本书';
   list.innerHTML=readerFindMatches.slice(0,60).map((idx,n)=>{
@@ -1017,21 +1108,21 @@ function jumpReaderFind(n){
 }
 function runReaderFind(){
   if(!cur) return;
-  readerFindQuery=$('#reader-find-q').value.trim().toLocaleLowerCase();
+  readerFindQuery=$('#cd-search-q').value.trim().toLocaleLowerCase();
   readerFindMatches=[];
   if(readerFindQuery) cur.sentences.forEach((s,i)=>{ if(String(s.t||'').toLocaleLowerCase().includes(readerFindQuery)) readerFindMatches.push(i); });
   readerMatchSet=new Set(readerFindMatches);
   readerFindIndex=0;
   renderWindow(cur.progress.idx); markActive(); renderReaderFindResults();
 }
-$('#reader-find-close').onclick=()=>$('#reader-find').classList.add('hidden');
-$('#reader-find-q').addEventListener('input',runReaderFind);
-$('#reader-find-q').addEventListener('keydown',e=>{
-  if(e.key==='Enter'){ e.preventDefault(); jumpReaderFind(readerFindIndex+(e.shiftKey?-1:1)); }
-  else if(e.key==='Escape') $('#reader-find').classList.add('hidden');
-});
-$('#reader-find-prev').onclick=()=>jumpReaderFind(readerFindIndex-1);
-$('#reader-find-next').onclick=()=>jumpReaderFind(readerFindIndex+1);
+const _cdq=$('#cd-search-q');
+if(_cdq){ _cdq.addEventListener('input',runReaderFind);
+  _cdq.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){ e.preventDefault(); jumpReaderFind(readerFindIndex+(e.shiftKey?-1:1)); }
+    else if(e.key==='Escape'){ _cdq.blur(); }
+  }); }
+const _cdp=$('#cd-search-prev'); if(_cdp) _cdp.onclick=()=>jumpReaderFind(readerFindIndex-1);
+const _cdn=$('#cd-search-next'); if(_cdn) _cdn.onclick=()=>jumpReaderFind(readerFindIndex+1);
 $('#btn-chapters-close').onclick=()=>$('#chapter-drawer').classList.add('hidden');
 $('#dr-ai').onclick=()=>{ $('#chapter-drawer').classList.add('hidden'); $('#aisheet').classList.remove('hidden'); };
 $('#dr-type').onclick=()=>{ $('#chapter-drawer').classList.add('hidden'); $('#typeset').classList.remove('hidden'); };
@@ -1647,7 +1738,7 @@ setInterval(()=>{ if(document.hidden) return;
 /* ================= v3.5：导入弹窗 ================= */
 function openSheet(id){ $('#scrim').classList.remove('hidden'); $('#'+id).classList.remove('hidden'); }
 function closeSheets(){ $('#scrim').classList.add('hidden');
-  ['import-sheet','url-sheet','text-sheet','clone-sheet','cast-sheet','voice-sheet','about-sheet','book-menu','typeset-sheet','settings-sheet','typeset','aisheet'].forEach(id=>{const el=$('#'+id); if(el) el.classList.add('hidden');});
+  ['import-sheet','url-sheet','text-sheet','clone-sheet','cast-sheet','voice-sheet','about-sheet','book-menu','typeset-sheet','settings-sheet','typeset','aisheet','reader-book-menu'].forEach(id=>{const el=$('#'+id); if(el) el.classList.add('hidden');});
   if(typeof stopRecord==='function'){ try{stopRecord();}catch(e){} }
   if(typeof discardCloneSource==='function'){ try{discardCloneSource();}catch(e){} } }
 function openImportSheet(){ openSheet('import-sheet'); }
@@ -1817,6 +1908,22 @@ const s2=$('#ts-size2'); if(s2){ s2.value=size; const v2=$('#ts-size2-v'); if(v2
 const l2=$('#ts-lh2'); if(l2){ l2.value=lh; const v3=$('#ts-lh2-v'); if(v3) v3.textContent=(lh/10).toFixed(1); }
 const f2=$('#ts-flip2'); if(f2) f2.value=store.get('ts_flip','curl');
 const t2=$('#ts-theme2'); if(t2) t2.value=theme;
+const ink=store.get('ts_ink','');
+c.style.color=ink||'';
+syncTypesetUI();
+}
+/* v3.86：Readify 式排版控件同步（字体名/行距 pills/颜色/背景/翻页 pills） */
+const TS_THEME_TEXT={day:'#1d1d1f',sepia:'#4a3f2c',yellow:'#5a4a1a',green:'#2e4a2e',blue:'#2c3e50',pink:'#4a2c35',gray:'#333333',ink:'#d7dce2',darkblue:'#d0dce8',night:'#e8e2f5'};
+function syncTypesetUI(){
+  const fn=$('#ts-font-name'); if(fn) fn.textContent=store.get('ts_font','serif')==='serif'?'宋体':'无衬线';
+  const lh=String(store.get('ts_lh','18'));
+  document.querySelectorAll('#ts-lh-pills button').forEach(b=>b.classList.toggle('cur', b.dataset.lh===lh));
+  const ink=store.get('ts_ink','')||TS_THEME_TEXT[store.get('ts_theme','sepia')]||'';
+  document.querySelectorAll('#ts-ink-sw button').forEach(b=>b.classList.toggle('cur', ink && b.dataset.ink.toLowerCase()===ink.toLowerCase()));
+  const th=store.get('ts_theme','sepia');
+  document.querySelectorAll('#ts-bg-sw button').forEach(b=>b.classList.toggle('cur', b.dataset.theme===th));
+  const fl=store.get('ts_flip','curl');
+  document.querySelectorAll('#ts-flip-pills button').forEach(b=>b.classList.toggle('cur', b.dataset.flip===fl));
 }
 /* 排版按钮已并入目录抽屉（#dr-type） */
 $('#btn-type-close').onclick=()=>$('#typeset').classList.add('hidden');
@@ -1825,10 +1932,17 @@ $('#ts-lh').addEventListener('input',e=>{store.set('ts_lh',e.target.value);apply
 $('#ts-font').addEventListener('change',e=>{store.set('ts_font',e.target.value);applyType();scheduleRepaginate();});
 $('#ts-theme').addEventListener('change',e=>{store.set('ts_theme',e.target.value);applyType();scheduleRepaginate();});
 $('#ts-flip').addEventListener('change',e=>{store.set('ts_flip',e.target.value);applyFlipMode();toast(e.target.selectedOptions[0].text+'已生效');});
-$('#ts-theme2').addEventListener('change',e=>{store.set('ts_theme',e.target.value);applyType();scheduleRepaginate();});
+const _t2=$('#ts-theme2'); if(_t2) _t2.addEventListener('change',e=>{store.set('ts_theme',e.target.value);applyType();scheduleRepaginate();});
 const _s2=$('#ts-size2'); if(_s2) _s2.addEventListener('input',e=>{store.set('ts_size',e.target.value);applyType();scheduleRepaginate();});
 const _l2=$('#ts-lh2'); if(_l2) _l2.addEventListener('input',e=>{store.set('ts_lh',e.target.value);applyType();scheduleRepaginate();});
 const _f2=$('#ts-flip2'); if(_f2) _f2.addEventListener('change',e=>{store.set('ts_flip',e.target.value);applyFlipMode();toast(e.target.selectedOptions[0].text+'已生效');});
+/* v3.86：Readify 式排版新控件 */
+const _tfr=$('#ts-font-row');
+if(_tfr) _tfr.onclick=()=>{ const f=store.get('ts_font','serif'); store.set('ts_font', f==='serif'?'sans':'serif'); applyType(); scheduleRepaginate(); };
+document.querySelectorAll('#ts-lh-pills button').forEach(b=>b.onclick=()=>{ store.set('ts_lh', b.dataset.lh); applyType(); scheduleRepaginate(); });
+document.querySelectorAll('#ts-ink-sw button').forEach(b=>b.onclick=()=>{ const cur=store.get('ts_ink',''); store.set('ts_ink', cur===b.dataset.ink?'':b.dataset.ink); applyType(); });
+document.querySelectorAll('#ts-bg-sw button').forEach(b=>b.onclick=()=>{ store.set('ts_theme', b.dataset.theme); store.set('ts_ink',''); applyType(); scheduleRepaginate(); });
+document.querySelectorAll('#ts-flip-pills button').forEach(b=>b.onclick=()=>{ store.set('ts_flip', b.dataset.flip); applyFlipMode(); syncTypesetUI(); toast(b.textContent+'已生效'); });
 
 /* ---------- 设置持久化 ---------- */
 function initSettings(){
@@ -1982,7 +2096,6 @@ async function renderHome(){
   updateMiniPlayer();
 }
 /* v3.80：经典必读——公版书，点一本直接去搜书页查 Open Library / Gutenberg */
-const CLASSICS=['红楼梦','西游记','三国演义','水浒传','聊斋志异','儒林外史','镜花缘','老残游记'];
 function renderClassics(){
   const list=$('#classics-list'); if(!list) return;
   if(list.children.length) return; // 静态列表，只渲染一次

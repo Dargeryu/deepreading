@@ -62,6 +62,19 @@ function bindFlip(){
     clearTimeout(snapT);
     snapT = setTimeout(snapToPage, 120);
   }, { passive: true });
+  // v3.86 卷页模式滚动看门狗：原生横向滚动本应被禁用，任何偏离页边界的滚动
+  // 都是异常状态（字体加载/窗口变化/旧状态残留），停稳 180ms 后自动回正到当前页。
+  let watchT = null;
+  el.addEventListener('scroll', ()=>{
+    if(flipMode() === 'slide' || Flip.active || !PG.ready || PG.total <= 1) return;
+    clearTimeout(watchT);
+    watchT = setTimeout(()=>{
+      if(flipMode() === 'slide' || Flip.active || !PG.ready) return;
+      const W = el.clientWidth || 1;
+      const target = localPageOf(PG.page) * W;
+      if(Math.abs(el.scrollLeft - target) > 8) showPageInstant(PG.page);
+    }, 180);
+  }, { passive: true });
 }
 function applyFlipMode(){
   // v3.67 一次性迁移：之前存了 slide 的老用户切到 curl（3D 卷页），之后用户手动改的优先
@@ -104,6 +117,9 @@ function snapToPage(){
     const target = targetLocal * W;
     if(Math.abs(el.scrollLeft - target) > 2) el.scrollTo({ left: target, behavior: 'smooth' });
   }
+  // v3.86：平滑滚动停稳后验一次对齐（列进位 4px/页的漂移靠它纠；滚动中途被打断也能自愈）
+  const sl0 = el.scrollLeft;
+  setTimeout(()=>{ if(el.scrollLeft === sl0 && PG.page === gp && !Flip.active) verifyPageAlignment(gp, W); }, 420);
 }
 
 function onFlipDown(e){
@@ -399,16 +415,23 @@ function endLeaf(){
   clearStaleShift();
 }
 
-function completeFlip(){
-  const cur = Flip.progress;
-  const dur = Math.max(120, Math.min(420, 230 * (1 - Flip.progress) / (0.35 + Math.abs(Flip.vel))));
-  tweenCurl(cur, 1, dur, () => {
-    const tp = Flip.toPage;
-    endCurl();
+/* v3.86：翻页动画收尾——只有无人中途改页（目录/进度条/点句跳转）时才提交目标页；
+ * 若动画期间已被 showPageInstant 跳走，旧目标页作废，只清卷叶、按当前页重新对齐。 */
+function finishFlip(tp){
+  endCurl();
+  if(PG.page === Flip.fromPage){
     commitPage(tp);
     verifyPageAlignment(tp, pagesEl().clientWidth||1);
     drainQueue();
-  });
+  }else{
+    Flip.queued = null;
+    verifyPageAlignment(PG.page, pagesEl().clientWidth||1);
+  }
+}
+function completeFlip(){
+  const cur = Flip.progress;
+  const dur = Math.max(120, Math.min(420, 230 * (1 - Flip.progress) / (0.35 + Math.abs(Flip.vel))));
+  tweenCurl(cur, 1, dur, () => finishFlip(Flip.toPage));
 }
 function cancelFlip(){
   const cur = Flip.progress;
@@ -445,11 +468,5 @@ Flip.animateTo = function(gp){
   const dir = gp > PG.page ? 1 : -1;
   if(Math.abs(gp - PG.page) !== 1){ showPageInstant(gp); return; }
   beginCurl(dir);
-  tweenCurl(0, 1, 300, () => {
-    const tp = Flip.toPage;
-    endCurl();
-    commitPage(tp);
-    verifyPageAlignment(tp, pagesEl().clientWidth||1);
-    drainQueue();
-  });
+  tweenCurl(0, 1, 300, () => finishFlip(Flip.toPage));
 };

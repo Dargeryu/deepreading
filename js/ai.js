@@ -74,7 +74,7 @@ async function speak(text, voiceId){
   const r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+encodeURIComponent(voice),{
     method:'POST',
     headers:{'Content-Type':'application/json','xi-api-key':key},
-    body:JSON.stringify({text:text, model_id:'eleven_multilingual_v2'})
+    body:JSON.stringify({text:text, model_id:'eleven_multilingual_v2', voice_settings:{stability: store.get('tts_emotion','0')==='1'?0.3:0.5, similarity_boost:0.75}})
   });
   const ct=r.headers.get('content-type')||'';
   if(!r.ok||ct.indexOf('audio')<0){

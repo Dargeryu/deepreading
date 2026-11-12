@@ -50,7 +50,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">●</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.85</div>
+    <div class="sb-ver">Apo v3.86</div>
   </div>
 </aside>
 <div id="app">
@@ -225,37 +225,44 @@ if ('serviceWorker' in navigator) {
         <div class="reader-doc-meta"><span id="reader-chapter" class="reader-ch" title="打开目录"></span><span id="reader-count" class="reader-count"></span></div>
       </div>
       <div class="reader-actions">
+        <button id="btn-reader-pdf" class="icon-btn pdf-btn hidden" title="切到 PDF 原版">P</button>
         <button id="btn-ai-typeset" class="ai-typeset-btn" title="AI 排版"><span class="ai-spark">✦</span>AI排版</button>
         <button id="btn-reader-toc" class="icon-btn" title="目录">☰</button>
         <button id="btn-reader-typeset" class="icon-btn" title="排版设置">Aa</button>
         <button id="btn-reader-more" class="icon-btn" title="更多">···</button>
       </div>
     </header>
-    <section id="reader-find" class="reader-find hidden" aria-label="在本书中搜索">
-      <div class="reader-find-top">
-        <input id="reader-find-q" type="search" placeholder="搜索本书内容" aria-label="搜索本书内容">
-        <button id="reader-find-close" class="btn-ghost" aria-label="关闭搜索">✕</button>
-      </div>
-      <div class="reader-find-tools">
-        <span id="reader-find-count">输入关键词搜索整本书</span>
-        <button id="reader-find-prev" class="btn-ghost sm" title="上一个结果">↑</button>
-        <button id="reader-find-next" class="btn-ghost sm" title="下一个结果">↓</button>
-      </div>
-      <div id="reader-find-results"></div>
-    </section>
     <div id="chapter-drawer" class="drawer hidden">
       <div class="drawer-head"><span class="serif">目录</span> <button id="btn-chapters-close" class="btn-ghost">✕</button></div>
-      <div class="drawer-tools">
-        <button id="dr-ai" class="btn-ghost sm">✦ AI 助手</button>
-        <button id="dr-type" class="btn-ghost sm">Aa 排版</button>
-        <button id="dr-bilingual" class="btn-ghost sm">🌐 双语</button>
-        <button id="dr-trbook" class="btn-ghost sm">📖 整书翻译</button>
-        <button id="dr-find" class="btn-ghost sm">⌕ 搜本书</button>
-        <button id="dr-notes" class="btn-ghost sm">▤ 划线笔记</button>
-        <button id="dr-bookmark" class="btn-ghost sm">♧ 本页书签</button>
-        <div id="tr-progress" style="display:none;width:100%;font-size:12px;color:#666;padding:6px 0"></div>
+      <div class="cd-seg" role="tablist">
+        <button class="cd-seg-btn" data-tab="search">搜索</button>
+        <button class="cd-seg-btn cur" data-tab="toc">目录</button>
+        <button class="cd-seg-btn" data-tab="marks">书签</button>
       </div>
-      <div id="chapter-list"></div>
+      <div class="cd-pane hidden" id="cd-pane-search">
+        <div class="cd-search-top">
+          <input id="cd-search-q" type="search" placeholder="搜索本书内容" aria-label="搜索本书内容">
+          <button id="cd-search-prev" class="btn-ghost sm" title="上一个结果">↑</button>
+          <button id="cd-search-next" class="btn-ghost sm" title="下一个结果">↓</button>
+        </div>
+        <div id="cd-search-count" class="cd-search-count">输入关键词搜索整本书</div>
+        <div id="cd-search-results"></div>
+      </div>
+      <div class="cd-pane" id="cd-pane-toc">
+        <div class="drawer-tools">
+          <button id="dr-ai" class="btn-ghost sm">✦ AI 助手</button>
+          <button id="dr-type" class="btn-ghost sm">Aa 排版</button>
+          <button id="dr-bilingual" class="btn-ghost sm">🌐 双语</button>
+          <button id="dr-trbook" class="btn-ghost sm">📖 整书翻译</button>
+          <button id="dr-notes" class="btn-ghost sm">▤ 划线笔记</button>
+          <button id="dr-bookmark" class="btn-ghost sm">♧ 本页书签</button>
+          <div id="tr-progress" style="display:none;width:100%;font-size:12px;color:#666;padding:6px 0"></div>
+        </div>
+        <div id="chapter-list"></div>
+      </div>
+      <div class="cd-pane hidden" id="cd-pane-marks">
+        <div id="cd-marks-list"></div>
+      </div>
     </div>
     <div id="reader-pages"><article id="content"></article></div>
     <div class="reader-turn-controls" aria-label="翻页控制">
@@ -447,11 +454,45 @@ if ('serviceWorker' in navigator) {
   <!-- 排版 -->
   <div id="typeset" class="sheet hidden">
     <div class="sheet-head"><span class="serif">排版</span> <button id="btn-type-close" class="btn-ghost">✕</button></div>
-    <p class="hint" style="padding:0">阅读器内快捷排版，与「我的」页面同步。</p>
-    <label>字号 <input type="range" id="ts-size2" min="14" max="26" step="1" style="width:120px;vertical-align:middle"> <span id="ts-size2-v">18</span></label>
-    <label>行高 <input type="range" id="ts-lh2" min="14" max="26" step="1" style="width:120px;vertical-align:middle"> <span id="ts-lh2-v">1.8</span></label>
-    <label>翻页 <select id="ts-flip2"><option value="curl">3D 卷页 · 推荐</option><option value="slide">横向翻页</option><option value="none">无动画</option></select></label>
-    <label>主题 <select id="ts-theme2"><option value="day">白天</option><option value="sepia">暖纸</option><option value="yellow">鹅黄</option><option value="green">豆绿</option><option value="blue">雾蓝</option><option value="pink">樱粉</option><option value="gray">浅灰</option><option value="ink">墨黑</option><option value="darkblue">深蓝</option><option value="night">夜间</option></select></label>
+    <div class="ts-sec">
+      <div class="ts-size-top"><span class="ts-a">A</span><span class="ts-bubble" id="ts-size2-v">24</span><span class="ts-a big">A</span></div>
+      <input type="range" id="ts-size2" min="14" max="26" step="1" class="ts-range" aria-label="字号">
+    </div>
+    <button class="ts-row" id="ts-font-row"><span class="ts-label">字体</span><span class="ts-val" id="ts-font-name">宋体</span><span class="ts-chev">›</span></button>
+    <div class="ts-sec">
+      <div class="ts-label">行间距</div>
+      <div class="ts-pills" id="ts-lh-pills">
+        <button data-lh="13">1.3</button><button data-lh="15">1.5</button><button data-lh="18">1.8</button><button data-lh="20">2.0</button><button data-lh="25">2.5</button>
+      </div>
+    </div>
+    <div class="ts-sec">
+      <div class="ts-label">颜色</div>
+      <div class="ts-swatches" id="ts-ink-sw">
+        <button data-ink="#1d1d1f" style="--sw:#1d1d1f" aria-label="墨黑"></button>
+        <button data-ink="#4a3f2c" style="--sw:#4a3f2c" aria-label="棕褐"></button>
+        <button data-ink="#2e4a2e" style="--sw:#2e4a2e" aria-label="墨绿"></button>
+        <button data-ink="#2c3e50" style="--sw:#2c3e50" aria-label="藏青"></button>
+        <button data-ink="#5a4a1a" style="--sw:#5a4a1a" aria-label="赭黄"></button>
+        <button data-ink="#e8e2f5" style="--sw:#e8e2f5" aria-label="浅紫"></button>
+      </div>
+    </div>
+    <div class="ts-sec">
+      <div class="ts-label">背景</div>
+      <div class="ts-swatches" id="ts-bg-sw">
+        <button data-theme="day" style="--sw:#ffffff" aria-label="白天"></button>
+        <button data-theme="sepia" style="--sw:#f6efe0" aria-label="暖纸"></button>
+        <button data-theme="yellow" style="--sw:#fff9e6" aria-label="鹅黄"></button>
+        <button data-theme="green" style="--sw:#e8f5e9" aria-label="豆绿"></button>
+        <button data-theme="blue" style="--sw:#e8f0f8" aria-label="雾蓝"></button>
+        <button data-theme="night" style="--sw:#14101d" aria-label="夜间"></button>
+      </div>
+    </div>
+    <div class="ts-sec">
+      <div class="ts-label">翻页</div>
+      <div class="ts-pills" id="ts-flip-pills">
+        <button data-flip="curl">3D 卷页</button><button data-flip="slide">横向翻页</button><button data-flip="none">无动画</button>
+      </div>
+    </div>
     <button class="btn-primary sm" id="btn-reflow" style="margin-top:12px">✦ 智能重排</button>
     <p class="hint" style="padding:6px 0 0">按章节重算分段：段落粘在一起的书会重新分好段，章节结构不变。</p>
   </div>
@@ -474,6 +515,42 @@ if ('serviceWorker' in navigator) {
       <button id="btn-ai-speak" class="btn-ghost">🔊 朗读讲解</button>
       <button id="btn-ai-story" class="btn-ghost hidden">▶ 播放分镜</button>
     </div>
+  </div>
+
+  <!-- 阅读器 ··· 书菜单（v3.86：按 Readify 式重做） -->
+  <div id="reader-book-menu" class="sheet hidden">
+    <div class="rbm-head">
+      <div class="cover rbm-cover" id="rbm-cover"></div>
+      <div class="rbm-info">
+        <div class="rbm-title" id="rbm-title"></div>
+        <div class="rbm-sub" id="rbm-sub"></div>
+      </div>
+    </div>
+    <div class="rbm-list">
+      <button class="rbm-row" id="rbm-search"><span class="rbm-ic">⌕</span><span class="rbm-t">搜索</span><span class="rbm-chev">›</span></button>
+      <button class="rbm-row" id="rbm-bookmark"><span class="rbm-ic">♧</span><span class="rbm-t">添加书签</span><span class="rbm-chev">›</span></button>
+      <button class="rbm-row" id="rbm-notes"><span class="rbm-ic">▤</span><span class="rbm-t">笔记</span><span class="rbm-n" id="rbm-notes-n">0</span><span class="rbm-chev">›</span></button>
+      <div class="rbm-row rbm-toggle-row"><span class="rbm-ic">✦</span><span class="rbm-t">情感增强 <em class="rbm-beta">BETA</em></span><button class="rbm-switch" id="rbm-emotion" role="switch" aria-checked="false" aria-label="情感增强"><span class="rbm-knob"></span></button></div>
+      <button class="rbm-row" id="rbm-tr"><span class="rbm-ic">🌐</span><span class="rbm-t">翻译设置</span><span class="rbm-chev">›</span></button>
+      <button class="rbm-row" id="rbm-rename"><span class="rbm-ic">✎</span><span class="rbm-t">重命名</span><span class="rbm-chev">›</span></button>
+      <button class="rbm-row rbm-danger" id="rbm-del"><span class="rbm-ic">🗑</span><span class="rbm-t">删除</span></button>
+    </div>
+    <p class="hint rbm-hint">情感增强：云端音色用更富表现力的语调朗读；系统语音按句末语气微调音调与语速。</p>
+  </div>
+
+  <!-- PDF 原版视图（v3.86：顶栏“切到PDF”打开，按原文件页渲染） -->
+  <div id="pdf-view" class="hidden">
+    <header class="pdf-bar">
+      <button id="pdf-back" class="icon-btn" aria-label="切回文本">‹</button>
+      <span id="pdf-title" class="pdf-title"></span>
+      <button id="pdf-to-text" class="btn-ghost sm">切回文本</button>
+    </header>
+    <div class="pdf-stage"><canvas id="pdf-canvas"></canvas></div>
+    <footer class="pdf-foot">
+      <button id="pdf-prev" class="icon-btn" aria-label="上一页">‹</button>
+      <span id="pdf-page-label">第 1 页 / 共 1 页</span>
+      <button id="pdf-next" class="icon-btn" aria-label="下一页">›</button>
+    </footer>
   </div>
 
   <!-- 设置（v3.84：从我的页挪出来，我的页只留参考图四块） -->
