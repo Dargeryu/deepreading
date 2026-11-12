@@ -1222,3 +1222,25 @@ button,.icon-btn,.rd-icbtn,.tab,.fp-tool,.fp-skip{color:#111}button:focus-visibl
 /* 底导：中间黑色大 + 号（原图），声音/我的从底导撤下 */
 #tabbar .tab-plus{width:64px;height:46px;border-radius:999px;background:#111;color:#fff;font-size:26px;line-height:1;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:-16px;box-shadow:0 6px 16px rgba(0,0,0,.28);flex:none}
 #tabbar .tab-plus:active{transform:scale(.94)}
+
+/* ============ v3.81：我的页按 Readify 原图结构重建（用户 2026-11-12 二次亲定） ============ */
+/* 菜单行改线条图标（原图是黑色线条，不是 emoji） */
+.menu-row .mi{display:grid;place-items:center;width:24px;flex:none}
+.menu-row .mi svg{display:block}
+/* 紫色分享横幅（原图“邀请有礼”位置；Apo 没有奖励，改成真实的分享动作） */
+.invite-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;border:none;cursor:pointer;text-align:left;color:#fff;background:linear-gradient(100deg,#6f73e8,#9aa0f2);border-radius:16px;padding:18px 20px;margin-bottom:14px;box-shadow:0 6px 20px rgba(111,115,232,.28)}
+.invite-banner .ib-txt b{display:block;font-family:var(--serif);font-size:17px;font-weight:700}
+.invite-banner .ib-txt small{display:block;margin-top:4px;font-size:12.5px;opacity:.88}
+.invite-banner .ib-gift{font-size:44px;line-height:1;filter:drop-shadow(0 4px 8px rgba(0,0,0,.2))}
+/* 徽章页：与我的页同款淡紫底 + 白卡行 */
+#view-badges{background:#f5f5fa!important}
+#view-badges .topbar{background:transparent!important;border-bottom:none!important;color:#111!important}
+.badge-row{display:flex;align-items:center;gap:14px;background:#fff;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.045);padding:14px 16px;margin-bottom:10px}
+.badge-row:not(.got){opacity:.62}
+.badge-row:not(.got) .bd-ic{filter:grayscale(1)}
+.bd-ic{font-size:26px;flex:none;width:34px;text-align:center}
+.bd-t{flex:1;min-width:0}
+.bd-t b{display:block;font-size:15px;color:#111}
+.bd-t i{display:block;font-style:normal;font-size:12.5px;color:#888;margin-top:2px}
+.bd-st{font-size:12px;color:#999;flex:none}
+.badge-row.got .bd-st{color:#2e7d46;font-weight:700}

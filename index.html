@@ -50,7 +50,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">●</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.80</div>
+    <div class="sb-ver">Apo v3.81</div>
   </div>
 </aside>
 <div id="app">
@@ -69,7 +69,7 @@ if ('serviceWorker' in navigator) {
       <div class="rd-logo">Apo</div>
       <div class="rd-top-icons">
         <button class="rd-icbtn" id="btn-home-settings" title="设置" aria-label="设置"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2.2" fill="#fff"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="15" cy="17" r="2.2" fill="#fff"/></svg></button>
-        <button class="rd-avatar" id="btn-mine" title="我的">我</button>
+        <button class="rd-avatar" id="btn-mine" title="我的" style="font-size:12px">忆宁</button>
       </div>
     </header>
     <div class="rd-search" id="home-search" role="button" tabindex="0" aria-label="搜索书籍"><span>✦</span><span class="hs-t">搜书名、作者，或描述你想找的书</span></div>
@@ -366,13 +366,23 @@ if ('serviceWorker' in navigator) {
     </header>
     <div id="view-mine-body" style="padding:6px 18px 170px">
       <div class="mine-head">
-        <div class="avatar-btn lg">我</div>
-        <div><div class="t serif">Apo</div><div class="d">本地听书 · 数据只存本机</div></div>
+        <div class="avatar-btn lg">忆宁</div>
+        <div><div class="t serif">余忆宁</div></div>
       </div>
       <div class="menu-card">
-        <button class="menu-row" id="mn-notes"><span class="mi">📝</span><span class="mt">读书笔记</span><i>›</i></button>
-        <button class="menu-row" id="mn-voice"><span class="mi">🎙</span><span class="mt">我的音色</span><i>›</i></button>
-        <button class="menu-row" id="mn-bookmarks"><span class="mi">🔖</span><span class="mt">我的书签</span><i>›</i></button>
+        <button class="menu-row" id="mn-notes"><span class="mi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h6M9 16h6"/></svg></span><span class="mt">读书笔记</span><i>›</i></button>
+        <button class="menu-row" id="mn-voice"><span class="mi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></span><span class="mt">我的音色</span><i>›</i></button>
+        <button class="menu-row" id="mn-badges"><span class="mi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14" r="5"/><path d="M9 9.6 7 3h4l1 3.2L13 3h4l-2 6.6"/><path d="M12 11.8l.7 1.5 1.6.2-1.2 1.1.3 1.6-1.4-.8-1.4.8.3-1.6-1.2-1.1 1.6-.2z"/></svg></span><span class="mt">我的徽章</span><i>›</i></button>
+      </div>
+      <button class="invite-banner" id="btn-invite">
+        <span class="ib-txt"><b>分享 Apo</b><small>一起听书，把好书推给朋友</small></span>
+        <span class="ib-gift">🎁</span>
+      </button>
+      <div class="menu-card">
+        <button class="menu-row" id="st-share"><span class="mi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 15l6-6"/><path d="M11 9h4v4"/></svg></span><span class="mt">分享 Apo</span><i>›</i></button>
+        <button class="menu-row" id="st-bookmarks"><span class="mi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10v18l-5-4-5 4z"/></svg></span><span class="mt">我的书签</span><i>›</i></button>
+        <button class="menu-row" id="st-settings"><span class="mi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1"/></svg></span><span class="mt">设置</span><i>›</i></button>
+        <button class="menu-row" id="st-about"><span class="mi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.4 2.4 0 1 1 3.3 2.3c-.7.4-.9.9-.9 1.7"/><path d="M12 17h.01"/></svg></span><span class="mt">关于 Apo</span><i>›</i></button>
       </div>
       <div class="set-group">
         <div class="sec">朗读引擎</div>
@@ -431,7 +441,20 @@ if ('serviceWorker' in navigator) {
         <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
         <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
       </div>
-      <div class="ver">Apo v3.80</div>
+      <div class="ver">Apo v3.81</div>
+    </div>
+  </main>
+
+  <!-- 我的徽章 -->
+  <main id="view-badges" class="view hidden">
+    <header class="topbar">
+      <button id="badges-back" class="icon-btn">‹</button>
+      <div class="brand serif">我的徽章</div>
+      <span style="width:34px"></span>
+    </header>
+    <div style="padding:6px 18px 170px">
+      <p class="sub" id="badges-summary" style="margin:6px 2px 14px"></p>
+      <div id="badges-list"></div>
     </div>
   </main>
 
@@ -577,6 +600,15 @@ if ('serviceWorker' in navigator) {
   <div id="cast-sheet" class="sheet tall hidden">
     <div class="sheet-head"><span class="serif">🎭 多角色配音</span> <button id="btn-cast-close" class="btn-ghost">✕</button></div>
     <div id="cast-body"></div>
+  </div>
+
+  <div id="about-sheet" class="sheet bottom hidden">
+    <div class="grab"></div>
+    <div class="sheet-title serif">关于 Apo</div>
+    <p class="sheet-sub">Apo · 本地听书</p>
+    <p style="font-size:14px;line-height:1.9;color:#333;margin:0 0 10px">把 PDF / EPUB / TXT 变成有声书：系统语音免费离线朗读，ElevenLabs 云端音色与自定义克隆音色可选，AI 多角色配音、划线笔记、整书翻译都在本机完成。</p>
+    <p style="font-size:13px;line-height:1.8;color:#888;margin:0">书籍、进度、音色与 Key 只存本机，不上传。版本 <span id="about-ver"></span></p>
+    <button class="btn-primary" id="btn-about-close" style="width:100%;margin-top:14px">知道了</button>
   </div>
 
   <div id="book-menu" class="sheet bottom hidden">

@@ -493,7 +493,7 @@ async function downloadBook(b){
 let cur=null, sentEls=[];
 let readerFindMatches=[], readerFindIndex=0, readerFindQuery='', readerMatchSet=new Set();
 /* ---------- v3 导航 ---------- */
-const VIEWS=['splash','home','library','detail','reader','mine','notes','bookchat','bookmarks','stats','search','voice'];
+const VIEWS=['splash','home','library','detail','reader','mine','notes','bookchat','bookmarks','stats','search','voice','badges'];
 let curView='home', returnView='library';
 function go(name){
   if(!VIEWS.includes(name)) name='home';
@@ -513,6 +513,7 @@ function go(name){
     else if(name==='bookchat'){ stopSpeak(); }
     else if(name==='bookmarks'){ stopSpeak(); renderBookmarksList(); }
     else if(name==='stats'){ stopSpeak(); renderStatsDetail('week'); }
+    else if(name==='badges'){ stopSpeak(); renderBadges(); }
   }catch(e){ console.error('[Apo] 渲染失败：', name, e); }
   try{ updateMiniPlayer(); }catch(e){ console.error('[Apo] 迷你播放器刷新失败：', e); }
   window.scrollTo(0,0);
@@ -1237,7 +1238,14 @@ async function renderBookmarksList(){
 $('#bookmarks-back').onclick = () => go('mine');
 $('#mn-notes').onclick = () => { returnView='mine'; go('notes'); };
 $('#mn-voice').onclick = () => go('voice');
-$('#mn-bookmarks').onclick = () => go('bookmarks');
+$('#mn-badges').onclick = () => go('badges');
+$('#badges-back').onclick = () => go('mine');
+$('#btn-invite').onclick = () => shareApo();
+$('#st-share').onclick = () => shareApo();
+$('#st-bookmarks').onclick = () => go('bookmarks');
+$('#st-settings').onclick = () => { const g=document.querySelector('#view-mine-body .set-group'); if(g) g.scrollIntoView({behavior:'smooth', block:'start'}); };
+$('#st-about').onclick = () => { const v=document.querySelector('#about-ver'); if(v) v.textContent=document.querySelector('.ver')?.textContent||''; openSheet('about-sheet'); };
+$('#btn-about-close').onclick = () => closeSheets();
 
 /* ---------- 翻译持久化 ---------- */
 const idbTr = {
@@ -1568,7 +1576,7 @@ setInterval(()=>{ if(document.hidden) return;
 /* ================= v3.5：导入弹窗 ================= */
 function openSheet(id){ $('#scrim').classList.remove('hidden'); $('#'+id).classList.remove('hidden'); }
 function closeSheets(){ $('#scrim').classList.add('hidden');
-  ['import-sheet','url-sheet','text-sheet','clone-sheet','cast-sheet','voice-sheet'].forEach(id=>{const el=$('#'+id); if(el) el.classList.add('hidden');});
+  ['import-sheet','url-sheet','text-sheet','clone-sheet','cast-sheet','voice-sheet','about-sheet','book-menu','typeset-sheet'].forEach(id=>{const el=$('#'+id); if(el) el.classList.add('hidden');});
   if(typeof stopRecord==='function'){ try{stopRecord();}catch(e){} }
   if(typeof discardCloneSource==='function'){ try{discardCloneSource();}catch(e){} } }
 function openImportSheet(){ openSheet('import-sheet'); }
@@ -1948,6 +1956,48 @@ $('#classics-more').onclick=()=>go('search');
 const SEARCH_HINTS=['三体','红楼梦','认知天性','成为乔布斯','百年孤独'];
 let _shi=0;
 setInterval(()=>{ const el=document.querySelector('#home-search .hs-t'); if(el&&curView==='home') el.textContent='搜“'+SEARCH_HINTS[_shi++%SEARCH_HINTS.length]+'”试试'; },4000);
+
+/* ---------- 我的徽章（v3.81：全部按真实阅读数据算，不造假） ---------- */
+function badgeStats(){
+  const s=getStat();
+  const totalMin=Math.round(Object.values(s.days||{}).reduce((a,b)=>a+b,0)/60);
+  const todayMin=Math.floor((s.days[statKey(new Date())]||0)/60);
+  const finished=books.filter(b=>(b.total||1)>1 && (b.progress?.idx||0)>=(b.total||1)-1).length;
+  return {streak:s.streak||0, totalMin, todayMin, target:s.target||30, finished, count:books.length};
+}
+const BADGES=[
+  {icon:'📖', name:'初试啼声', desc:'导入第一本书', test:x=>x.count>=1},
+  {icon:'🔥', name:'三日不辍', desc:'连续阅读 3 天', test:x=>x.streak>=3},
+  {icon:'🔥', name:'七日不辍', desc:'连续阅读 7 天', test:x=>x.streak>=7},
+  {icon:'👑', name:'月满则盈', desc:'连续阅读 30 天', test:x=>x.streak>=30},
+  {icon:'🎯', name:'今日达标', desc:'今日阅读达到目标时长', test:x=>x.todayMin>=x.target},
+  {icon:'✅', name:'读完一本', desc:'读完任意一本书', test:x=>x.finished>=1},
+  {icon:'⏱', name:'累计 10 小时', desc:'累计阅读满 10 小时', test:x=>x.totalMin>=600},
+  {icon:'📚', name:'博览群书', desc:'书架满 10 本书', test:x=>x.count>=10},
+];
+async function renderBadges(){
+  if(!books.length){ try{ await loadBooks(); }catch(e){} }
+  const x=badgeStats();
+  const got=BADGES.filter(b=>b.test(x)).length;
+  const sum=$('#badges-summary'); if(sum) sum.textContent=`已获得 ${got} / ${BADGES.length} 枚 · 连续阅读 ${x.streak} 天 · 累计 ${x.totalMin} 分钟 · 读完 ${x.finished} 本`;
+  const list=$('#badges-list'); if(!list) return;
+  list.innerHTML=BADGES.map(b=>{
+    const ok=b.test(x);
+    return `<div class="badge-row${ok?' got':''}"><span class="bd-ic">${b.icon}</span><span class="bd-t"><b>${b.name}</b><i>${b.desc}</i></span><span class="bd-st">${ok?'已获得':'未获得'}</span></div>`;
+  }).join('');
+}
+/* v3.81：系统分享（横幅与分享行共用）；用户取消分享不弹复制提示 */
+async function shareApo(){
+  const url='https://dargeryu.github.io/deepreading/';
+  try{
+    if(navigator.share){ await navigator.share({title:'Apo', text:'Apo：把书听成故事', url}); return; }
+    throw new Error('no-share');
+  }catch(e){
+    if(e && e.name==='AbortError') return;
+    try{ await navigator.clipboard.writeText(url); toast('链接已复制，发给朋友就能一起听书'); }
+    catch(err){ prompt('复制下面的链接发给朋友：', url); }
+  }
+}
 
 /* ---------- 书籍详情 ---------- */
 let detailId=null;
