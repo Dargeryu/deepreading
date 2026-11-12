@@ -1235,8 +1235,9 @@ async function renderBookmarksList(){
   });
 }
 $('#bookmarks-back').onclick = () => go('mine');
-$('#mine-notes').onclick = () => { returnView='mine'; go('notes'); };
-$('#mine-bookmarks').onclick = () => go('bookmarks');
+$('#mn-notes').onclick = () => { returnView='mine'; go('notes'); };
+$('#mn-voice').onclick = () => go('voice');
+$('#mn-bookmarks').onclick = () => go('bookmarks');
 
 /* ---------- 翻译持久化 ---------- */
 const idbTr = {
@@ -1503,7 +1504,19 @@ async function scanDownloads(){
 document.querySelectorAll('#tabbar .tab').forEach(t=>{ t.onclick=()=>go(t.dataset.v); });
 document.querySelectorAll('#sidebar .sb-item').forEach(b=>{ b.onclick=()=>{ if(b.dataset.v==='notes') returnView=curView; go(b.dataset.v); }; });
 $('#sb-add').onclick=()=>openImportSheet();
-$('#tab-add').onclick=()=>openImportSheet();
+$('#tab-plus').onclick=()=>openImportSheet();
+/* v3.80：书架顶栏三个图标都有实功能，不做摆设 */
+$('#lib-search').onclick=()=>{ const t=$('#shelf-toolbar'); t.classList.toggle('hidden'); if(!t.classList.contains('hidden')) setTimeout(()=>$('#shelf-filter').focus(),80); };
+$('#lib-sort').onclick=()=>{
+  const sel=$('#shelf-sort'); const order=['recent','added','title'];
+  const ni=(order.indexOf(sel.value)+1)%order.length; sel.value=order[ni];
+  renderShelf(); toast('排序：'+sel.selectedOptions[0].text);
+};
+$('#lib-menu').onclick=()=>{
+  const sel=$('#shelf-format'); const order=['all','pdf','epub','txt','docx'];
+  const ni=(order.indexOf(sel.value)+1)%order.length; sel.value=order[ni];
+  renderShelf(); toast('筛选：'+sel.selectedOptions[0].text);
+};
 
 /* ================= v3.5：阅读统计 ================= */
 const STAT_GOALS=[15,30,60];
@@ -1893,13 +1906,48 @@ async function renderHome(){
     cl.appendChild(d);
   });
   renderStats();
+  renderClassics();
+  renderBanner();
   updateMiniPlayer();
 }
+/* v3.80：经典必读——公版书，点一本直接去搜书页查 Open Library / Gutenberg */
+const CLASSICS=['红楼梦','西游记','三国演义','水浒传','聊斋志异','儒林外史','镜花缘','老残游记'];
+function renderClassics(){
+  const list=$('#classics-list'); if(!list) return;
+  if(list.children.length) return; // 静态列表，只渲染一次
+  CLASSICS.forEach(t=>{
+    const d=document.createElement('div'); d.className='rd-bcard';
+    d.innerHTML=`<div class="cov"><div class="ct" style="background:${coverBG({title:t})}">${esc(t)}</div></div><div class="nm">${esc(t)}</div>`;
+    d.onclick=()=>{ go('search'); const q=$('#search-q'); if(q){ q.value=t; } doAiSearch(t); };
+    list.appendChild(d);
+  });
+}
+/* v3.80：打卡横幅——今日目标与连续天数是真实数据，不是装饰 */
+function renderBanner(){
+  const b=$('#banner'); if(!b) return;
+  try{ if(localStorage.getItem('apo_banner_hide')===statKey(new Date())){ b.classList.add('hidden'); return; } }catch(e){}
+  b.classList.remove('hidden');
+  const st=getStat(), k=statKey(new Date());
+  const todayMin=Math.floor((st.days[k]||0)/60), done=todayMin>=st.target;
+  const sub=$('#banner-sub'), btn=$('#banner-btn');
+  if(sub) sub.textContent=done?`今日目标已达成 · 已连续阅读 ${st.streak} 天，明天继续。`:`已连续阅读 ${st.streak} 天 · 今日已读 ${todayMin} 分钟 / 目标 ${st.target} 分钟。`;
+  if(btn) btn.textContent=done?'查看统计 ›':'去阅读 ›';
+}
 $('#btn-mine').onclick=()=>go('mine');
+$('#btn-home-settings').onclick=()=>go('mine');
 $('#mine-back').onclick=()=>go('home');
-$('#banner-btn').onclick=()=>{ go('library'); setTimeout(()=>openImportSheet(),300); };
-/* v3.76：横幅是单张静态图，旧轮播代码引用的 #banner-slides/#banner-dots 根本不存在，每 5 秒抛一次错，已整段删除 */
-$('#banner').onclick=()=>openImportSheet();
+$('#banner-btn').onclick=()=>{
+  const cont=books.filter(b=>b.progress.idx>0 && b.progress.idx<b.total-1);
+  if(cont.length){ returnView='home'; openDetail(cont[0].id); }
+  else if(books.length){ returnView='home'; openDetail(books[0].id); }
+  else openImportSheet();
+};
+$('#banner-x').onclick=e=>{ e.stopPropagation(); try{ localStorage.setItem('apo_banner_hide', statKey(new Date())); }catch(err){} $('#banner').classList.add('hidden'); };
+$('#classics-more').onclick=()=>go('search');
+/* v3.80：首页搜索框占位提示轮换（示例书名，点进去就是搜书页） */
+const SEARCH_HINTS=['三体','红楼梦','认知天性','成为乔布斯','百年孤独'];
+let _shi=0;
+setInterval(()=>{ const el=document.querySelector('#home-search .hs-t'); if(el&&curView==='home') el.textContent='搜“'+SEARCH_HINTS[_shi++%SEARCH_HINTS.length]+'”试试'; },4000);
 
 /* ---------- 书籍详情 ---------- */
 let detailId=null;

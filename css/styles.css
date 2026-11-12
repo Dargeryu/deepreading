@@ -1167,3 +1167,58 @@ button,.icon-btn,.rd-icbtn,.tab,.fp-tool,.fp-skip{color:#111}button:focus-visibl
 .anna-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:calc(100% - 44px);margin:14px 22px 6px;padding:15px;background:#111;color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer}
 .anna-btn span{font-size:18px}
 .anna-btn:active{transform:scale(.98)}
+
+/* ============ v3.80：按 Readify 截图布局重排（用户 2026-11-12 发四张原图亲定） ============ */
+/* 首页顶栏：滑块图标恢复成 plain 按钮（深色层把它做成了深色圆钮），头像改回粉色 */
+#view-home .rd-icbtn{background:none!important;color:#111!important;border:none!important;width:38px;height:38px;display:grid;place-items:center}
+.rd-avatar{background:#f06292!important}
+/* 搜索 pill：全圆角 + 浅灰底 + 占位文字单行省略 */
+.rd-search{border-radius:999px!important;background:#f5f5f7!important}
+.rd-search .hs-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 打卡横幅：深色书页渐变（白层曾把它压成白卡），金色标题 + 绿色 CTA */
+.rd-banner{background:linear-gradient(115deg,#2e2118 0%,#3d3325 48%,#26301f 100%)!important;color:#fff!important;border:none!important;border-radius:16px!important;box-shadow:0 8px 24px rgba(0,0,0,.18)!important;min-height:118px!important;height:auto!important;margin:0 20px 20px!important}
+.rd-banner::before,.rd-banner::after{display:none!important}
+.rd-banner .rb-bg{display:block!important;position:absolute;inset:0;width:100%;background:radial-gradient(120% 130% at 85% 10%,rgba(232,213,163,.30),transparent 55%),linear-gradient(100deg,transparent 40%,rgba(255,255,255,.06))!important;opacity:1}
+.rd-banner .rb-txt{padding:20px 18px!important;position:relative;z-index:2}
+.rd-banner .rb-t{font-family:var(--serif)!important;font-size:20px!important;font-weight:700!important;color:#ecd9a8!important;text-shadow:none!important;margin-bottom:4px}
+.rd-banner .rb-d{color:rgba(255,255,255,.85)!important;font-size:12.5px;margin-bottom:12px}
+.rd-banner .rb-btn{background:#2e7d46!important;color:#fff!important;border-radius:99px!important;padding:8px 18px!important;font-size:13px}
+.rb-x{position:absolute;top:10px;right:10px;z-index:3;width:26px;height:26px;border-radius:50%;border:none;background:rgba(0,0,0,.45);color:#fff;font-size:12px;cursor:pointer}
+/* 章节标题与书名统一衬线（与原图一致），深色层曾把 h3 压成近白色 */
+.rd-sec h3{font-family:var(--serif);font-size:17px;color:#111!important}
+.rd-sec .more{font-size:20px;color:#111}
+.rd-bcard .nm{font-family:var(--serif);font-size:13px;color:#111}
+.rd-bcard .pbdg{background:rgba(0,0,0,.85)!important}
+.bk-row .t{font-family:var(--serif)}
+/* 书架：最近阅读区隐藏（原图只有三列网格）；顶栏图标按钮；工具栏可折叠 */
+#recent-section{display:none!important}
+.lib-icbtn{width:38px;height:38px;border:none;background:none;font-size:21px;color:#111;cursor:pointer;display:grid;place-items:center;padding:0}
+#shelf-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:2px 20px 14px}
+#shelf-toolbar.hidden{display:none!important}
+#shelf-toolbar .shelf-find{flex:1;min-width:140px;display:flex;align-items:center;gap:6px;background:#f5f5f7;border-radius:10px;padding:8px 12px}
+#shelf-toolbar .shelf-find input{border:none;background:none;flex:1;min-width:0;font-size:14px;outline:none;color:#111}
+#shelf-toolbar select{border:1px solid #e5e5e5;border-radius:10px;padding:8px;background:#fff;font-size:13px;color:#111}
+#shelf-toolbar .shelf-count{color:#999;font-size:13px}
+#view-shelf{padding:0 20px 35px!important}
+@media(max-width:520px){
+  #shelf-list{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:20px 12px!important}
+  .bk-row .t{font-size:13px}
+  .bk-row .a{font-size:11px}
+}
+/* 我的页：淡紫底 + 白卡（原图个人页）；顶栏透明只留返回箭头 */
+#view-mine{background:#f5f5fa!important}
+#view-mine .topbar{background:transparent!important;border-bottom:none!important;color:#111!important}
+#view-mine .mine-head{background:#fff!important;border-radius:16px!important;box-shadow:0 4px 18px rgba(0,0,0,.045)!important;padding:18px!important;margin-bottom:14px}
+#view-mine .mine-head .avatar-btn.lg{width:56px;height:56px;border-radius:50%!important;background:#f06292!important;color:#fff;font-size:22px;display:grid;place-items:center}
+#view-mine .mine-head .t{font-size:18px}
+.menu-card{background:#fff;border-radius:16px;box-shadow:0 4px 18px rgba(0,0,0,.045);margin-bottom:14px;overflow:hidden}
+.menu-row{display:flex;align-items:center;gap:12px;width:100%;border:none;background:#fff;padding:15px 16px;font-size:15px;color:#111;cursor:pointer;text-align:left}
+.menu-row + .menu-row{border-top:1px solid #f0f0f5}
+.menu-row .mi{font-size:20px}
+.menu-row .mt{flex:1;font-weight:500}
+.menu-row i{font-style:normal;color:#bbb;font-size:18px}
+#view-mine .set-group{border-radius:16px!important;box-shadow:0 4px 18px rgba(0,0,0,.045)!important}
+#view-mine .set-group .sec{font-family:var(--serif);font-size:14px;color:#111!important}
+/* 底导：中间黑色大 + 号（原图），声音/我的从底导撤下 */
+#tabbar .tab-plus{width:64px;height:46px;border-radius:999px;background:#111;color:#fff;font-size:26px;line-height:1;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:-16px;box-shadow:0 6px 16px rgba(0,0,0,.28);flex:none}
+#tabbar .tab-plus:active{transform:scale(.94)}

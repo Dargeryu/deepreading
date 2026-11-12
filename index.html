@@ -50,7 +50,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">●</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.79</div>
+    <div class="sb-ver">Apo v3.80</div>
   </div>
 </aside>
 <div id="app">
@@ -68,16 +68,18 @@ if ('serviceWorker' in navigator) {
     <header class="rd-top">
       <div class="rd-logo">Apo</div>
       <div class="rd-top-icons">
+        <button class="rd-icbtn" id="btn-home-settings" title="设置" aria-label="设置"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2.2" fill="#fff"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="15" cy="17" r="2.2" fill="#fff"/></svg></button>
         <button class="rd-avatar" id="btn-mine" title="我的">我</button>
       </div>
     </header>
-    <div class="rd-search" id="home-search" role="button" tabindex="0" aria-label="搜索书籍"><span>🔍</span><span>搜书名、作者，或描述你想找的书</span></div>
+    <div class="rd-search" id="home-search" role="button" tabindex="0" aria-label="搜索书籍"><span>✦</span><span class="hs-t">搜书名、作者，或描述你想找的书</span></div>
 
     <div class="rd-banner" id="banner">
+      <button class="rb-x" id="banner-x" aria-label="关闭横幅">✕</button>
       <div class="rb-txt">
-        <div class="rb-t">下一本好书，正在等你</div>
-        <div class="rb-d">导入喜爱的书，马上开始阅读与聆听。</div>
-        <button class="rb-btn" id="banner-btn">＋ 添加一本书</button>
+        <div class="rb-t" id="banner-title">连续阅读打卡</div>
+        <div class="rb-d" id="banner-sub">今天还没开始读，点下面开始今日阅读。</div>
+        <button class="rb-btn" id="banner-btn">去阅读 ›</button>
       </div>
       <div class="rb-bg"></div>
     </div>
@@ -85,6 +87,11 @@ if ('serviceWorker' in navigator) {
     <div id="continue-wrap" class="hidden">
       <div class="rd-sec"><h3>继续阅读</h3></div>
       <div class="rd-hscroll" id="cont-list"></div>
+    </div>
+
+    <div id="classics-wrap">
+      <div class="rd-sec"><h3>经典必读</h3><button class="more" id="classics-more">›</button></div>
+      <div class="rd-hscroll" id="classics-list"></div>
     </div>
 
     <div class="rd-sec" id="home-stats-link"><h3>阅读统计 <small>›</small></h3></div>
@@ -115,14 +122,25 @@ if ('serviceWorker' in navigator) {
   <!-- 书架 -->
   <main id="view-library" class="view hidden">
     <header class="rd-lib-top">
-      <div class="library-title-wrap">
-        <div class="t">我的书架</div>
-        <div class="library-subtitle">你的阅读，都在这里</div>
-      </div>
+      <div class="t serif">书架</div>
       <div class="ics">
-        <button id="tab-add" class="btn-primary library-add" title="添加书籍">＋ 添加</button>
+        <button class="lib-icbtn" id="lib-search" title="搜索书架" aria-label="搜索书架">⌕</button>
+        <button class="lib-icbtn" id="lib-sort" title="切换排序" aria-label="切换排序">⇅</button>
+        <button class="lib-icbtn" id="lib-menu" title="按类型筛选" aria-label="按类型筛选">⋮</button>
       </div>
     </header>
+    <div id="shelf-toolbar" class="hidden">
+      <label class="shelf-find" title="只搜索本机书架">
+        <span aria-hidden="true">⌕</span><input id="shelf-filter" type="search" placeholder="搜索我的书架">
+      </label>
+      <select id="shelf-format" aria-label="按文件类型筛选">
+        <option value="all">全部文件</option><option value="pdf">PDF</option><option value="epub">EPUB</option><option value="txt">TXT</option><option value="docx">DOCX</option>
+      </select>
+      <select id="shelf-sort" aria-label="书籍排序">
+        <option value="recent">最近阅读</option><option value="added">添加时间</option><option value="title">书名</option>
+      </select>
+      <span id="shelf-count" class="shelf-count"></span>
+    </div>
     <div id="view-shelf">
       <section id="recent-section" class="shelf-section recent-section">
         <div class="shelf-section-head"><h2>最近阅读</h2><span id="recent-count"></span></div>
@@ -132,20 +150,6 @@ if ('serviceWorker' in navigator) {
         </div>
       </section>
       <section id="all-books-section" class="shelf-section all-books-section">
-        <div class="all-books-head">
-          <div><h2>全部书籍</h2><span id="shelf-count" class="shelf-count"></span></div>
-          <div class="shelf-toolbar">
-            <label class="shelf-find" title="只搜索本机书架">
-              <span aria-hidden="true">⌕</span><input id="shelf-filter" type="search" placeholder="搜索我的书架">
-            </label>
-            <select id="shelf-format" aria-label="按文件类型筛选">
-              <option value="all">全部文件</option><option value="pdf">PDF</option><option value="epub">EPUB</option><option value="txt">TXT</option><option value="docx">DOCX</option>
-            </select>
-            <select id="shelf-sort" aria-label="书籍排序">
-              <option value="recent">最近阅读</option><option value="added">添加时间</option><option value="title">书名</option>
-            </select>
-          </div>
-        </div>
         <div id="cat-bar" aria-label="书架分类"></div>
         <div id="shelf-has">
           <div id="shelf-list"></div>
@@ -358,13 +362,17 @@ if ('serviceWorker' in navigator) {
   <main id="view-mine" class="view hidden">
     <header class="topbar">
       <button id="mine-back" class="icon-btn">‹</button>
-      <div class="brand serif">我的</div>
       <span style="width:34px"></span>
     </header>
     <div id="view-mine-body" style="padding:6px 18px 170px">
       <div class="mine-head">
-        <div class="avatar-btn lg">读</div>
+        <div class="avatar-btn lg">我</div>
         <div><div class="t serif">Apo</div><div class="d">本地听书 · 数据只存本机</div></div>
+      </div>
+      <div class="menu-card">
+        <button class="menu-row" id="mn-notes"><span class="mi">📝</span><span class="mt">读书笔记</span><i>›</i></button>
+        <button class="menu-row" id="mn-voice"><span class="mi">🎙</span><span class="mt">我的音色</span><i>›</i></button>
+        <button class="menu-row" id="mn-bookmarks"><span class="mi">🔖</span><span class="mt">我的书签</span><i>›</i></button>
       </div>
       <div class="set-group">
         <div class="sec">朗读引擎</div>
@@ -423,12 +431,7 @@ if ('serviceWorker' in navigator) {
         <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
         <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
       </div>
-      <div class="set-group">
-        <div class="sec">我的内容</div>
-        <button class="btn-ghost" id="mine-notes" style="width:100%;margin-bottom:8px">📝 划线与笔记</button>
-        <button class="btn-ghost" id="mine-bookmarks" style="width:100%">🔖 我的书签</button>
-      </div>
-      <div class="ver">Apo v3.79</div>
+      <div class="ver">Apo v3.80</div>
     </div>
   </main>
 
@@ -503,12 +506,12 @@ if ('serviceWorker' in navigator) {
   <div id="import-sheet" class="sheet bottom hidden">
     <div class="grab"></div>
     <div class="sheet-title serif">导入</div>
-    <p class="sheet-sub">支持txt/pdf/epub/docx/fb2/md（MOBI/AZW 暂不支持，请先转 EPUB 或 TXT）</p>
+    <p class="sheet-sub">支持txt/pdf/epub/docx/fb2/md</p>
+    <button class="imp-opt" id="imp-aisearch"><span class="io-ic">🔍</span><span class="io-t">AI 搜书 <span class="sub">Anna's Archive 全网搜书</span></span><i>›</i></button>
     <button class="imp-opt" id="imp-file"><span class="io-ic">📁</span><span class="io-t">从文件导入</span><i>›</i></button>
     <button class="imp-opt" id="imp-url"><span class="io-ic">🌐</span><span class="io-t">从网页导入</span><i>›</i></button>
     <button class="imp-opt" id="imp-text"><span class="io-ic">📝</span><span class="io-t">输入或粘贴文本</span><i>›</i></button>
     <button class="imp-opt" id="imp-ocr"><span class="io-ic">📷</span><span class="io-t">拍照识字导入</span><i>›</i></button>
-    <button class="imp-opt" id="imp-aisearch"><span class="io-ic">🔍</span><span class="io-t">AI 搜书 <span class="sub">Anna's Archive 全网搜书</span></span><i>›</i></button>
   </div>
 
   <!-- 网页导入 -->
@@ -591,9 +594,8 @@ if ('serviceWorker' in navigator) {
   <!-- 底部导航 -->
   <nav id="tabbar" aria-label="主导航">
     <button class="tab cur" data-v="home"><span class="ti">⌂</span>首页</button>
+    <button class="tab-plus" id="tab-plus" aria-label="导入书籍">＋</button>
     <button class="tab" data-v="library"><span class="ti">▤</span>书架</button>
-    <button class="tab" data-v="voice"><span class="ti">♪</span>声音</button>
-    <button class="tab" data-v="mine"><span class="ti">●</span>我的</button>
   </nav>
 
   <div id="toast" class="toast hidden"></div>
