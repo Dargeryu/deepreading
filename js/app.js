@@ -1990,7 +1990,7 @@ function syncFullPlayer(){
   t.classList.toggle('on', sleepMin>0);
   t.querySelector('span').textContent=sleepMin>0?`定时${sleepMin}′`:'定时';
 }
-function openFullPlayer(){ if(!cur){toast('先选一本书');return;} renderFullPlayer(); $('#player-full').classList.remove('hidden'); updateMiniPlayer(); }
+function openFullPlayer(){ if(!cur){toast('先选一本书');return;} renderFullPlayer(); $('#player-full').classList.remove('hidden'); syncFullPlayer(); updateMiniPlayer(); }
 $('#fp-close').onclick=()=>{ $('#player-full').classList.add('hidden'); updateMiniPlayer(); };
 $('#fp-play').onclick=()=>{ if(!cur)return; wantPlay?stopSpeak():play(); syncFullPlayer(); };
 $('#fp-seek').addEventListener('change',e=>{ if(!cur)return; seekTo(Math.round(e.target.value/1000*(cur.total-1))); });
