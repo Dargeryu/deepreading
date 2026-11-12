@@ -136,6 +136,18 @@ async function migrateV1(){
 const stripBook=b=>{ const c=Object.assign({},b); delete c.progress; return c; };
 
 /* ---------- 解析器 ---------- */
+/* v3.82：封面图压到 480 宽以内再存成 dataURL；任何一步失败都返回 ''，不拦导入 */
+async function downscaleImage(blob, maxW, mime){
+  try{
+    if(!blob || blob.size<=120*1024){ const b=mime?new Blob([blob],{type:mime}):blob; return await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>res(''); r.readAsDataURL(b); }); }
+    const bmp=await createImageBitmap(blob);
+    const w=Math.min(bmp.width, maxW), h=Math.round(bmp.height*w/bmp.width);
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(bmp,0,0,w,h);
+    bmp.close&&bmp.close();
+    return c.toDataURL('image/jpeg', .8);
+  }catch(e){ return ''; }
+}
 /* PDF：逐页取文本；启发式去掉重复页眉页脚与纯页码行 */
 async function parsePDF(buf){
   const pdf = await pdfjsLib.getDocument({data:buf}).promise;
@@ -161,11 +173,21 @@ async function parsePDF(buf){
   const cnt={};
   for (const t of pageTexts) for (const ln of new Set(t.split('\n').map(x=>x.trim()).filter(x=>x&&x.length<60))) cnt[ln]=(cnt[ln]||0)+1;
   const banned=new Set(Object.keys(cnt).filter(k=>cnt[k]>=3 && cnt[k]>=pdf.numPages*0.3));
+  let cover='';
+  try{
+    const pg=await pdf.getPage(1);
+    const vp=pg.getViewport({scale:1});
+    const sc=Math.min(1, 360/vp.width);
+    const v2=pg.getViewport({scale:sc});
+    const c=document.createElement('canvas'); c.width=Math.round(v2.width); c.height=Math.round(v2.height);
+    await pg.render({canvasContext:c.getContext('2d'), viewport:v2}).promise;
+    cover=c.toDataURL('image/jpeg', .75);
+  }catch(e){ cover=''; }
   const cleaned=pageTexts.map(t=>t.split('\n')
     .map(x=>x.trim())
     .filter(x=>x && !banned.has(x) && !/^\d{1,4}$/.test(x) && !/^第\s*\d+\s*页$/.test(x))
     .join('\n')).join('\n');
-  return {title:'', text:cleaned};
+  return {title:'', text:cleaned, cover};
 }
 /* EPUB：解包 → OPF → spine 顺序取正文 */
 async function parseEPUB(buf){
@@ -175,11 +197,11 @@ async function parseEPUB(buf){
   if(!opfPath) throw new Error('EPUB 结构异常');
   const base=opfPath.includes('/')?opfPath.slice(0,opfPath.lastIndexOf('/')+1):'';
   const opf=await zip.file(opfPath).async('text');
-  const items={};
+  const items={}; const itemTypes={};
   for (const m of opf.matchAll(/<item[^>]*>/g)){
     const tag=m[0];
     const id=(tag.match(/id="([^"]+)"/)||[])[1], href=(tag.match(/href="([^"]+)"/)||[])[1];
-    if(id&&href) items[id]=base+decodeURIComponent(href);
+    if(id&&href){ items[id]=base+decodeURIComponent(href); itemTypes[id]=(tag.match(/media-type="([^"]+)"/)||[])[1]||''; }
   }
   const spineIds=[...opf.matchAll(/<itemref[^>]*idref="([^"]+)"/g)].map(m=>m[1]);
   let title=(opf.match(/<dc:title[^>]*>([^<]+)</)||[])[1]||'';
@@ -195,7 +217,24 @@ async function parseEPUB(buf){
     if (text.length>20) chapters.push({title:cTitle||`第${chapters.length+1}节`, text});
   }
   if(!chapters.length) throw new Error('EPUB 没有可读正文');
-  return {title:title.trim(), chapters};
+  let cover='';
+  try{
+    let coverId=(opf.match(/<meta[^>]*name=["']cover["'][^>]*content=["']([^"']+)["']/)||[])[1]
+      || (opf.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']cover["']/)||[])[1];
+    let coverHref='';
+    if(coverId && items[coverId]) coverHref=items[coverId];
+    if(!coverHref){
+      for (const m of opf.matchAll(/<item[^>]*>/g)){
+        const tag=m[0];
+        if(/cover-image/.test(tag)){ const href=(tag.match(/href="([^"]+)"/)||[])[1]; if(href){ coverHref=base+decodeURIComponent(href); coverId=(tag.match(/id="([^"]+)"/)||[])[1]; break; } }
+      }
+    }
+    if(coverHref){
+      const f=zip.file(coverHref);
+      if(f){ const blob=await f.async('blob'); cover=await downscaleImage(blob, 480, itemTypes[coverId]||''); }
+    }
+  }catch(e){ cover=''; }
+  return {title:title.trim(), chapters, cover};
 }
 async function parseTXT(buf){
   let txt=new TextDecoder('utf-8',{fatal:false}).decode(buf);
@@ -252,7 +291,7 @@ function detectChapters(doc, baseUrl){
   // 按 URL 排序（通常章节按顺序）
   return links.slice(0,200);
 }
-async function finalizeImport(title, format, chapters, fileData, fileName){
+async function finalizeImport(title, format, chapters, fileData, fileName, cover){
   // 章节 → 句子
   const sentences=[]; const chIndex=[];
   chapters.forEach((c,ci)=>{
@@ -261,7 +300,7 @@ async function finalizeImport(title, format, chapters, fileData, fileName){
   });
   if (!sentences.length) throw new Error('没有提取到正文');
   const sample=sentences.slice(0,30).map(s=>s.t).join(' ');
-  const book={ id:uid(), title, format, addedAt:Date.now(),
+  const book={ id:uid(), title, format, addedAt:Date.now(), cover:cover||'',
     lang:detectLang(sample), total:sentences.length, sentences, chapters:chIndex,
     hasFile:!!fileData, fileName:fileName||'',
     progress:{idx:0, updatedAt:Date.now()}, voiceURI:'', voiceURI2:'', rate:100, dialogVoice:false };
@@ -280,13 +319,14 @@ async function importFile(file){
     // v3.76：MOBI/AZW 是二进制容器，此前被当纯文本硬解，只会产出乱码书——明确拒掉，不再假装支持
     if(ext==='mobi'||ext==='azw') throw new Error('暂不支持 MOBI / AZW，请先转成 EPUB 或 TXT 再导入');
     let title=file.name.replace(/\.[^.]+$/,''), chapters;
-    if (ext==='pdf'){ const r=await parsePDF(buf); chapters=splitChapters(r.text); }
-    else if (ext==='epub'){ const r=await parseEPUB(buf); title=r.title||title; chapters=r.chapters; }
+    let cover='';
+    if (ext==='pdf'){ const r=await parsePDF(buf); chapters=splitChapters(r.text); cover=r.cover||''; }
+    else if (ext==='epub'){ const r=await parseEPUB(buf); title=r.title||title; chapters=r.chapters; cover=r.cover||''; }
     else if (ext==='docx'){ const r=await parseDOCX(buf); chapters=splitChapters(r.text); }
     else if (ext==='fb2'){ const r=await parseFB2(buf); title=r.title||title; chapters=splitChapters(r.text); }
     else if (ext==='html'||ext==='htm'){ const r=await parseHTML(buf); title=r.title||title; chapters=splitChapters(r.text); }
     else { const r=await parseTXT(buf); chapters=splitChapters(r.text); }
-    return await finalizeImport(title, ext, chapters, fileData, file.name);
+    return await finalizeImport(title, ext, chapters, fileData, file.name, cover);
   } finally { loading(false); }
 }
 /* 从粘贴文本导入 */
@@ -356,7 +396,19 @@ const COVERS=[['#3b2f4a','#7a5fa0'],['#1f3a4d','#3f7fae'],['#4a2f2b','#a06a5f'],
 let books=[];
 function coverBG(b){ const [c1,c2]=COVERS[(b.title||'').length%COVERS.length];
   return `linear-gradient(135deg,${c1},${c2})`; }
-const coverHTML=(b,cls)=>`<div class="cover ${cls}" style="background:${coverBG(b)}">${esc((b.title||'?').slice(0,12))}</div>`;
+const coverHTML=(b,cls)=> b.cover
+  ? `<div class="cover ${cls}"><img src="${b.cover}" alt=""></div>`
+  : `<div class="cover ${cls}" style="background:${coverBG(b)}">${esc((b.title||'?').slice(0,12))}</div>`;
+/* v3.82：卡片封面统一走这里——有真实封面用图，没有用渐变字 */
+const coverInner=b=> b.cover
+  ? `<img src="${b.cover}" alt="">`
+  : `<div class="ct" style="background:${coverBG(b)}">${esc((b.title||'?').slice(0,10))}</div>`;
+/* v3.82：详情/迷你条/全屏播放器的封面位统一走这里（有图用图，没有用渐变字） */
+function setCoverEl(el, b, n){
+  if(!el||!b) return;
+  if(b.cover){ el.style.background=''; el.innerHTML=`<img src="${b.cover}" alt="">`; }
+  else { el.style.background=coverBG(b); el.textContent=(b.title||'?').slice(0,n); }
+}
 async function loadBooks(){
   books=await idb.all();
   const pm={}; try{ (await idb.allProgress()).forEach(p=>pm[p.bookId]=p); }catch(e){}
@@ -409,7 +461,7 @@ async function renderShelf(){
     const pct=Math.round(100*(b.progress?.idx||0)/Math.max(1,b.total||1));
     const done=(b.progress?.idx||0)>=((b.total||1)-1)&&(b.total||1)>1;
     return `<button class="recent-card" data-book-index="${recent.indexOf(b)}">
-      <span class="recent-cover"><span class="ct" style="background:${coverBG(b)}">${esc((b.title||'?').slice(0,10))}</span></span>
+      <span class="recent-cover">${coverInner(b)}</span>
       <span class="recent-info"><strong>${esc(b.title||'未命名书籍')}</strong><small>${esc(b.author||'未知作者')}</small><span class="recent-progress">${done?'已读完':pct+'%'}</span></span>
     </button>`;
   }).join('');
@@ -434,7 +486,7 @@ async function renderShelf(){
     const pct=Math.round(100*(b.progress?.idx||0)/Math.max(1,b.total||1));
     const done=(b.progress?.idx||0)>=((b.total||1)-1)&&(b.total||1)>1;
     const el=document.createElement('button'); el.type='button'; el.className='bk-row';
-    el.innerHTML=`<span class="cov"><span class="ct" style="background:${coverBG(b)}">${esc((b.title||'?').slice(0,10))}</span>
+    el.innerHTML=`<span class="cov">${coverInner(b)}
       ${pct?`<span class="pbdg${done?' done':''}">${done?'✓':pct+'%'}</span>`:''}</span>
       <span class="inf"><span class="t">${esc(b.title||'未命名书籍')}</span>
       <span class="a">${esc(b.author||'未知作者')}</span>
@@ -780,7 +832,7 @@ function updatePlayer(){
   const rpAuthor=$('#rp-author'); if(rpAuthor) rpAuthor.textContent=cur.author||'未知作者';
   const spt=$('#rp-speed');
   if(spt) spt.textContent=fmtRate(cur.rate/100);
-  const cv=$('#rp-cover'); if(cv) cv.style.background=coverBG(cur);
+  setCoverEl($('#rp-cover'), cur, 6);
 }
 /* 进度条已并入 #rp-progress（点击跳转），旧 #seek 已移除 */
 
@@ -1891,7 +1943,7 @@ function greetWord(){
 function rdCardHTML(b){
   const pct=Math.round(100*b.progress.idx/Math.max(1,b.total));
   const done=b.progress.idx>=b.total-1&&b.total>1;
-  return `<div class="cov"><div class="ct" style="background:${coverBG(b)}">${esc((b.title||'?').slice(0,10))}</div>
+  return `<div class="cov">${coverInner(b)}
     ${pct?`<span class="pbdg${done?' done':''}">${done?'✓':pct+'%'}</span>`:''}</div>
     <div class="nm">${esc(b.title)}</div>`;
 }
@@ -1951,6 +2003,24 @@ $('#banner-btn').onclick=()=>{
   else openImportSheet();
 };
 $('#banner-x').onclick=e=>{ e.stopPropagation(); try{ localStorage.setItem('apo_banner_hide', statKey(new Date())); }catch(err){} $('#banner').classList.add('hidden'); };
+/* v3.82：横幅双 slide 轮播（原图横幅带圆点）——打卡 + 克隆音色，6 秒自动轮换，可点圆点/左右滑切换 */
+let bannerSlide=0, bannerTimer=null;
+function showBannerSlide(i){
+  const slides=document.querySelectorAll('#banner .rb-slide'); if(!slides.length) return;
+  bannerSlide=((i%slides.length)+slides.length)%slides.length;
+  slides.forEach((el,j)=>el.classList.toggle('cur', j===bannerSlide));
+  document.querySelectorAll('#banner-dots i').forEach((el,j)=>el.classList.toggle('cur', j===bannerSlide));
+}
+function startBannerTimer(){
+  if(bannerTimer) clearInterval(bannerTimer);
+  bannerTimer=setInterval(()=>{ if(curView==='home' && !document.hidden && !$('#banner').classList.contains('hidden')) showBannerSlide(bannerSlide+1); }, 6000);
+}
+$('#banner-btn2').onclick=()=>{ go('voice'); setTimeout(()=>{ document.querySelector('.vt[data-t="clone"]')?.click(); }, 300); };
+document.querySelectorAll('#banner-dots i').forEach(d=>d.onclick=e=>{ e.stopPropagation(); showBannerSlide(Number(d.dataset.s)); });
+let _bx=null;
+$('#banner').addEventListener('touchstart', e=>{ _bx=e.touches[0].clientX; }, {passive:true});
+$('#banner').addEventListener('touchend', e=>{ if(_bx===null) return; const dx=e.changedTouches[0].clientX-_bx; if(Math.abs(dx)>40) showBannerSlide(bannerSlide+(dx<0?1:-1)); _bx=null; }, {passive:true});
+startBannerTimer();
 $('#classics-more').onclick=()=>go('search');
 /* v3.80：首页搜索框占位提示轮换（示例书名，点进去就是搜书页） */
 const SEARCH_HINTS=['三体','红楼梦','认知天性','成为乔布斯','百年孤独'];
@@ -2004,8 +2074,7 @@ let detailId=null;
 function openDetail(id){ detailId=id; renderDetail(); go('detail'); }
 function renderDetail(){
   const b=books.find(x=>x.id===detailId); if(!b){ go('library'); return; }
-  $('#dt-cover').style.background=coverBG(b);
-  $('#dt-cover').textContent=b.title.slice(0,12);
+  setCoverEl($('#dt-cover'), b, 12);
   $('#dt-title').textContent=b.title;
   const pct=Math.round(100*b.progress.idx/Math.max(1,b.total));
   $('#dt-sub').textContent=`${b.format?b.format.toUpperCase()+' · ':''}${b.total} 句${pct?` · 已读 ${pct}%`:''}`;
@@ -2035,8 +2104,7 @@ function updateMiniPlayer(){
   const show=!!(cur && curView!=='reader' && curView!=='splash' && !fullOpen);
   mp.classList.toggle('hidden', !show);
   if(!show) return;
-  $('#mp-cover').style.background=coverBG(cur);
-  $('#mp-cover').textContent=(cur.title||'?').slice(0,6);
+  setCoverEl($('#mp-cover'), cur, 6);
   $('#mp-title').textContent=cur.title;
   $('#mp-pos').textContent=Math.round(100*cur.progress.idx/Math.max(1,cur.total))+'%';
   $('#mp-play').textContent=wantPlay?'⏸':'▶';
@@ -2055,8 +2123,7 @@ const SLEEPS=[0,15,30,60];
 let sleepTimer=null, sleepMin=0, sleepEnd=0;
 function renderFullPlayer(){
   if(!cur) return;
-  $('#fp-cover').style.background=coverBG(cur);
-  $('#fp-cover').textContent=(cur.title||'?').slice(0,12);
+  setCoverEl($('#fp-cover'), cur, 12);
   $('#fp-title').textContent=cur.title;
   const ch=cur.chapters[chapterOf(cur.progress.idx)];
   $('#fp-sub').textContent=ch?ch.title:'';

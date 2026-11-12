@@ -50,7 +50,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">●</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.81</div>
+    <div class="sb-ver">Apo v3.82</div>
   </div>
 </aside>
 <div id="app">
@@ -76,11 +76,19 @@ if ('serviceWorker' in navigator) {
 
     <div class="rd-banner" id="banner">
       <button class="rb-x" id="banner-x" aria-label="关闭横幅">✕</button>
-      <div class="rb-txt">
-        <div class="rb-t" id="banner-title">连续阅读打卡</div>
-        <div class="rb-d" id="banner-sub">今天还没开始读，点下面开始今日阅读。</div>
-        <button class="rb-btn" id="banner-btn">去阅读 ›</button>
+      <div class="rb-slides" id="banner-slides">
+        <div class="rb-slide cur" data-s="0">
+          <div class="rb-t" id="banner-title">连续阅读打卡</div>
+          <div class="rb-d" id="banner-sub">今天还没开始读，点下面开始今日阅读。</div>
+          <button class="rb-btn" id="banner-btn">去阅读 ›</button>
+        </div>
+        <div class="rb-slide" data-s="1">
+          <div class="rb-t">克隆你的声音</div>
+          <div class="rb-d">录 20 秒，做出你的专属音色，用自己的声音听书。</div>
+          <button class="rb-btn" id="banner-btn2">去克隆 ›</button>
+        </div>
       </div>
+      <div class="rb-dots" id="banner-dots"><i class="cur" data-s="0"></i><i data-s="1"></i></div>
       <div class="rb-bg"></div>
     </div>
 
@@ -441,7 +449,7 @@ if ('serviceWorker' in navigator) {
         <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
         <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
       </div>
-      <div class="ver">Apo v3.81</div>
+      <div class="ver">Apo v3.82</div>
     </div>
   </main>
 
