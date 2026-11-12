@@ -178,7 +178,8 @@ body.in-reader #mini-player{display:none}
 
 /* ---------- 完整播放器 ---------- */
 #player-full{position:fixed;inset:0;z-index:60;background:#fff;
-  display:flex;flex-direction:column;max-width:520px;margin:0 auto}
+  display:flex;flex-direction:column}
+#player-full .fp-nav,#player-full .fp-hero,#player-full .fp-controls,#player-full .fp-tools{width:100%;max-width:520px;margin-left:auto;margin-right:auto;box-sizing:border-box}
 #player-full .fp-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 18px}
 .fp-hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 30px}
 .fp-hero h2{margin:20px 0 4px;font-size:21px;text-align:center}
@@ -970,10 +971,11 @@ button.btn-ghost:hover{background:#303036}
 #reader-find .reader-find-top input{background:#fff;color:#111}
 #sel-tip{background:#fff;color:#111;border:1px solid #e5e5e5;box-shadow:0 6px 20px rgba(0,0,0,.14)}
 
-/* v3.62: keep the page and book text white/black across saved themes */
-#content[data-theme]{background:#fff;color:#111}
-#content[data-theme] .ch-title{color:#111}
-#content[data-theme] .sent.active{background:#efefef;box-shadow:0 0 0 3px #efefef}
+/* v3.62: keep the page and book text white/black across saved themes
+   v3.77: 只压 day 主题——此前连 sepia/夜间一起压白，主题切换等于没切（D14） */
+#content[data-theme=day]{background:#fff;color:#111}
+#content[data-theme=day] .ch-title{color:#111}
+#content[data-theme=day] .sent.active{background:#efefef;box-shadow:0 0 0 3px #efefef}
 
 
 /* v3.64：全站白色主色、黑色文字与图标 */
@@ -996,7 +998,7 @@ html,body,#app{background:#fff!important;color:#111!important}body{color:#111!im
 .dt-actions .btn-soft,.btn-soft{background:#f4f4f4!important;color:#111!important;border:1px solid #e5e5e5!important;border-radius:10px!important}.btn-primary,.s-go{background:#111!important;color:#fff!important;border:1px solid #111!important;border-radius:10px!important}.btn-primary:hover,.s-go:hover{background:#333!important}.btn-ghost{background:#fff!important;color:#111!important;border:1px solid #ddd!important;border-radius:10px!important}button.btn-ghost:hover{background:#f4f4f4!important}
 button,.icon-btn,.rd-icbtn,.tab,.fp-tool,.fp-skip{color:#111}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline-color:#111!important}
 #tabbar{border-top:1px solid #e8e8e8!important}.tab{color:#777!important}.tab.cur{color:#111!important}.tab.cur::after{background:#111!important}#tab-add.rd-import,#tab-add.rd-import .ti{color:#111!important}
-#reader-bar .icon-btn,.reader-turn{background:#f5f5f5!important;color:#111!important;border-color:#e5e5e5!important}#reader-pages{background:#fff!important;border-color:#eee!important;box-shadow:0 4px 18px rgba(0,0,0,.05)!important}#content[data-theme]{background:#fff!important;color:#111!important}#content[data-theme] .ch-title{color:#111!important}#content[data-theme] .sent.active{background:#eee!important;box-shadow:0 0 0 3px #eee!important}
+#reader-bar .icon-btn,.reader-turn{background:#f5f5f5!important;color:#111!important;border-color:#e5e5e5!important}#reader-pages{background:#fff!important;border-color:#eee!important;box-shadow:0 4px 18px rgba(0,0,0,.05)!important}#content[data-theme=day]{background:#fff!important;color:#111!important}#content[data-theme=day] .ch-title{color:#111!important}#content[data-theme=day] .sent.active{background:#eee!important;box-shadow:0 0 0 3px #eee!important}
 #reader-player{background:#fff!important;color:#111!important;border-top:1px solid #e8e8e8!important}#reader-player .rp-btn{background:#f2f2f2!important;color:#111!important}#reader-player .rp-play,#fp-play{background:#111!important;color:#fff!important}#reader-player .rp-speed{color:#777!important}
 #mini-player{background:#fff!important;color:#111!important;border:1px solid #e8e8e8!important;box-shadow:0 6px 24px rgba(0,0,0,.12)!important}#mini-player #mp-title,#mp-pos{color:#111!important}#mini-player #mp-play{background:#111!important;color:#fff!important}#player-full{background:#fff!important;color:#111!important}#player-full .sub{color:#777!important}
 .sheet .sec,.set-group .sec{color:#666!important}.sheet .ai-tab{background:#f5f5f5!important;color:#111!important}.sheet .ai-tab.cur{background:#111!important;color:#fff!important;border-color:#111!important}#ai-out .card{background:#fff!important;color:#111!important;border-color:#e8e8e8!important}
@@ -1010,6 +1012,11 @@ button,.icon-btn,.rd-icbtn,.tab,.fp-tool,.fp-skip{color:#111}button:focus-visibl
 
 
 /* v3.76：声音中心恢复入口（v3.75 只删了搜书的同类隐藏规则，这条漏了） */
+/* v3.77：D4 段落间隔（与 paginate.js 测量器里的 .7em spacer 等高） */
+.para-break{display:block;height:.7em}
+/* v3.77：D15 各视图底部给悬浮迷你播放条 + 底导留出空间，别再盖住按钮 */
+#view-home,#view-library,#view-search,#view-voice,#view-mine,#view-notes,#view-bookmarks,#view-stats,#view-bookchat,#view-detail{padding-bottom:150px}
+
 /* v3.76：Anna 镜像切换 */
 .aa-mirrors{display:flex;gap:6px;align-items:center;padding:10px 20px 0;font-size:13px;color:#888}
 .aa-mirrors button{border:1px solid #ddd;background:#fff;border-radius:14px;padding:3px 10px;font-size:13px;color:#333}

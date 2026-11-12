@@ -220,7 +220,7 @@ async function runTypeset(bookId, opts, ui){
   const newSentences = [], newChapters = [];
   chapters.forEach((c, ci)=>{
     newChapters.push({title: c.title, start: newSentences.length});
-    for(const s of splitSentences(c.text)) newSentences.push({t:s, c:ci});
+    for(const s of splitSentences(c.text)) newSentences.push({t:s.t, p:s.p||0, c:ci});
   });
   if(!newSentences.length) throw new Error('排版后正文为空，已中止（原文已备份）');
 
@@ -236,6 +236,7 @@ async function runTypeset(bookId, opts, ui){
   await idb.putProgress(bookId, 0).catch(()=>{});
   if(cur && cur.id===bookId) await openBook(bookId);
   if(typeof renderDetail==='function' && typeof detailId!=='undefined' && detailId===bookId) renderDetail();
+  ui.onStep('排版完成 ✓');   // D16：进度文案同步成完成态，别还挂着“正在重建排版…”
   toast(`排版完成，共 ${newSentences.length} 句`);
 }
 
@@ -299,6 +300,7 @@ async function startTypeset(){
     else toast('排版失败：' + e.message);
   }
   $('#ts-cancel').classList.add('hidden');
+  $('#ts-progress').classList.add('hidden');   // D16：完成后隐藏进度条
   $('#ts-actions').classList.remove('hidden');
   refreshTsRestore();
 }

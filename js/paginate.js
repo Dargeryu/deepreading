@@ -20,7 +20,7 @@ function pageHash(){
   const w = el ? Math.round(el.clientWidth) : 0;
   const h = el ? Math.round(el.clientHeight) : 0;
   return [store.get('ts_size','18'), store.get('ts_lh','18'),
-          store.get('ts_font','serif'), w, h].join('|');
+          store.get('ts_font','serif'), w, h, 'pg2'].join('|');
 }
 
 /* 二分：句子 g 位于哪一页（0-based） */
@@ -48,12 +48,15 @@ function buildMeasurer(){
   const pageW = src.clientWidth, pageH = src.clientHeight;
   const c = $('#content');
   const cs = getComputedStyle(c);
+  const ps = getComputedStyle(src);   // live padding/gap, not hardcoded guesses
+  const padL = parseFloat(ps.paddingLeft)||22, padR = parseFloat(ps.paddingRight)||22;
+  const gap = parseFloat(ps.columnGap)||44;
   const m = document.createElement('div');
   m.setAttribute('aria-hidden','true');
   m.style.cssText =
     'position:fixed;left:-100000px;top:0;width:'+pageW+'px;height:'+pageH+'px;' +
-    'padding:22px;box-sizing:border-box;overflow:hidden;visibility:hidden;pointer-events:none;' +
-    'column-width:'+Math.max(200,pageW-44)+'px;column-gap:44px;column-fill:auto;';
+    'padding:'+ps.paddingTop+' '+ps.paddingRight+' '+ps.paddingBottom+' '+ps.paddingLeft+';box-sizing:border-box;overflow:hidden;visibility:hidden;pointer-events:none;' +
+    'column-width:'+Math.max(200,pageW-padL-padR-gap)+'px;column-gap:'+gap+'px;column-fill:auto;';
   const art = document.createElement('div');
   art.style.cssText =
     'font-size:'+cs.fontSize+';line-height:'+cs.lineHeight+';font-family:'+cs.fontFamily+';' +
@@ -71,7 +74,7 @@ const CH_TITLE_CSS =
 async function paginateBook(book, hash){
   const { m, art, pageW } = buildMeasurer();
   const starts = [];
-  let lastPage = -1, ci = -1, base = -1;
+  let lastPage = -1, ci = -1, baseLeft = -1, measCols = 1;
   const N = book.total, SLICE = 400;
   try{
     for(let s = 0; s < N; s += SLICE){
@@ -86,16 +89,21 @@ async function paginateBook(book, hash){
           h.textContent = book.chapters[ci] ? book.chapters[ci].title : ('第'+(ci+1)+'章');
           art.appendChild(h);
         }
+        if(sn.p){ const pb = document.createElement('span');
+          pb.style.cssText = 'display:block;height:.7em;'; art.appendChild(pb); }
         const sp = document.createElement('span');
         sp.textContent = sn.t;
         art.appendChild(sp);
         art.appendChild(document.createTextNode(' '));
         spans.push([sp, i]);
       }
-      // 强制布局后读取本片各句所在的列
+      // 强制布局后读取本片各句所在的列。注意：行内 span 的 offsetLeft
+      // 在多列容器里是无意义的（返回行内框的 x，不是列位置），必须用
+      // getBoundingClientRect().left 相对首句 rect 换算列号。
       for(const [sp, gi] of spans){
-        if(base < 0) base = sp.offsetLeft;
-        const p = Math.max(0, Math.round((sp.offsetLeft - base) / pageW));
+        const r = sp.getBoundingClientRect();
+        if(baseLeft < 0) baseLeft = r.left;
+        const p = Math.max(0, Math.round((r.left - baseLeft) / pageW));
         if(p > lastPage){ starts.push(gi); lastPage = p; }
       }
       // 让出主线程，保持界面响应
@@ -103,9 +111,12 @@ async function paginateBook(book, hash){
       // 中途书被切换或指纹变化就放弃
       if(!cur || cur.id !== book.id || pageHash() !== hash) return null;
     }
+    // 测量器实际列数交叉校验：starts 再多也不能超过真实列数
+    measCols = Math.max(1, Math.round(m.scrollWidth / pageW));
   }finally{
     m.remove();
   }
   if(!starts.length) starts.push(0);
+  if(starts.length > measCols) starts.length = measCols;
   return { starts, total: starts.length };
 }

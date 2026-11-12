@@ -42,14 +42,18 @@ function bindFlip(){
   window.addEventListener('pointercancel', onFlipCancel, { passive: true });
   // 滑动模式：点按左右边缘翻页（兜底）
   el.addEventListener('click', (e)=>{
-    if(flipMode() !== 'slide' || !PG.ready || PG.total <= 1) return;
+    if(!PG.ready || PG.total <= 1) return;
+    // D10：卷页模式下触屏点按走 onFlipUp 的边缘点按，click 只补桌面鼠标；
+    // 滑动模式保持原行为（所有指针都走这里）
+    if(flipMode() === 'curl' && Flip.lastPointerType !== 'mouse') return;
     if(window.getSelection().toString()) return;
     if(e.target.closest('button, a, .sel-tip')) return;
     const W = el.clientWidth || 1;
     const rect = el.getBoundingClientRect();
     const rx = e.clientX - rect.left;
-    if(rx < W * 0.22 && PG.page > 0){ Flip.animateTo(PG.page - 1); }
-    else if(rx > W * 0.78 && PG.page < PG.total - 1){ Flip.animateTo(PG.page + 1); }
+    const flipTo = (pg)=>{ if(flipMode() === 'curl') setPage(pg); else Flip.animateTo(pg); };
+    if(rx < W * 0.22 && PG.page > 0){ flipTo(PG.page - 1); }
+    else if(rx > W * 0.78 && PG.page < PG.total - 1){ flipTo(PG.page + 1); }
   });
   // 滑动模式：滚动时只做轻量防抖；分页窗口调整延后到手势停下后。
   let snapT = null;
@@ -103,11 +107,15 @@ function snapToPage(){
 }
 
 function onFlipDown(e){
+  Flip.lastPointerType = e.pointerType; // 供 click 处理区分鼠标/触屏
   if(flipMode() !== 'curl' || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return; // 无动画偏好下用阅读器按钮翻页
   if(e.target.closest('button, a, input, textarea, select, .reader-find')) return;
   if(Flip.active || !PG.ready || PG.total <= 1) return;
   clearStaleShift();
   if(e.pointerType === 'mouse' && e.button !== 0) return;
+  // D10：桌面鼠标拖拽归文本选择（划线），不再 14px 就进卷页清选中；
+  // 鼠标翻页走边缘点按（click 处理）/‹ › 按钮/方向键。触摸与触控笔不变。
+  if(e.pointerType === 'mouse') return;
   Flip.tracking = true; Flip.dragging = false; Flip.edge = false;
   Flip.startX = e.clientX; Flip.startY = e.clientY;
   Flip.lastX = e.clientX; Flip.lastT = performance.now(); Flip.vel = 0;

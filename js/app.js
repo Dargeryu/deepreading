@@ -20,18 +20,21 @@ function detectLang(text){
   return cjk >= lat ? 'zh' : 'en';
 }
 /* 中文按 。！？；… 分句；英文按 .!? 分句（照顾常见缩写） */
+/* 返回 {t, p}：p=1 表示该句是新段落开头（原文中空行分隔）。
+   行内 span 的 offsetLeft 在多列里不可靠，段落信息必须随句对象保存，
+   不能靠换行符事后推断。 */
 function splitSentences(text){
-  const out=[]; let buf='';
-  const push=()=>{ const t=buf.trim(); if(t) out.push(t); buf=''; };
+  const out=[]; let buf='', paraNext=false;
+  const push=()=>{ const t=buf.trim(); if(t) out.push({t, p:paraNext?1:0}); buf=''; paraNext=false; };
   for (let i=0;i<text.length;i++){
     const ch=text[i]; buf+=ch;
     if ('。！？；'.includes(ch)) push();
     else if (ch==='…' && text[i+1]!=='…') push();
     else if ((ch==='.'||ch==='!'||ch==='?') && /[a-zA-Z\u4e00-\u9fff]/.test(text[i-1]||'') && !/[a-zA-Z]/.test(text[i+1]||'') && !/(Mr|Mrs|Ms|Dr|St)\.$/.test(buf.slice(-4))) push();
-    else if (ch==='\n'){ if(buf.trim()) push(); }
+    else if (ch==='\n'){ if(buf.trim()) push(); else paraNext=true; }
   }
   push();
-  return out.filter(s=>s.length>1);
+  return out.filter(s=>s.t.length>1);
 }
 const CHAP_RE = /^(第[一二三四五六七八九十百千万零\d\s]+[章节回篇卷]|Chapter\s+\d+|CHAPTER\s+\d+|前言|序言|后记|引言|楔子|尾声|番外)/;
 function splitChapters(fullText){
@@ -66,10 +69,20 @@ function openDB(){
       if(!d.objectStoreNames.contains('bookmarks')) d.createObjectStore('bookmarks',{keyPath:'id',autoIncrement:true});
       if(!d.objectStoreNames.contains('translations')) d.createObjectStore('translations',{keyPath:'bookId'});
     };
-    r.onsuccess=()=>{db=r.result;res();}; r.onerror=()=>rej(r.error);
+    r.onsuccess=()=>{db=r.result; db.onclose=()=>{db=null;}; db.onversionchange=()=>{db=null;}; res();}; r.onerror=()=>rej(r.error);
   });
 }
 const _tx=(s,m='readonly')=>db.transaction(s,m).objectStore(s);
+/* D3：首次导入偶发 "database connection is closing"——写操作包一层重试，
+   遇关连接类错误就重开 DB 再试一次。 */
+async function idbRetry(fn){
+  try{ return await fn(); }
+  catch(e){
+    const m=(e&&e.message)||'', n=(e&&e.name)||'';
+    if(!/closing|InvalidState|not active|UnknownError/i.test(m) && n!=='InvalidStateError') throw e;
+    db=null; await openDB(); return await fn();
+  }
+}
 const idbMarks={
   add:m=>new Promise((res,rej)=>{const t=_tx('marks','readwrite').add(m);t.onsuccess=()=>res(t.result);t.onerror=()=>rej(t.error);}),
   byBook:bid=>new Promise((res,rej)=>{const t=_tx('marks').getAll();t.onsuccess=()=>res((t.result||[]).filter(x=>x.bookId===bid));t.onerror=()=>rej(t.error);}),
@@ -101,7 +114,7 @@ const idb={
   allProgress:()=>new Promise((res,rej)=>{const t=_tx('progress').getAll();t.onsuccess=()=>res(t.result||[]);t.onerror=()=>rej(t.error);}),
   del:id=>Promise.all(['books','files','progress'].map(s=>new Promise((res,rej)=>{
     const t=db.transaction(s,'readwrite').objectStore(s).delete(id);
-    t.onsuccess=()=>res();t.onerror=()=>rej(t.error);}))).concat([idb.delPageCacheByBook(id).catch(()=>{})]),
+    t.onsuccess=()=>res();t.onerror=()=>rej(t.error);})).concat([idb.delPageCacheByBook(id).catch(()=>{})])),
   putVoice:v=>new Promise((res,rej)=>{const t=_tx('voices','readwrite').put(v);t.onsuccess=res;t.onerror=()=>rej(t.error);}),
   allVoices:()=>new Promise((res,rej)=>{const t=_tx('voices').getAll();t.onsuccess=()=>res(t.result||[]);t.onerror=()=>rej(t.error);}),
   delVoice:id=>new Promise((res,rej)=>{const t=_tx('voices','readwrite').delete(id);t.onsuccess=()=>res();t.onerror=()=>rej(t.error);}),
@@ -244,7 +257,7 @@ async function finalizeImport(title, format, chapters, fileData, fileName){
   const sentences=[]; const chIndex=[];
   chapters.forEach((c,ci)=>{
     chIndex.push({title:c.title||`第${ci+1}章`, start:sentences.length});
-    for (const s of splitSentences(c.text)) sentences.push({t:s, c:ci});
+    for (const s of splitSentences(c.text)) sentences.push({t:s.t, p:s.p||0, c:ci});
   });
   if (!sentences.length) throw new Error('没有提取到正文');
   const sample=sentences.slice(0,30).map(s=>s.t).join(' ');
@@ -252,9 +265,9 @@ async function finalizeImport(title, format, chapters, fileData, fileName){
     lang:detectLang(sample), total:sentences.length, sentences, chapters:chIndex,
     hasFile:!!fileData, fileName:fileName||'',
     progress:{idx:0, updatedAt:Date.now()}, voiceURI:'', voiceURI2:'', rate:100, dialogVoice:false };
-  await idb.put(stripBook(book));
-  if(fileData) await idb.putFile(book.id,fileData,fileName).catch(()=>{});
-  await idb.putProgress(book.id,0).catch(()=>{});
+  await idbRetry(()=>idb.put(stripBook(book)));
+  if(fileData) await idbRetry(()=>idb.putFile(book.id,fileData,fileName)).catch(()=>{});
+  await idbRetry(()=>idb.putProgress(book.id,0)).catch(()=>{});
   toast(`已导入《${title}》，共 ${sentences.length} 句`);
   return book;
 }
@@ -506,7 +519,18 @@ function go(name){
 }
 function showView(name){ go(name); } // 兼容旧调用
 async function openBook(id){
-  cur=books.find(b=>b.id===id); if(!cur) return;
+  cur=books.find(b=>b.id===id);
+  if(!cur){
+    const all=await idb.all().catch(()=>[]);
+    const b=all.find(x=>x.id===id);
+    if(b){
+      // IDB 里书的 progress 被 stripBook 删了（进度存在 progress 表里），按 loadBooks 的办法补上，否则后面 cur.progress.idx 全炸
+      const pr=await idb.getProgress(id).catch(()=>null);
+      b.progress=pr?{idx:pr.idx||0, updatedAt:pr.updatedAt||Date.now()}:{idx:0, updatedAt:b.addedAt||Date.now()};
+      books.unshift(b); cur=b;
+    }
+    else { toast('找不到这本书'); return; }
+  }
   readerFindMatches=[]; readerFindIndex=0; readerFindQuery=''; readerMatchSet.clear();
   const rf=$('#reader-find-q'), rfPanel=$('#reader-find');
   if(rf) rf.value=''; if(rfPanel) rfPanel.classList.add('hidden');
@@ -547,8 +571,9 @@ function renderWindow(centerIdx){
       const h=document.createElement('span'); h.className='ch-title';
       h.textContent=cur.chapters[ci]?cur.chapters[ci].title:`第${ci+1}章`; c.appendChild(h);
     }
+    if(sn.p){ const pb=document.createElement('span'); pb.className='para-break'; c.appendChild(pb); }
     const sp=document.createElement('span'); sp.className='sent'+(readerFindQuery&&readerMatchSet.has(i)?' find-hit':''); sp.textContent=sn.t; sp.dataset.g=i;
-    sp.onclick=(()=>{ const g=i; return ()=>{ if(pageTouchMoved) return; seekTo(g); }; })();
+    sp.onclick=(()=>{ const g=i; return ()=>{ if(pageTouchMoved || window.getSelection().toString()) return; seekTo(g, true); }; })();
     c.appendChild(sp); c.appendChild(document.createTextNode(' ')); sentEls.push(sp);
   }
   layoutPages();
@@ -647,10 +672,16 @@ function positionNearSentence(gi){
   const lp=Math.max(0,Math.round((r.left-cr.left+pagesEl().scrollLeft)/W));
   pagesEl().scrollTo({left:lp*W, behavior:'auto'});
 }
-async function paginateInBackground(h, idx){
+async function paginateInBackground(h, idx, attempt){
+  attempt=attempt||0;
   let res=null;
   try{ res=await paginateBook(cur, h); }catch(e){ res=null; }
-  if(!res) return;                                        // 中途已失效
+  if(!res){
+    // 测量异常/被打断：600ms 后重试一次（最多 2 次），不再静默丢弃——
+    // 丢弃后 PG.ready 恒 false，页码指示会一直空白（D8）
+    if(attempt<2) setTimeout(()=>{ if(cur&&curView==='reader'&&!PG.ready&&pageHash()===h) paginateInBackground(h, idx, attempt+1); },600);
+    return;
+  }
   if(!cur||PG.bookId!==cur.id||pageHash()!==h) return;    // 书已切换或排版已变
   PG.starts=res.starts; PG.total=res.total; PG.ready=true; pgVer++;
   try{ await idb.putPageCache({key:cur.id+'|'+h, bookId:cur.id, hash:h, starts:res.starts, total:res.total, updatedAt:Date.now()}); }catch(e){}
@@ -725,11 +756,14 @@ async function saveBook(){
   if(!cur) return;
   try{ await idb.put(stripBook(cur)); }catch(e){}
 }
-function seekTo(i){
+function seekTo(i, autoplay){
+  if(!cur) return;
+  const wasPlaying=wantPlay;   // stopSpeak 会清 wantPlay，先记下来
   stopSpeak();
   cur.progress.idx=Math.max(0,Math.min(cur.total-1,i));
   cur._lastSpk=null; // 多角色说话人追踪重置
-  markActive(); scrollToActive(); saveProgress(); play();
+  markActive(); scrollToActive(); saveProgress();
+  if(autoplay||wasPlaying) play();   // 目录跳转/进度条只在原本在播时续播
 }
 const fmtRate=sp=>{ let s=sp.toFixed(2).replace(/0+$/,''); if(s.endsWith('.')) s+='0'; return s+'x'; };
 function updatePlayer(){
@@ -795,6 +829,7 @@ function speakCurrent(){
   const _eng=store.get('tts_engine');
   if(_eng==='custom'||_eng==='elevenlabs'){ speakCustom(s, castT&&castT.kind==='custom'?castT.voiceId:null); return; }
   if(!synth){ toast('当前浏览器不支持语音朗读'); return; }
+  if(!voices.length && !pickVoice(cur)){ wantPlay=false; setPlayUI(); toast('系统里没有可用的语音，请检查手机的语音设置'); return; }
   synth.cancel();
   const u=new SpeechSynthesisUtterance(s.t);
   let v, pr={rate:1,pitch:1};
@@ -892,7 +927,7 @@ $('#rp-progress').addEventListener('click',e=>{
 $('#btn-back').onclick=()=>go(returnView);
 $('#reader-chapter').onclick=()=>{ renderChapters(); $('#chapter-drawer').classList.remove('hidden'); };
 $('#btn-reader-toc').onclick=()=>$('#reader-chapter').click();
-$('#btn-reader-more').onclick=()=>$('#reader-chapter').click();
+$('#btn-reader-more').onclick=()=>{ $('#chapter-drawer').classList.add('hidden'); $('#aisheet').classList.remove('hidden'); };
 $('#btn-reader-typeset').onclick=()=>$('#typeset').classList.remove('hidden');
 $('#btn-reader-translate').onclick=()=>{ $('#chapter-drawer').classList.remove('hidden'); $('#dr-bilingual').click(); };
 $('#btn-reader-notes').onclick=()=>{ returnView='reader'; go('notes'); };
@@ -1117,6 +1152,8 @@ $('#notes-back').onclick = () => go(returnView||'mine');
 $('#btn-bookmark').onclick = async () => {
   if(!cur){ return; }
   const si = PG.ready ? sentenceOfPage(PG.page) : 0;
+  const exist = (await idbBookmarks.byBook(cur.id).catch(()=>[])).find(b=>b.sentence===si);
+  if(exist){ await idbBookmarks.del(exist.id).catch(()=>{}); toast('书签已取消'); return; }
   const snippet = (cur.sentences[si]?.t || '').slice(0, 60);
   await idbBookmarks.add({ bookId: cur.id, sentence: si, page: PG.page, snippet, createdAt: Date.now() });
   toast('书签已添加');
@@ -1509,8 +1546,11 @@ $('#stat-goal').onclick=()=>{
   const i=(STAT_GOALS.indexOf(s.target)+1)%STAT_GOALS.length;
   s.target=STAT_GOALS[i]; setStat(s); renderStats();
 };
-// 播放时每 10 秒累计一次
-setInterval(()=>{ if(typeof wantPlay!=='undefined' && wantPlay && !document.hidden) addStatSecs(10); },10000);
+// 每 10 秒累计一次：在阅读器看书也算，不只播放时算；播放时不双计
+setInterval(()=>{ if(document.hidden) return;
+  if(typeof wantPlay!=='undefined' && wantPlay) addStatSecs(10);
+  else if(curView==='reader' && cur) addStatSecs(10);
+},10000);
 
 /* ================= v3.5：导入弹窗 ================= */
 function openSheet(id){ $('#scrim').classList.remove('hidden'); $('#'+id).classList.remove('hidden'); }
@@ -1560,12 +1600,14 @@ function rememberBookSearch(q){
 }
 async function searchOpenLibrary(q){
   const url='https://openlibrary.org/search.json?q='+encodeURIComponent(q)+'&limit=8&fields=key,title,author_name,first_publish_year,edition_count,cover_i';
-  const r=await fetch(url,{headers:{'Accept':'application/json'}});
+  const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),8000);
+  let r; try{ r=await fetch(url,{headers:{'Accept':'application/json'},signal:ctl.signal}); }finally{ clearTimeout(to); }
   if(!r.ok) throw new Error('Open Library HTTP '+r.status);
   const j=await r.json(); return Array.isArray(j.docs)?j.docs:[];
 }
 async function searchGutenberg(q){
-  const r=await fetch('https://gutendex.com/books/?search='+encodeURIComponent(q));
+  const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),8000);
+  let r; try{ r=await fetch('https://gutendex.com/books/?search='+encodeURIComponent(q),{signal:ctl.signal}); }finally{ clearTimeout(to); }
   if(!r.ok) throw new Error('Gutenberg HTTP '+r.status);
   const j=await r.json(); return Array.isArray(j.results)?j.results:[];
 }
@@ -1662,7 +1704,7 @@ async function doAiSearch(q){
   else if(!errors.includes('open')) html+='<div class="search-empty-source">Open Library 暂无匹配书目。</div>';
   if(gutUnique.length) html+='<h3 class="search-source-heading">Project Gutenberg <small>公版图书</small></h3>'+gutUnique.map(gutenbergCard).join('');
   else if(!errors.includes('gutenberg')) html+='<div class="search-empty-source">Project Gutenberg 暂无匹配公版书。</div>';
-  if(errors.length===tasks.length) html+='<div class="search-error">书目服务暂时无法连接。检查网络后重试。</div>';
+  if(errors.length===tasks.length) html+='<div class="search-error">书目服务暂时无法连接。检查网络后重试。</div><div style="margin:10px 0"><button class="btn-ghost sm" onclick="doAiSearch(document.querySelector(\'#search-q\').value.trim())">重试搜索</button> <span style="color:#888;font-size:13px">或点上方黑色按钮去 Anna\'s Archive 找书</span></div>';
   else if(errors.length) html+='<div class="search-error">部分书目服务暂不可用；已显示其余来源结果。</div>';
   if(!openUnique.length&&!gutUnique.length&&!errors.length) html+='<div class="search-empty-source">没有找到匹配书目，试试更短的书名或作者名。</div>';
   box.innerHTML=html;
@@ -1679,6 +1721,10 @@ $('#ts-size').value=size; $('#ts-size-v').textContent=size;
 $('#ts-lh').value=lh; $('#ts-lh-v').textContent=(lh/10).toFixed(1);
 $('#ts-font').value=font; $('#ts-theme').value=theme;
 const tf=$('#ts-flip'); if(tf) tf.value=store.get('ts_flip','curl');
+const s2=$('#ts-size2'); if(s2){ s2.value=size; const v2=$('#ts-size2-v'); if(v2) v2.textContent=size; }
+const l2=$('#ts-lh2'); if(l2){ l2.value=lh; const v3=$('#ts-lh2-v'); if(v3) v3.textContent=(lh/10).toFixed(1); }
+const f2=$('#ts-flip2'); if(f2) f2.value=store.get('ts_flip','curl');
+const t2=$('#ts-theme2'); if(t2) t2.value=theme;
 }
 /* 排版按钮已并入目录抽屉（#dr-type） */
 $('#btn-type-close').onclick=()=>$('#typeset').classList.add('hidden');
@@ -1688,6 +1734,9 @@ $('#ts-font').addEventListener('change',e=>{store.set('ts_font',e.target.value);
 $('#ts-theme').addEventListener('change',e=>{store.set('ts_theme',e.target.value);applyType();scheduleRepaginate();});
 $('#ts-flip').addEventListener('change',e=>{store.set('ts_flip',e.target.value);applyFlipMode();toast(e.target.selectedOptions[0].text+'已生效');});
 $('#ts-theme2').addEventListener('change',e=>{store.set('ts_theme',e.target.value);applyType();scheduleRepaginate();});
+const _s2=$('#ts-size2'); if(_s2) _s2.addEventListener('input',e=>{store.set('ts_size',e.target.value);applyType();scheduleRepaginate();});
+const _l2=$('#ts-lh2'); if(_l2) _l2.addEventListener('input',e=>{store.set('ts_lh',e.target.value);applyType();scheduleRepaginate();});
+const _f2=$('#ts-flip2'); if(_f2) _f2.addEventListener('change',e=>{store.set('ts_flip',e.target.value);applyFlipMode();toast(e.target.selectedOptions[0].text+'已生效');});
 
 /* ---------- 设置持久化 ---------- */
 function initSettings(){
@@ -1829,9 +1878,12 @@ async function renderHome(){
   if(!books.length){ try{ await loadBooks(); }catch(e){} }
   const has=books.length>0;
   $('#home-empty').classList.toggle('hidden', has);
-  // 继续阅读：有进度的书横向排
-  const cont=books.filter(b=>b.progress.idx>0 && b.progress.idx<b.total-1)
+  // 继续阅读：有进度的书横向排；没有进度书时回退显示最近加入的一本，别让首页变空壳
+  let cont=books.filter(b=>b.progress.idx>0 && b.progress.idx<b.total-1)
     .sort((a,b)=>b.progress.updatedAt-a.progress.updatedAt).slice(0,8);
+  let contTitle='继续阅读';
+  if(!cont.length && books.length){ cont=[...books].sort((a,b)=>b.addedAt-a.addedAt).slice(0,1); contTitle='最近加入'; }
+  const ct=$('#continue-wrap .rd-sec h3'); if(ct) ct.textContent=contTitle;
   $('#continue-wrap').classList.toggle('hidden', !cont.length);
   const cl=$('#cont-list'); cl.innerHTML='';
   cont.forEach(b=>{
@@ -1926,6 +1978,7 @@ function paintWave(){
 }
 function syncFullPlayer(){
   if(!cur||$('#player-full').classList.contains('hidden')) return;
+  const fs=$('#fp-state'); if(fs) fs.textContent=wantPlay?'正在播放':'已暂停';
   const pct=Math.round(1000*cur.progress.idx/Math.max(1,cur.total));
   $('#fp-seek').value=pct;
   $('#fp-play').textContent=wantPlay?'⏸':'▶';

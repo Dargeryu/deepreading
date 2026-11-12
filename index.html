@@ -50,7 +50,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">●</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.76</div>
+    <div class="sb-ver">Apo v3.77</div>
   </div>
 </aside>
 <div id="app">
@@ -361,7 +361,7 @@ if ('serviceWorker' in navigator) {
       <div class="brand serif">我的</div>
       <span style="width:34px"></span>
     </header>
-    <div id="view-mine-body" style="padding:6px 18px 20px">
+    <div id="view-mine-body" style="padding:6px 18px 170px">
       <div class="mine-head">
         <div class="avatar-btn lg">读</div>
         <div><div class="t serif">Apo</div><div class="d">本地听书 · 数据只存本机</div></div>
@@ -428,7 +428,7 @@ if ('serviceWorker' in navigator) {
         <button class="btn-ghost" id="mine-notes" style="width:100%;margin-bottom:8px">📝 划线与笔记</button>
         <button class="btn-ghost" id="mine-bookmarks" style="width:100%">🔖 我的书签</button>
       </div>
-      <div class="ver">Apo v3.76</div>
+      <div class="ver">Apo v3.77</div>
     </div>
   </main>
 
@@ -444,7 +444,7 @@ if ('serviceWorker' in navigator) {
   <div id="player-full" class="hidden">
     <div class="fp-nav">
       <button id="fp-close" class="icon-btn">‹</button>
-      <span class="serif" style="font-weight:700">正在播放</span>
+      <span class="serif" id="fp-state" style="font-weight:700">正在播放</span>
       <span style="width:34px"></span>
     </div>
     <div class="fp-hero">
@@ -472,7 +472,10 @@ if ('serviceWorker' in navigator) {
   <!-- 排版 -->
   <div id="typeset" class="sheet hidden">
     <div class="sheet-head"><span class="serif">排版</span> <button id="btn-type-close" class="btn-ghost">✕</button></div>
-    <p class="hint" style="padding:0">详细排版选项已移到「我的」页面，这里保留快捷入口。</p>
+    <p class="hint" style="padding:0">阅读器内快捷排版，与「我的」页面同步。</p>
+    <label>字号 <input type="range" id="ts-size2" min="14" max="26" step="1" style="width:120px;vertical-align:middle"> <span id="ts-size2-v">18</span></label>
+    <label>行高 <input type="range" id="ts-lh2" min="14" max="26" step="1" style="width:120px;vertical-align:middle"> <span id="ts-lh2-v">1.8</span></label>
+    <label>翻页 <select id="ts-flip2"><option value="curl">3D 卷页 · 推荐</option><option value="slide">横向翻页</option><option value="none">无动画</option></select></label>
     <label>主题 <select id="ts-theme2"><option value="day">白天</option><option value="sepia">暖纸</option><option value="yellow">鹅黄</option><option value="green">豆绿</option><option value="blue">雾蓝</option><option value="pink">樱粉</option><option value="gray">浅灰</option><option value="ink">墨黑</option><option value="darkblue">深蓝</option><option value="night">夜间</option></select></label>
   </div>
 
