@@ -1257,3 +1257,52 @@ button,.icon-btn,.rd-icbtn,.tab,.fp-tool,.fp-skip{color:#111}button:focus-visibl
 .rb-dots{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:3}
 .rb-dots i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.4);cursor:pointer}
 .rb-dots i.cur{width:16px;border-radius:99px;background:#fff}
+
+/* ============ v3.83：阅读器按 Readify 听书屏重做（用户 2026-11-12 发参考图亲定） ============ */
+/* 顶栏 AI排版按钮（参考图：✦ 图标 + AI排版文字） */
+.ai-typeset-btn{display:inline-flex;align-items:center;gap:5px;border:1px solid #e5e5e5;background:#fff;border-radius:999px;padding:6px 11px;font-size:13px;font-weight:600;color:#111;cursor:pointer;white-space:nowrap}
+.ai-typeset-btn .ai-spark{display:inline-grid;place-items:center;width:18px;height:18px;border:1.5px solid #111;border-radius:6px;font-size:11px;line-height:1}
+/* 底部播放器：时间行 + 滑杆 */
+#reader-player{padding-bottom:env(safe-area-inset-bottom)}
+.rp-times{display:flex;align-items:center;gap:10px;padding:10px 18px 2px}
+.rp-times span{font-size:12px;color:#8e8e93;font-variant-numeric:tabular-nums;white-space:nowrap}
+#rp-seek{flex:1;min-width:0;-webkit-appearance:none;appearance:none;height:4px;border-radius:99px;background:#e5e5e5;outline:none;cursor:pointer}
+#rp-seek::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 5px rgba(0,0,0,.35)}
+#rp-seek::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 5px rgba(0,0,0,.35)}
+/* 底部播放器：圆封面 + ↩ ▶ ↪ + 1.0x */
+#reader-player .rp-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 18px 12px;min-height:64px}
+#reader-player .rp-cover{border-radius:50%!important;width:44px;height:44px;flex:none;cursor:pointer}
+#reader-player .rp-controls{display:flex;align-items:center;gap:30px}
+#reader-player .rp-btn{border:none;background:none;font-size:26px;color:#111;cursor:pointer;padding:0;line-height:1}
+#reader-player .rp-play{width:64px;height:64px;border-radius:50%;border:none;background:#111;color:#fff;font-size:22px;cursor:pointer;flex:none;display:grid;place-items:center}
+#reader-player .rp-speed{display:flex;flex-direction:column;align-items:center;gap:2px;border:none;background:none;cursor:pointer;color:#111;padding:0;min-width:44px}
+#reader-player .rp-speed svg{display:block}
+#reader-player .rp-speed span{font-size:12px;color:#111}
+/* 浮动按钮：Ai + 深色停止键（参考图右下角两个圆钮） */
+#reader-fabs{position:fixed;right:16px;bottom:132px;z-index:40;display:flex;gap:12px}
+#ai-fab{width:52px;height:52px;border-radius:50%;border:1px solid #e5e5e5;background:#fff;box-shadow:0 5px 16px rgba(0,0,0,.14);cursor:pointer;display:grid;place-items:center}
+#ai-fab span{font-size:20px;font-weight:800;font-style:italic;background:linear-gradient(135deg,#7c3aed,#2563eb);-webkit-background-clip:text;background-clip:text;color:transparent}
+#stop-fab{width:52px;height:52px;border-radius:50%;border:none;background:#1d1d1f;color:#fff;font-size:17px;box-shadow:0 5px 16px rgba(0,0,0,.3);cursor:pointer;display:grid;place-items:center}
+body:not(.in-reader) #reader-fabs{display:none}
+/* 暖纸主题加淡淡纸纹（参考图正文底是带纹理的纸色） */
+#content[data-theme=sepia]{background-color:#f7f1e2;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* ============ v3.83 补丁：顶栏单行 + 播放器单行（压过 v3.69 窄屏两行网格） ============ */
+/* 顶栏：一行到底；章节名藏进抽屉，中间只留页码 */
+#reader-bar{display:flex!important;grid-template-columns:none!important;grid-template-rows:none!important;gap:6px!important;padding:8px 10px!important;min-height:52px!important}
+#reader-bar .reader-leading{grid-column:auto!important;grid-row:auto!important}
+#reader-bar .reader-doc{grid-column:auto!important;grid-row:auto!important;flex:1;min-width:0;align-items:center!important}
+#reader-bar .reader-actions{grid-column:auto!important;grid-row:auto!important;justify-content:flex-end!important;gap:6px!important}
+#reader-chapter{display:none}
+#reader-bar .ai-typeset-btn{padding:5px 9px!important;font-size:12px!important}
+#reader-bar .ai-typeset-btn .ai-spark{width:16px;height:16px;font-size:10px}
+/* 播放器：一行到底；↩/↪ 去灰底圆钮，恢复参考图的纯线条箭头 */
+#reader-player .rp-row{display:flex!important;grid-template-columns:none!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;padding:6px 18px 12px!important;min-height:64px!important}
+#reader-player .rp-controls{grid-column:auto!important;grid-row:auto!important;gap:30px!important}
+#reader-player .rp-controls .rp-btn{width:auto!important;height:auto!important;border-radius:0!important;background:none!important;color:#111!important;font-size:26px!important;padding:0!important}
+#reader-player .rp-controls .rp-play{width:64px!important;height:64px!important;background:#111!important;color:#fff!important;font-size:22px!important}
+#reader-player .rp-controls .rp-speed{min-width:44px!important;border:0!important;background:none!important;border-radius:0!important;padding:0!important;color:#111!important}
+/* 阅读器内藏起底导（v3.69 的本意；之前被后面的 display:flex!important 盖掉了） */
+body.in-reader #tabbar{display:none!important}
+/* 浮动钮挪到播放器上方，不再压住剩余时间 */
+#reader-fabs{bottom:132px}

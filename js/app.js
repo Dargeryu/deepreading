@@ -696,7 +696,7 @@ function setPage(gp, opts){
 }
 function updateCount(){
   const rc=$('#reader-count');
-  if(rc) rc.textContent=(PG.ready&&PG.total>0)?('第 '+(PG.page+1)+' 页 / 共 '+PG.total+' 页'):'';
+  if(rc) rc.textContent=(PG.ready&&PG.total>0)?('第'+(PG.page+1)+'页/共'+PG.total+'页'):'';
 }
 /* ---------- 分页启动 / 重排 ---------- */
 let __lastW=0;
@@ -823,18 +823,40 @@ function updatePlayer(){
   if(!cur) return;
   const pct=100*cur.progress.idx/Math.max(1,cur.total);
   updateCount();
-  const fill=$('#rp-fill'); if(fill) fill.style.width=pct+'%';
+  const sk=$('#rp-seek'); if(sk) sk.value=Math.round(pct*10);
+  const tm=estTimes();
+  const el=$('#rp-elapsed'); if(el) el.textContent=fmtClock(tm.el);
+  const rm=$('#rp-remaining'); if(rm) rm.textContent='-'+fmtClock(tm.total-tm.el);
   const ch=cur.chapters[chapterOf(cur.progress.idx)];
   const rh=$('#reader-chapter'); if(rh) rh.textContent=ch?ch.title:cur.title;
   const title=$('#reader-title'); if(title) title.textContent=cur.title||'';
   const type=$('#reader-format'); if(type) type.textContent=(cur.format||'TXT').toUpperCase();
-  const rpTitle=$('#rp-title'); if(rpTitle) rpTitle.textContent=cur.title||'';
-  const rpAuthor=$('#rp-author'); if(rpAuthor) rpAuthor.textContent=cur.author||'未知作者';
-  const spt=$('#rp-speed');
+  const spt=$('#rp-speed-v');
   if(spt) spt.textContent=fmtRate(cur.rate/100);
   setCoverEl($('#rp-cover'), cur, 6);
 }
-/* 进度条已并入 #rp-progress（点击跳转），旧 #seek 已移除 */
+/* v3.83：进度条已改成 #rp-seek 滑杆 + 时间显示 */
+
+/* v3.83：智能重排——按章节重算分段（段落粘在一起的书重新分段），章节标题与数量不变 */
+function reflowBook(){
+  if(!cur) return;
+  const newSentences=[]; const newCh=[];
+  cur.chapters.forEach((c,ci)=>{
+    const part=cur.sentences.filter(s=>s.c===ci);
+    const text=part.map(s=>s.t).join('');
+    newCh.push({title:c.title, start:newSentences.length});
+    for(const s of splitSentences(text)) newSentences.push({t:s.t, p:s.p||0, c:ci});
+  });
+  if(!newSentences.length) return;
+  cur.sentences=newSentences; cur.total=newSentences.length; cur.chapters=newCh;
+  cur.progress.idx=Math.min(cur.progress.idx, cur.total-1);
+  idb.put(stripBook(cur)).catch(()=>{});
+  idb.delPageCacheByBook(cur.id).catch(()=>{});
+  closeSheets();
+  scheduleRepaginate();
+  toast('已智能重排段落');
+}
+$('#btn-reflow').onclick=reflowBook;
 
 /* ---------- 语音引擎（Web Speech API） ---------- */
 const synth=window.speechSynthesis;
@@ -968,22 +990,16 @@ $('#rp-play').onclick=()=>{ if(!cur)return; wantPlay?stopSpeak():play(); };
 $('#rp-back').onclick=()=>skipSeconds(-15);
 $('#rp-fwd').onclick=()=>skipSeconds(15);
 $('#rp-speed').onclick=cycleSpeed;
-$('#rp-full').onclick=()=>openFullPlayer();
 $('#rp-cover').onclick=()=>openFullPlayer();
-$('#rp-close').onclick=()=>go(returnView);
-$('#rp-progress').addEventListener('click',e=>{
-  if(!cur) return;
-  const r=e.currentTarget.getBoundingClientRect();
-  const p=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));
-  seekTo(Math.round(p*(cur.total-1)));
-});
+$('#rp-seek').addEventListener('change',e=>{ if(!cur)return; seekTo(Math.round(e.target.value/1000*(cur.total-1))); });
 $('#btn-back').onclick=()=>go(returnView);
 $('#reader-chapter').onclick=()=>{ renderChapters(); $('#chapter-drawer').classList.remove('hidden'); };
 $('#btn-reader-toc').onclick=()=>$('#reader-chapter').click();
 $('#btn-reader-more').onclick=()=>{ $('#chapter-drawer').classList.add('hidden'); $('#aisheet').classList.remove('hidden'); };
 $('#btn-reader-typeset').onclick=()=>$('#typeset').classList.remove('hidden');
-$('#btn-reader-translate').onclick=()=>{ $('#chapter-drawer').classList.remove('hidden'); $('#dr-bilingual').click(); };
-$('#btn-reader-notes').onclick=()=>{ returnView='reader'; go('notes'); };
+$('#btn-ai-typeset').onclick=()=>$('#typeset').classList.remove('hidden');
+$('#dr-find').onclick=()=>{ $('#chapter-drawer').classList.add('hidden'); $('#reader-find').classList.remove('hidden'); $('#reader-find-q').focus(); $('#reader-find-q').select(); };
+$('#dr-notes').onclick=()=>{ returnView='reader'; go('notes'); };
 function renderReaderFindResults(){
   const list=$('#reader-find-results'), count=$('#reader-find-count');
   if(!list||!count) return;
@@ -1010,7 +1026,6 @@ function runReaderFind(){
   readerFindIndex=0;
   renderWindow(cur.progress.idx); markActive(); renderReaderFindResults();
 }
-$('#btn-reader-find').onclick=()=>{ $('#reader-find').classList.remove('hidden'); $('#reader-find-q').focus(); $('#reader-find-q').select(); };
 $('#reader-find-close').onclick=()=>$('#reader-find').classList.add('hidden');
 $('#reader-find-q').addEventListener('input',runReaderFind);
 $('#reader-find-q').addEventListener('keydown',e=>{
@@ -1022,7 +1037,8 @@ $('#reader-find-next').onclick=()=>jumpReaderFind(readerFindIndex+1);
 $('#btn-chapters-close').onclick=()=>$('#chapter-drawer').classList.add('hidden');
 $('#dr-ai').onclick=()=>{ $('#chapter-drawer').classList.add('hidden'); $('#aisheet').classList.remove('hidden'); };
 $('#dr-type').onclick=()=>{ $('#chapter-drawer').classList.add('hidden'); $('#typeset').classList.remove('hidden'); };
-$('#voice-fab').onclick=()=>{ renderVoiceSheet(); $('#voice-sheet').classList.remove('hidden'); $('#scrim').classList.remove('hidden'); };
+$('#stop-fab').onclick=()=>{ stopSpeak(); toast('已停止朗读'); };
+$('#fp-voice').onclick=()=>{ renderVoiceSheet(); $('#voice-sheet').classList.remove('hidden'); $('#scrim').classList.remove('hidden'); };
 $('#voice-sheet-close').onclick=()=>{ $('#voice-sheet').classList.add('hidden'); $('#scrim').classList.add('hidden'); };
 bindReaderGestures();
 $('#sel-voice').onchange=e=>{ if(cur){cur.voiceURI=e.target.value;saveBook();} };
@@ -1202,7 +1218,7 @@ async function renderNotesList(){
 $('#notes-back').onclick = () => go(returnView||'mine');
 
 /* ---------- 书签 ---------- */
-$('#btn-bookmark').onclick = async () => {
+async function toggleBookmark(){
   if(!cur){ return; }
   const si = PG.ready ? sentenceOfPage(PG.page) : 0;
   const exist = (await idbBookmarks.byBook(cur.id).catch(()=>[])).find(b=>b.sentence===si);
@@ -1210,12 +1226,14 @@ $('#btn-bookmark').onclick = async () => {
   const snippet = (cur.sentences[si]?.t || '').slice(0, 60);
   await idbBookmarks.add({ bookId: cur.id, sentence: si, page: PG.page, snippet, createdAt: Date.now() });
   toast('书签已添加');
-};
-$('#btn-bookchat').onclick = () => {
+}
+$('#dr-bookmark').onclick = toggleBookmark;
+function openBookchat(){
   if(!cur){ toast('先打开一本书'); return; }
   renderBookchatSugg();
   go('bookchat');
-};
+}
+$('#ai-fab').onclick = openBookchat;
 
 /* ---------- AI书伴：基于整书内容的问答 ---------- */
 const BOOKCHAT_SUGG = ['这本书讲了什么？', '作者的核心观点是什么？', '总结一下当前章节', '书中最重要的三个概念？'];
@@ -1785,8 +1803,8 @@ async function doAiSearch(q){
 /* ---------- 排版 ---------- */
 function applyType(){
 const c=$('#content'); if(!c) return;
-const size=store.get('ts_size','18'), lh=store.get('ts_lh','18'),
-font=store.get('ts_font','serif'), theme=store.get('ts_theme','day');
+const size=store.get('ts_size','24'), lh=store.get('ts_lh','18'),
+font=store.get('ts_font','serif'), theme=store.get('ts_theme','sepia');
 c.style.fontSize=size+'px'; c.style.lineHeight=(lh/10);
 c.style.fontFamily=font==='serif'?'Georgia,"Songti SC","Noto Serif CJK SC",serif':'-apple-system,"PingFang SC","Microsoft YaHei",sans-serif';
 c.dataset.theme=theme;
@@ -2147,8 +2165,9 @@ function syncFullPlayer(){
   const pct=Math.round(1000*cur.progress.idx/Math.max(1,cur.total));
   $('#fp-seek').value=pct;
   $('#fp-play').textContent=wantPlay?'⏸':'▶';
-  $('#fp-cur').textContent=`第 ${cur.progress.idx+1} 句`;
-  $('#fp-total').textContent=`共 ${cur.total} 句`;
+  const _tm=estTimes();
+  $('#fp-cur').textContent=fmtClock(_tm.el);
+  $('#fp-total').textContent=fmtClock(_tm.total);
   $('#fp-speed').classList.toggle('on', (cur.rate/100)!==1);
   $('#fp-speed').querySelector('span').textContent=fmtRate(cur.rate/100);
   const t=$('#fp-timer');
@@ -2163,6 +2182,15 @@ $('#fp-wave').onclick=e=>{ if(!cur)return; const r=e.currentTarget.getBoundingCl
   seekTo(Math.round((e.clientX-r.left)/r.width*(cur.total-1))); };
 $('#fp-back15').onclick=()=>skipSeconds(-15);
 $('#fp-fwd15').onclick=()=>skipSeconds(15);
+/* v3.83：按字数估算已播/总时长（与 skipSeconds 同一套 4.2 字/秒口径），供播放器时间显示 */
+function estTimes(){
+  if(!cur) return {el:0, total:0};
+  const cps=4.2*(cur.rate/100);
+  let el=0, total=0;
+  cur.sentences.forEach((s,i)=>{ const d=s.t.length/cps; total+=d; if(i<cur.progress.idx) el+=d; });
+  return {el, total};
+}
+function fmtClock(sec){ sec=Math.max(0,Math.round(sec)); const p=n=>String(n).padStart(2,'0'); return `${p(Math.floor(sec/3600))}:${p(Math.floor(sec%3600/60))}:${p(sec%60)}`; }
 function skipSeconds(sec){
   if(!cur) return;
   const cps=4.2*(cur.rate/100); // 每秒约读字数

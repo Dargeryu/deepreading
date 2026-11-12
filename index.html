@@ -50,7 +50,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">●</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.82</div>
+    <div class="sb-ver">Apo v3.83</div>
   </div>
 </aside>
 <div id="app">
@@ -220,21 +220,15 @@ if ('serviceWorker' in navigator) {
     <header id="reader-bar">
       <div class="reader-leading">
         <button id="btn-back" class="icon-btn" aria-label="返回">‹</button>
-        <button id="btn-reader-toc" class="icon-btn" title="目录">☰</button>
-        <button id="btn-bookmark" class="icon-btn" title="书签">♧</button>
-        <span id="reader-format" class="reader-format">TXT</span>
       </div>
       <div class="reader-doc">
-        <strong id="reader-title"></strong>
         <div class="reader-doc-meta"><span id="reader-chapter" class="reader-ch" title="打开目录"></span><span id="reader-count" class="reader-count"></span></div>
       </div>
       <div class="reader-actions">
-        <button id="btn-reader-find" class="icon-btn" title="在本书中搜索">⌕</button>
-        <button id="btn-reader-translate" class="icon-btn" title="双语阅读">A文</button>
-        <button id="btn-reader-notes" class="icon-btn" title="划线与笔记">▤</button>
+        <button id="btn-ai-typeset" class="ai-typeset-btn" title="AI 排版"><span class="ai-spark">✦</span>AI排版</button>
+        <button id="btn-reader-toc" class="icon-btn" title="目录">☰</button>
         <button id="btn-reader-typeset" class="icon-btn" title="排版设置">Aa</button>
         <button id="btn-reader-more" class="icon-btn" title="更多">···</button>
-        <button id="btn-bookchat" class="icon-btn reader-ai" title="AI书伴">✦</button>
       </div>
     </header>
     <section id="reader-find" class="reader-find hidden" aria-label="在本书中搜索">
@@ -256,6 +250,9 @@ if ('serviceWorker' in navigator) {
         <button id="dr-type" class="btn-ghost sm">Aa 排版</button>
         <button id="dr-bilingual" class="btn-ghost sm">🌐 双语</button>
         <button id="dr-trbook" class="btn-ghost sm">📖 整书翻译</button>
+        <button id="dr-find" class="btn-ghost sm">⌕ 搜本书</button>
+        <button id="dr-notes" class="btn-ghost sm">▤ 划线笔记</button>
+        <button id="dr-bookmark" class="btn-ghost sm">♧ 本页书签</button>
         <div id="tr-progress" style="display:none;width:100%;font-size:12px;color:#666;padding:6px 0"></div>
       </div>
       <div id="chapter-list"></div>
@@ -266,29 +263,29 @@ if ('serviceWorker' in navigator) {
       <button id="reader-next" class="reader-turn" type="button" aria-label="下一页" title="下一页">›</button>
     </div>
     <div id="sel-tip" class="sel-tip hidden">已选中 <button id="btn-hl" class="btn-ghost sm">划线</button><button id="btn-note" class="btn-ghost sm">笔记</button><button id="btn-tr" class="btn-ghost sm">翻译</button><button id="btn-ai-ask" class="btn-primary sm">AI 讲解</button></div>
-    <button id="voice-fab" title="挑选音色">🎙</button>
+    <div id="reader-fabs">
+      <button id="ai-fab" title="AI 书伴"><span>Ai</span></button>
+      <button id="stop-fab" title="停止朗读">■</button>
+    </div>
     <div id="voice-sheet" class="sheet hidden">
       <div class="sheet-head"><span class="serif">🎙 挑选朗读音色</span> <button id="voice-sheet-close" class="btn-ghost">✕</button></div>
       <div id="voice-sheet-list"></div>
       <p class="hint" style="padding:0 18px 18px">选用后整本书都用这个音色朗读。云端音色按字符计费。</p>
     </div>
     <footer id="reader-player">
-      <div id="rp-progress"><div id="rp-fill"></div></div>
+      <div class="rp-times">
+        <span id="rp-elapsed">00:00:00</span>
+        <input type="range" id="rp-seek" min="0" max="1000" value="0" aria-label="播放进度">
+        <span id="rp-remaining">-00:00:00</span>
+      </div>
       <div class="rp-row">
-        <div class="rp-track">
-          <div class="cover sm rp-cover" id="rp-cover"></div>
-          <div class="rp-meta"><strong id="rp-title"></strong><span id="rp-author"></span></div>
-        </div>
+        <div class="cover sm rp-cover" id="rp-cover" title="打开全屏播放器"></div>
         <div class="rp-controls">
-          <button id="rp-back" class="rp-btn" title="快退15秒">↺</button>
+          <button id="rp-back" class="rp-btn" title="快退15秒">↩</button>
           <button id="rp-play" class="rp-play" title="播放/暂停">▶</button>
-          <button id="rp-fwd" class="rp-btn" title="快进15秒">↻</button>
-          <button id="rp-speed" class="rp-speed" title="倍速">1.0x</button>
+          <button id="rp-fwd" class="rp-btn" title="快进15秒">↪</button>
         </div>
-        <div class="rp-tools">
-          <button id="rp-full" class="rp-btn" title="更多控制"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2.2" fill="#fff"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2.2" fill="#fff"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="7" cy="17" r="2.2" fill="#fff"/></svg></button>
-          <button id="rp-close" class="rp-btn" title="关闭">✕</button>
-        </div>
+        <button id="rp-speed" class="rp-speed" title="倍速"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2.5l7.5 4.3v8.4L12 19.5l-7.5-4.3V6.8z"/><circle cx="12" cy="11" r="2.6"/></svg><span id="rp-speed-v">1.0x</span></button>
       </div>
     </footer>
   </main>
@@ -449,7 +446,7 @@ if ('serviceWorker' in navigator) {
         <label><input type="checkbox" id="chk-wakelock" checked><span class="k">屏幕常亮</span><span class="sub">播放时保持</span></label>
         <p class="hint">书籍、进度、Key 只存本机，不上传。阅读时选中正文文字点"AI 讲解"，或点播放条上的 ✦。</p>
       </div>
-      <div class="ver">Apo v3.82</div>
+      <div class="ver">Apo v3.83</div>
     </div>
   </main>
 
@@ -500,6 +497,7 @@ if ('serviceWorker' in navigator) {
       <button class="fp-tool" id="fp-speed"><b>⟳</b><span>倍速</span></button>
       <button class="fp-tool" id="fp-timer"><b>◷</b><span>定时</span></button>
       <button class="fp-tool" id="fp-chapters"><b>☰</b><span>章节</span></button>
+      <button class="fp-tool" id="fp-voice"><b>🎙</b><span>音色</span></button>
     </div>
   </div>
 
@@ -511,6 +509,8 @@ if ('serviceWorker' in navigator) {
     <label>行高 <input type="range" id="ts-lh2" min="14" max="26" step="1" style="width:120px;vertical-align:middle"> <span id="ts-lh2-v">1.8</span></label>
     <label>翻页 <select id="ts-flip2"><option value="curl">3D 卷页 · 推荐</option><option value="slide">横向翻页</option><option value="none">无动画</option></select></label>
     <label>主题 <select id="ts-theme2"><option value="day">白天</option><option value="sepia">暖纸</option><option value="yellow">鹅黄</option><option value="green">豆绿</option><option value="blue">雾蓝</option><option value="pink">樱粉</option><option value="gray">浅灰</option><option value="ink">墨黑</option><option value="darkblue">深蓝</option><option value="night">夜间</option></select></label>
+    <button class="btn-primary sm" id="btn-reflow" style="margin-top:12px">✦ 智能重排</button>
+    <p class="hint" style="padding:6px 0 0">按章节重算分段：段落粘在一起的书会重新分好段，章节结构不变。</p>
   </div>
 
   <!-- AI 助手 -->
