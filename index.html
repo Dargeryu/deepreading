@@ -45,11 +45,12 @@ if ('serviceWorker' in navigator) {
   <div class="sb-brand"><img src="icon-192.png" alt="Apo"><span>Apo</span></div>
   <button class="sb-item cur" data-v="home"><span class="ti">⌂</span>首页</button>
   <button class="sb-item" data-v="library"><span class="ti">▤</span>我的书架</button>
+  <button class="sb-item" data-v="voice"><span class="ti">♪</span>声音</button>
   <button class="sb-item" data-v="notes"><span class="ti">☷</span>划线与笔记</button>
   <button class="sb-item" data-v="mine"><span class="ti">●</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.75</div>
+    <div class="sb-ver">Apo v3.76</div>
   </div>
 </aside>
 <div id="app">
@@ -70,7 +71,7 @@ if ('serviceWorker' in navigator) {
         <button class="rd-avatar" id="btn-mine" title="我的">我</button>
       </div>
     </header>
-    <div class="rd-search" id="home-search"><span>🔍</span><span>搜书名、作者，或描述你想找的书</span></div>
+    <div class="rd-search" id="home-search" role="button" tabindex="0" aria-label="搜索书籍"><span>🔍</span><span>搜书名、作者，或描述你想找的书</span></div>
 
     <div class="rd-banner" id="banner">
       <div class="rb-txt">
@@ -96,7 +97,7 @@ if ('serviceWorker' in navigator) {
         <div class="rd-ring-c"><div class="lb">今日阅读时长</div><div class="tm" id="stat-time">0:00</div></div>
       </div>
     </div>
-    <div class="rd-goal"><button id="stat-goal">目标 <b id="stat-target">30分钟</b> ▾</button></div>
+    <div class="rd-goal"><span id="stat-streak" style="margin-right:10px;color:#888;font-size:13px">🔥0天</span><button id="stat-goal">目标 <b id="stat-target">30分钟</b> ▾</button></div>
 
     <div id="home-empty" class="empty hidden">
       <svg class="empty-illus" viewBox="0 0 150 112" aria-hidden="true">
@@ -138,7 +139,7 @@ if ('serviceWorker' in navigator) {
               <span aria-hidden="true">⌕</span><input id="shelf-filter" type="search" placeholder="搜索我的书架">
             </label>
             <select id="shelf-format" aria-label="按文件类型筛选">
-              <option value="all">全部文件</option><option value="pdf">PDF</option><option value="epub">EPUB</option><option value="txt">TXT</option><option value="docx">DOCX</option><option value="mobi">MOBI</option>
+              <option value="all">全部文件</option><option value="pdf">PDF</option><option value="epub">EPUB</option><option value="txt">TXT</option><option value="docx">DOCX</option>
             </select>
             <select id="shelf-sort" aria-label="书籍排序">
               <option value="recent">最近阅读</option><option value="added">添加时间</option><option value="title">书名</option>
@@ -159,7 +160,7 @@ if ('serviceWorker' in navigator) {
       </section>
     </div>
     <input type="file" id="ocr-input" accept="image/*" hidden>
-    <input type="file" id="file-input" accept=".pdf,.epub,.txt,.docx,.md,.html,.htm,.fb2,.mobi,.azw" multiple hidden>
+    <input type="file" id="file-input" accept=".pdf,.epub,.txt,.docx,.md,.html,.htm,.fb2" multiple hidden>
   </main>
 
   <!-- 搜书（正版来源） -->
@@ -170,6 +171,8 @@ if ('serviceWorker' in navigator) {
       <button class="s-go" id="btn-search" aria-label="搜索书目">➤</button>
     </div>
     <button id="btn-anna" class="anna-btn">📚 在 Anna's Archive 搜书 <span>↗</span></button>
+    <div id="anna-fallback" class="hidden" style="padding:8px 20px 0;font-size:13px;color:#888"></div>
+    <div class="aa-mirrors" id="aa-mirrors"><span>镜像：</span><button data-m="https://annas-archive.pk">.pk</button><button data-m="https://annas-archive.gl">.gl</button><button data-m="https://annas-archive.gd">.gd</button><span class="aa-hint">打不开就换一个</span></div>
     <div class="search-note">目录检索会向 Open Library 与 Project Gutenberg 发送关键词。勾选 Gemini 后，描述也会发给 Google Gemini 做检索词扩展。点上方按钮直接在 Anna's Archive 全网搜书。</div>
     <label class="search-ai-toggle"><input id="search-ai" type="checkbox"><span>✦ 用 Gemini 理解我的描述</span></label>
     <div id="search-history" class="search-history"></div>
@@ -425,7 +428,7 @@ if ('serviceWorker' in navigator) {
         <button class="btn-ghost" id="mine-notes" style="width:100%;margin-bottom:8px">📝 划线与笔记</button>
         <button class="btn-ghost" id="mine-bookmarks" style="width:100%">🔖 我的书签</button>
       </div>
-      <div class="ver">Apo v3.75</div>
+      <div class="ver">Apo v3.76</div>
     </div>
   </main>
 
@@ -497,7 +500,7 @@ if ('serviceWorker' in navigator) {
   <div id="import-sheet" class="sheet bottom hidden">
     <div class="grab"></div>
     <div class="sheet-title serif">导入</div>
-    <p class="sheet-sub">支持txt/pdf/epub/mobi/azw/docx/fb2/md</p>
+    <p class="sheet-sub">支持txt/pdf/epub/docx/fb2/md（MOBI/AZW 暂不支持，请先转 EPUB 或 TXT）</p>
     <button class="imp-opt" id="imp-file"><span class="io-ic">📁</span><span class="io-t">从文件导入</span><i>›</i></button>
     <button class="imp-opt" id="imp-url"><span class="io-ic">🌐</span><span class="io-t">从网页导入</span><i>›</i></button>
     <button class="imp-opt" id="imp-text"><span class="io-ic">📝</span><span class="io-t">输入或粘贴文本</span><i>›</i></button>
@@ -586,6 +589,7 @@ if ('serviceWorker' in navigator) {
   <nav id="tabbar" aria-label="主导航">
     <button class="tab cur" data-v="home"><span class="ti">⌂</span>首页</button>
     <button class="tab" data-v="library"><span class="ti">▤</span>书架</button>
+    <button class="tab" data-v="voice"><span class="ti">♪</span>声音</button>
     <button class="tab" data-v="mine"><span class="ti">●</span>我的</button>
   </nav>
 

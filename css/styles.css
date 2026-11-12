@@ -1009,8 +1009,12 @@ button,.icon-btn,.rd-icbtn,.tab,.fp-tool,.fp-skip{color:#111}button:focus-visibl
 .flip-curl-back{background:linear-gradient(180deg,rgba(250,249,247,.96),#fff 48%,rgba(245,243,239,.96));box-shadow:inset 0 0 10px rgba(65,54,38,.1)}
 
 
-/* v3.75：恢复搜书入口（AI 搜书功能需要） */
-#view-voice{display:none!important}
+/* v3.76：声音中心恢复入口（v3.75 只删了搜书的同类隐藏规则，这条漏了） */
+/* v3.76：Anna 镜像切换 */
+.aa-mirrors{display:flex;gap:6px;align-items:center;padding:10px 20px 0;font-size:13px;color:#888}
+.aa-mirrors button{border:1px solid #ddd;background:#fff;border-radius:14px;padding:3px 10px;font-size:13px;color:#333}
+.aa-mirrors button.cur{background:#111;color:#fff;border-color:#111}
+.aa-mirrors .aa-hint{color:#aaa;font-size:12px}
 
 /* v3.69：参考悦读AI结构，桌面书架左侧导航与最近阅读 */
 @media(min-width:960px){

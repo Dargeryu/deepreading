@@ -264,6 +264,8 @@ async function importFile(file){
     const buf=await file.arrayBuffer();
     const fileData=buf.slice(0); // pdf.js 可能转移原 buffer，先复制一份存档
     const ext=file.name.split('.').pop().toLowerCase();
+    // v3.76：MOBI/AZW 是二进制容器，此前被当纯文本硬解，只会产出乱码书——明确拒掉，不再假装支持
+    if(ext==='mobi'||ext==='azw') throw new Error('暂不支持 MOBI / AZW，请先转成 EPUB 或 TXT 再导入');
     let title=file.name.replace(/\.[^.]+$/,''), chapters;
     if (ext==='pdf'){ const r=await parsePDF(buf); chapters=splitChapters(r.text); }
     else if (ext==='epub'){ const r=await parseEPUB(buf); title=r.title||title; chapters=r.chapters; }
@@ -478,25 +480,28 @@ async function downloadBook(b){
 let cur=null, sentEls=[];
 let readerFindMatches=[], readerFindIndex=0, readerFindQuery='', readerMatchSet=new Set();
 /* ---------- v3 导航 ---------- */
-const VIEWS=['splash','home','library','detail','reader','mine','notes','bookchat','bookmarks','stats','search'];
+const VIEWS=['splash','home','library','detail','reader','mine','notes','bookchat','bookmarks','stats','search','voice'];
 let curView='home', returnView='library';
 function go(name){
-  if(name==='voice'||!VIEWS.includes(name)) name='home';
+  if(!VIEWS.includes(name)) name='home';
   curView=name;
   VIEWS.forEach(v=>{ const el=$('#view-'+v); if(el) el.classList.toggle('hidden', v!==name); });
   document.body.classList.toggle('in-reader', name==='reader');
   document.body.classList.toggle('in-splash', name==='splash');
   document.querySelectorAll('#tabbar .tab').forEach(t=>t.classList.toggle('cur', t.dataset.v===name));
   document.querySelectorAll('#sidebar .sb-item').forEach(t=>t.classList.toggle('cur', t.dataset.v===name));
-  document.querySelectorAll('#sidebar .sb-item').forEach(t=>t.classList.toggle('cur', t.dataset.v===name));
-  if(name==='library'){ stopSpeak(); renderShelf(); }
-  else if(name==='home'){ stopSpeak(); renderHome(); }
-  else if(name==='mine'){ stopSpeak(); }
-  else if(name==='notes'){ stopSpeak(); renderNotesList(); }
-  else if(name==='bookchat'){ stopSpeak(); }
-  else if(name==='bookmarks'){ stopSpeak(); renderBookmarksList(); }
-  else if(name==='stats'){ stopSpeak(); renderStatsDetail('week'); }
-  updateMiniPlayer();
+  // v3.76：渲染失败不得掐断导航尾巴（此前 renderStats 一抛错，updateMiniPlayer/scrollTo 全不执行）
+  try{
+    if(name==='library'){ stopSpeak(); renderShelf(); }
+    else if(name==='home'){ stopSpeak(); renderHome(); }
+    else if(name==='mine'){ stopSpeak(); }
+    else if(name==='voice'){ stopSpeak(); if(typeof renderVoice==='function') renderVoice(); }
+    else if(name==='notes'){ stopSpeak(); renderNotesList(); }
+    else if(name==='bookchat'){ stopSpeak(); }
+    else if(name==='bookmarks'){ stopSpeak(); renderBookmarksList(); }
+    else if(name==='stats'){ stopSpeak(); renderStatsDetail('week'); }
+  }catch(e){ console.error('[Apo] 渲染失败：', name, e); }
+  try{ updateMiniPlayer(); }catch(e){ console.error('[Apo] 迷你播放器刷新失败：', e); }
   window.scrollTo(0,0);
 }
 function showView(name){ go(name); } // 兼容旧调用
@@ -746,7 +751,7 @@ function updatePlayer(){
 
 /* ---------- 语音引擎（Web Speech API） ---------- */
 const synth=window.speechSynthesis;
-let voices=[], playing=false, wantPlay=false, resumeTimer=null, wakeLock=null;
+let voices=[], playing=false, wantPlay=false, resumeTimer=null, wakeLock=null, sysTtsErrs=0;
 function refreshVoices(){
   voices=synth?synth.getVoices():[];
   const sel=$('#sel-voice'), sel2=$('#sel-voice2');
@@ -783,7 +788,8 @@ function pickVoice(book){
 const isDialog=t=>/^\s*[“"『「]/.test(t);
 function speakCurrent(){
   if(!cur) return;
-  const s=cur.sentences[cur.progress.idx]; if(!s){return;}
+  // v3.76：进度越界/空句时不再假装"正在播放"——直接停掉并复位播放键
+  const s=cur.sentences[cur.progress.idx]; if(!s){ wantPlay=false; setPlayUI(); return; }
   // v3.6 多角色：按说话人选音色（启发式识别）
   const castT=(typeof castVoiceFor==='function')?castVoiceFor(s.t,cur):null;
   const _eng=store.get('tts_engine');
@@ -805,11 +811,14 @@ function speakCurrent(){
   }
   if(v) u.voice=v;
   u.rate=(cur.rate/100)*pr.rate; u.pitch=pr.pitch;
-  u.onend=()=>{ if(!wantPlay) return;
+  u.onend=()=>{ if(!wantPlay) return; sysTtsErrs=0;
     if(cur.progress.idx<cur.total-1){ cur.progress.idx++; markActive(); saveProgress(); speakCurrent(); }
     else { wantPlay=false; setPlayUI(); saveProgress(); toast('本章播完'); }
   };
-  u.onerror=e=>{ if(e.error!=='interrupted'&&wantPlay){ setTimeout(()=>{if(wantPlay)speakCurrent();},600); } };
+  // v3.76：系统语音持续出错时最多重试 3 次，之后停掉并明说，不再每 600ms 无限重试
+  u.onerror=e=>{ if(e.error!=='interrupted'&&wantPlay){ sysTtsErrs++;
+    if(sysTtsErrs>=3){ wantPlay=false; setPlayUI(); toast('系统语音出错，已停止朗读：换个音色或重启 App 再试'); }
+    else setTimeout(()=>{if(wantPlay)speakCurrent();},600); } };
   synth.speak(u);
   markActive();
   clearInterval(resumeTimer); // Chrome 长文本暂停 bug 兜底
@@ -838,7 +847,7 @@ async function ensureWakeLock(){
 function releaseWakeLock(){ if(wakeLock){wakeLock.release().catch(()=>{});wakeLock=null;} }
 function play(){
   if(!cur){ toast('先选一本书'); return; }
-  wantPlay=true; setPlayUI(); ensureWakeLock(); startAmbience(); speakCurrent(); scrollToActive();
+  wantPlay=true; sysTtsErrs=0; setPlayUI(); ensureWakeLock(); startAmbience(); speakCurrent(); scrollToActive();
 }
 function stopSpeak(){ wantPlay=false; setPlayUI(); clearInterval(resumeTimer); releaseWakeLock();
   Ambience.stop(); CustomTTS.stop();
@@ -1422,7 +1431,7 @@ async function scanDownloads(){
     for await(const entry of h.values()){
       if(entry.kind!=='file') continue;
       const nm=entry.name||'';
-      if(!/\.(epub|pdf|txt|mobi|azw|fb2)$/i.test(nm)) continue;
+      if(!/\.(epub|pdf|txt|fb2)$/i.test(nm)) continue;
       if(seenSet.has(nm)) continue;
       try{
         const f=await entry.getFile();
@@ -1488,11 +1497,12 @@ function fmtDur(sec){
 function renderStats(){
   const s=getStat(), k=statKey(new Date());
   const today=s.days[k]||0, target=s.target*60;
-  $('#stat-time').textContent=fmtDur(today);
-  $('#stat-target').textContent=s.target+'分钟';
-  $('#stat-streak').textContent=`🔥${s.streak}天`;
-  const c=327, off=c*(1-Math.min(1,today/target));
-  $('#stat-ring-fg').style.strokeDashoffset=off;
+  // v3.76：逐项判空——v3.69 删了 stat-streak 元素后这里每次必抛错，圆环永远 0%
+  const tEl=$('#stat-time'); if(tEl) tEl.textContent=fmtDur(today);
+  const gEl=$('#stat-target'); if(gEl) gEl.textContent=s.target+'分钟';
+  const sEl=$('#stat-streak'); if(sEl) sEl.textContent=`🔥${s.streak}天`;
+  const ring=$('#stat-ring-fg');
+  if(ring){ const c=327, off=c*(1-Math.min(1,today/target)); ring.style.strokeDashoffset=off; }
 }
 $('#stat-goal').onclick=()=>{
   const s=getStat();
@@ -1583,8 +1593,11 @@ function gutenbergCard(b){
   return `<article class="sr search-book-card"><div class="search-cover search-cover-empty">公版</div><div class="search-book-main"><div class="t">${title}</div><div class="a">${authors}</div><div class="search-book-meta">Project Gutenberg · 公版书目</div><div class="ops"><a class="btn-ghost sm" href="${page}" target="_blank" rel="noopener noreferrer">查看书目 ↗</a>${epub?`<a class="btn-primary sm" href="${esc(epub)}" target="_blank" rel="noopener noreferrer">下载 EPUB</a>`:''}</div></div></article>`;
 }
 async function runBookSearch(){
+  // v3.76：点搜索先直达 Anna's Archive（用户原令），站内书目结果随后在下方继续出
   const q=$('#search-q').value.trim(); if(!q){toast('输入书名、作者或找书描述');return;}
-  rememberBookSearch(q); await doAiSearch(q);
+  rememberBookSearch(q);
+  searchAnnasArchive();
+  await doAiSearch(q);
 }
 /* Anna's Archive 镜像 */
 const AA_MIRRORS=['https://annas-archive.pk','https://annas-archive.gl','https://annas-archive.gd'];
@@ -1601,14 +1614,23 @@ async function searchAnnasArchive(){
     try{
       const expanded=await expandBookSearchQuery(q);
       if(expanded.length) query=expanded[0];
-    }catch(e){}
+    }catch(e){ toast('AI 扩展失败，已按原关键词搜索'); }
   }
   const url=aaBase()+'/search?q='+encodeURIComponent(query);
   try{ const a=document.createElement('a'); a.href=url; a.target='_blank'; a.rel='noopener'; document.body.appendChild(a); a.click(); a.remove(); }catch(e){ location.href=url; }
+  // v3.76：弹窗拦截不会抛错，a.click 静默失败时用户只看到"点了没反应"——留一条手动打开的链接兜底
+  const fb=$('#anna-fallback');
+  if(fb){ fb.innerHTML=`没自动打开？<a href="${url}" target="_blank" rel="noopener" style="color:#111;text-decoration:underline">点这里手动打开 Anna's Archive ↗</a>`; fb.classList.remove('hidden'); }
   toast('正在打开 Anna\'s Archive…');
 }
 $('#btn-anna').onclick=searchAnnasArchive;
+$('#search-back').onclick=()=>go('home');
 $('#home-search').onclick=()=>{ go('search'); setTimeout(()=>$('#search-q').focus(),80); };
+$('#home-search').addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go('search'); setTimeout(()=>$('#search-q').focus(),80); } });
+/* v3.76：Anna 镜像切换（此前三镜像写在代码里，App 内无路可换，.pk 被墙即全死） */
+function renderAaMirrors(){ document.querySelectorAll('#aa-mirrors button').forEach(b=>b.classList.toggle('cur', aaBase()===b.dataset.m)); }
+document.querySelectorAll('#aa-mirrors button').forEach(b=>b.onclick=()=>{ store.set('aa_mirror', b.dataset.m); renderAaMirrors(); toast('已切换镜像：'+b.dataset.m.replace('https://annas-archive','')); });
+renderAaMirrors();
 async function doAiSearch(q){
   const box=$('#search-results'); box.innerHTML='<div class="search-loading">正在查找书目…</div>';
   const useAI=$('#search-ai')?.checked;
@@ -1669,7 +1691,7 @@ $('#ts-theme2').addEventListener('change',e=>{store.set('ts_theme',e.target.valu
 
 /* ---------- 设置持久化 ---------- */
 function initSettings(){
-const bind=(id,k)=>{ const el=$(id); el.value=store.get(k,el.value);
+const bind=(id,k)=>{ const el=$(id); if(!el) return; el.value=store.get(k,el.value);
 el.addEventListener('change',()=>store.set(k,el.value));};
 bind('#sel-engine','tts_engine'); bind('#tts-endpoint','tts_ep'); bind('#tts-key','tts_key');
 bind('#tts-voice','tts_voice'); bind('#gemini-key','gemini_key'); bind('#gemini-model','gemini_model');
@@ -1824,19 +1846,8 @@ async function renderHome(){
 $('#btn-mine').onclick=()=>go('mine');
 $('#mine-back').onclick=()=>go('home');
 $('#banner-btn').onclick=()=>{ go('library'); setTimeout(()=>openImportSheet(),300); };
-/* 横幅轮播 */
-let bannerIdx=0;
-function bannerGo(i){
-  const n=$('#banner-slides').children.length;
-  bannerIdx=(i+n)%n;
-  $('#banner-slides').style.transform=`translateX(-${bannerIdx*100}%)`;
-  $('#banner-dots').querySelectorAll('i').forEach((d,k)=>d.classList.toggle('on',k===bannerIdx));
-}
-setInterval(()=>{ if(curView==='home') bannerGo(bannerIdx+1); },5000);
-$('#banner').onclick=()=>{
-  if(bannerIdx===1){ toast('打开一本书后，点播放条上的 ✦ 使用 AI 助手'); }
-  else openImportSheet();
-};
+/* v3.76：横幅是单张静态图，旧轮播代码引用的 #banner-slides/#banner-dots 根本不存在，每 5 秒抛一次错，已整段删除 */
+$('#banner').onclick=()=>openImportSheet();
 
 /* ---------- 书籍详情 ---------- */
 let detailId=null;
