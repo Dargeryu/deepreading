@@ -19,8 +19,10 @@ function pageHash(){
   const el = $('#reader-pages');
   const w = el ? Math.round(el.clientWidth) : 0;
   const h = el ? Math.round(el.clientHeight) : 0;
+  const ps = el ? getComputedStyle(el) : null;
+  const pad = ps ? [ps.paddingTop, ps.paddingRight, ps.paddingBottom, ps.paddingLeft].join(',') : '';
   return [store.get('ts_size','18'), store.get('ts_lh','18'),
-          store.get('ts_font','serif'), w, h, 'pg2'].join('|');
+          store.get('ts_font','serif'), w, h, pad, 'pg4'].join('|'); // v3.85：padding 也进指纹，改 padding 不用再手动升版；pg3 缓存按旧 padding 算的页作废
 }
 
 /* 二分：句子 g 位于哪一页（0-based） */
@@ -74,7 +76,7 @@ const CH_TITLE_CSS =
 async function paginateBook(book, hash){
   const { m, art, pageW } = buildMeasurer();
   const starts = [];
-  let lastPage = -1, ci = -1, baseLeft = -1, measCols = 1;
+  let lastPage = -1, ci = -1, baseLeft = null, measCols = 1;
   const N = book.total, SLICE = 400;
   try{
     for(let s = 0; s < N; s += SLICE){
@@ -102,7 +104,7 @@ async function paginateBook(book, hash){
       // getBoundingClientRect().left 相对首句 rect 换算列号。
       for(const [sp, gi] of spans){
         const r = sp.getBoundingClientRect();
-        if(baseLeft < 0) baseLeft = r.left;
+        if(baseLeft === null) baseLeft = r.left; // v3.85 修：测量器在 left:-100000px，rect.left 全是负数，旧判据 <0 每句都重置 baseLeft，整书恒算 1 页
         const p = Math.max(0, Math.round((r.left - baseLeft) / pageW));
         if(p > lastPage){ starts.push(gi); lastPage = p; }
       }

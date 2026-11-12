@@ -50,7 +50,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">●</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.84</div>
+    <div class="sb-ver">Apo v3.85</div>
   </div>
 </aside>
 <div id="app">
@@ -68,7 +68,7 @@ if ('serviceWorker' in navigator) {
     <header class="rd-top">
       <div class="rd-logo">Apo</div>
       <div class="rd-top-icons">
-        <button class="rd-icbtn" id="btn-home-settings" title="设置" aria-label="设置"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2.2" fill="#fff"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="15" cy="17" r="2.2" fill="#fff"/></svg></button>
+        <button class="rd-icbtn" id="btn-home-settings" title="我的" aria-label="我的"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2.2" fill="#fff"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="15" cy="17" r="2.2" fill="#fff"/></svg></button>
         <button class="rd-avatar" id="btn-mine" title="我的" style="font-size:12px">忆宁</button>
       </div>
     </header>
@@ -76,9 +76,9 @@ if ('serviceWorker' in navigator) {
 
     <div class="rd-banner" id="banner">
       <button class="rb-x" id="banner-x" aria-label="关闭横幅">✕</button>
-      <div class="rb-slides" id="banner-slides">
+      <div class="rb-slides">
         <div class="rb-slide cur" data-s="0">
-          <div class="rb-t" id="banner-title">连续阅读打卡</div>
+          <div class="rb-t">连续阅读打卡</div>
           <div class="rb-d" id="banner-sub">今天还没开始读，点下面开始今日阅读。</div>
           <button class="rb-btn" id="banner-btn">去阅读 ›</button>
         </div>
@@ -97,7 +97,7 @@ if ('serviceWorker' in navigator) {
       <div class="rd-hscroll" id="cont-list"></div>
     </div>
 
-    <div id="classics-wrap">
+    <div>
       <div class="rd-sec"><h3>经典必读</h3><button class="more" id="classics-more">›</button></div>
       <div class="rd-hscroll" id="classics-list"></div>
     </div>
@@ -157,7 +157,7 @@ if ('serviceWorker' in navigator) {
           <button id="recent-next" class="recent-next" aria-label="查看更多最近阅读">›</button>
         </div>
       </section>
-      <section id="all-books-section" class="shelf-section all-books-section">
+      <section class="shelf-section">
         <div id="cat-bar" aria-label="书架分类"></div>
         <div id="shelf-has">
           <div id="shelf-list"></div>
@@ -528,6 +528,16 @@ if ('serviceWorker' in navigator) {
           <label><span class="k">ID 路径</span><input id="clone-id-path" class="txt" value="voice_id"></label>
         </div>
         <p class="hint">ElevenLabs：POST /v1/voices/add（multipart：name + files），Key 为 xi-api-key。自定义：按服务商文档填接口与字段，返回 JSON 中 voice id 的路径（如 data.voice_id）。克隆出的音色走「自定义 TTS API」引擎朗读。</p>
+      </div>
+      <div class="set-group">
+        <div class="sec">导入</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn-ghost sm" id="btn-auto-import">选择下载文件夹并自动导入</button>
+          <span class="sub" id="auto-import-state"></span>
+        </div>
+        <p class="hint">桌面版 Chrome/Edge 可选一个文件夹，以后下载进这个文件夹的新书会自动上架。手机浏览器不支持文件夹监听，可用导入页手动导入。</p>
+        <label><span class="k">OCR Key</span><input id="ocr-key" type="password" class="txt" placeholder="ocr.space 免费 Key，不填用公共演示 Key"></label>
+        <p class="hint">拍照识字走 ocr.space 免费接口；不填 Key 时用公共演示 Key（有次数限制），想多用去 ocr.space 免费注册一个填进来，只存本机。</p>
       </div>
       <div class="set-group">
         <div class="sec">Gemini 辅助阅读</div>

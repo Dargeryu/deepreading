@@ -829,8 +829,6 @@ function updatePlayer(){
   const rm=$('#rp-remaining'); if(rm) rm.textContent='-'+fmtClock(tm.total-tm.el);
   const ch=cur.chapters[chapterOf(cur.progress.idx)];
   const rh=$('#reader-chapter'); if(rh) rh.textContent=ch?ch.title:cur.title;
-  const title=$('#reader-title'); if(title) title.textContent=cur.title||'';
-  const type=$('#reader-format'); if(type) type.textContent=(cur.format||'TXT').toUpperCase();
   const spt=$('#rp-speed-v');
   if(spt) spt.textContent=fmtRate(cur.rate/100);
   setCoverEl($('#rp-cover'), cur, 6);
@@ -1313,7 +1311,8 @@ $('#badges-back').onclick = () => go('mine');
 $('#btn-invite').onclick = () => shareApo();
 $('#st-share').onclick = () => shareApo();
 $('#st-bookmarks').onclick = () => go('bookmarks');
-$('#st-settings').onclick = () => openSheet('settings-sheet');
+$('#st-settings').onclick = async () => { openSheet('settings-sheet'); const h=await sysGet('dlHandle').catch(()=>null); const el=$('#auto-import-state'); if(el) el.textContent=h?'已开启':''; };
+$('#btn-auto-import').onclick = async () => { await enableAutoImport(); const h=await sysGet('dlHandle').catch(()=>null); const el=$('#auto-import-state'); if(el) el.textContent=h?'已开启':''; };
 $('#btn-settings-close').onclick = () => closeSheets();
 $('#st-about').onclick = () => { const v=document.querySelector('#about-ver'); if(v) v.textContent=document.querySelector('.sb-ver')?.textContent||''; openSheet('about-sheet'); };
 $('#btn-about-close').onclick = () => closeSheets();
@@ -1460,6 +1459,7 @@ $('#ocr-input').onchange = async e => {
     fd.append('file', f);
     fd.append('language', 'chs');
     fd.append('isOverlayRequired', 'false');
+    fd.append('apikey', (store.get('ocr_key')||'').trim() || 'helloworld'); // v3.85 修：以前没传 apikey，ocr.space 直接拒掉；默认用公共演示 Key， heavy 用户去设置里填自己的免费 Key
     // ocr.space 免费接口
     const r = await fetch('https://api.ocr.space/parse/image', { method: 'POST', body: fd });
     if(!r.ok) throw new Error('OCR 请求失败 ' + r.status);
@@ -1647,7 +1647,7 @@ setInterval(()=>{ if(document.hidden) return;
 /* ================= v3.5：导入弹窗 ================= */
 function openSheet(id){ $('#scrim').classList.remove('hidden'); $('#'+id).classList.remove('hidden'); }
 function closeSheets(){ $('#scrim').classList.add('hidden');
-  ['import-sheet','url-sheet','text-sheet','clone-sheet','cast-sheet','voice-sheet','about-sheet','book-menu','typeset-sheet','settings-sheet'].forEach(id=>{const el=$('#'+id); if(el) el.classList.add('hidden');});
+  ['import-sheet','url-sheet','text-sheet','clone-sheet','cast-sheet','voice-sheet','about-sheet','book-menu','typeset-sheet','settings-sheet','typeset','aisheet'].forEach(id=>{const el=$('#'+id); if(el) el.classList.add('hidden');});
   if(typeof stopRecord==='function'){ try{stopRecord();}catch(e){} }
   if(typeof discardCloneSource==='function'){ try{discardCloneSource();}catch(e){} } }
 function openImportSheet(){ openSheet('import-sheet'); }
@@ -1837,7 +1837,7 @@ el.addEventListener('change',()=>store.set(k,el.value));};
 bind('#sel-engine','tts_engine'); bind('#tts-endpoint','tts_ep'); bind('#tts-key','tts_key');
 bind('#tts-voice','tts_voice'); bind('#gemini-key','gemini_key'); bind('#gemini-model','gemini_model');
 bind('#sel-clone-provider','clone_provider'); bind('#clone-key','clone_key');
-bind('#eleven-key','eleven_key');
+bind('#eleven-key','eleven_key'); bind('#ocr-key','ocr_key');
 bind('#clone-ep','clone_ep'); bind('#clone-field-name','clone_field_name');
 bind('#clone-field-file','clone_field_file'); bind('#clone-id-path','clone_id_path');
 /* v3.14 起：引擎参数分组常显，不再按引擎选择折叠，避免找不到 Key 输入框/测试按钮 */
@@ -1950,14 +1950,6 @@ try{ initSettings(); applyType();}catch(e){}
 $('#btn-start').onclick=()=>{ try{store.set('splash_done','1');}catch(e){} go('home'); };
 
 /* ---------- 首页 ---------- */
-function greetWord(){
-  const h=new Date().getHours();
-  if(h<6) return '夜深了，';
-  if(h<12) return '早上好，';
-  if(h<14) return '中午好，';
-  if(h<18) return '下午好，';
-  return '晚上好，';
-}
 /* ================= v3.5：Readify 式首页 ================= */
 function rdCardHTML(b){
   const pct=Math.round(100*b.progress.idx/Math.max(1,b.total));

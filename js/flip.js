@@ -347,56 +347,6 @@ function tweenCurl(from, to, dur, done){
   };
   Flip.raf = requestAnimationFrame(step);
 }
-/* 开始一次翻页：静层先切到目标页，叶子盖住显示当前页 */
-function beginLeaf(dir){
-  const el = pagesEl();
-  Flip.W = el.clientWidth || Flip.W || 1;
-  const W = Flip.W;
-  Flip.dir = dir; Flip.fromPage = PG.page; Flip.toPage = PG.page + dir; Flip.progress = 0;
-  ensureWindowForPage(Flip.toPage);                       // 目标页句子必须已渲染
-  el.scrollTo({ left: localPageOf(Flip.toPage) * W, behavior: 'auto' }); // 静层=目标页
-  const src = el.cloneNode(true);                          // 叶子=当前页
-  src.removeAttribute('id'); src.className = 'flip-src';
-  src.style.transform = ''; src.style.transition = '';       // 清掉可能残留的边缘橡皮筋位移
-  const leaf = document.createElement('div');
-  leaf.className = 'flip-leaf';
-  leaf.style.transformOrigin = dir === 1 ? 'left center' : 'right center';
-  leaf.appendChild(src);
-  try{ // 叶子背面 = 纸色，转过 90° 后不再看到镜像文字
-    leaf.style.background = getComputedStyle(document.getElementById('content')).backgroundColor || '#fff';
-  }catch(_){}
-  const shade = document.createElement('div');
-  shade.className = 'flip-shade';
-  if(dir === -1) shade.style.transform = 'scaleX(-1)';
-  leaf.appendChild(shade);
-  el.appendChild(leaf);
-  src.scrollLeft = localPageOf(Flip.fromPage) * W;          // 插入后定位才生效
-  const spine = document.createElement('div');
-  spine.className = 'flip-spine ' + (dir === 1 ? 'l' : 'r');
-  el.appendChild(spine);
-  const fx = document.createElement('div'); fx.className = 'flip-fx'; el.appendChild(fx);
-  const hl = document.createElement('div'); hl.className = 'flip-hl'; el.appendChild(hl);
-  Flip.leaf = leaf; Flip.shade = shade; Flip.spine = spine;
-  Flip.fx = fx; Flip.hl = hl;
-  Flip.active = true;
-  Flip._activeSince = Date.now();
-  setAngle(0);
-}
-
-function setAngle(deg){
-  if(!Flip.leaf) return;
-  // 只写 transform/opacity（GPU 合成），不碰 left 等布局属性
-  Flip.leaf.style.transform = 'rotateY(' + deg + 'deg)';
-  const p = Math.min(1, Math.abs(deg) / 180);
-  const s = Math.sin(p * Math.PI);
-  if(Flip.shade) Flip.shade.style.opacity = (s * 0.6).toFixed(3);
-  if(Flip.spine) Flip.spine.style.opacity = (s * 0.85).toFixed(3);
-  // 卷曲前锋的投影位置：自由边投影 x = W*cos(θ)
-  const W = Flip.W || 1, proj = Flip.dir === 1 ? W * Math.cos(p * Math.PI) : W - W * Math.cos(p * Math.PI);
-  if(Flip.fx){ Flip.fx.style.transform = 'translateX(' + (proj - 55).toFixed(1) + 'px)'; Flip.fx.style.opacity = (s * 0.5).toFixed(3); }
-  if(Flip.hl){ Flip.hl.style.transform = 'translateX(' + (Flip.dir === 1 ? proj - 70 : proj).toFixed(1) + 'px)'; Flip.hl.style.opacity = (s * 0.65).toFixed(3); }
-}
-
 function edgeDrag(dx){
   const el = pagesEl(), W = Flip.W || 1;
   const x = Math.max(-1, Math.min(1, dx / (W * 0.6)));
@@ -426,19 +376,6 @@ function flushDrag(){
   if(!Flip.dragRaf) return;
   cancelAnimationFrame(Flip.dragRaf); Flip.dragRaf = 0;
   if(Flip.active && Flip.dragging && !Flip.edge) curlDragTo(Flip.pendingDx);
-}
-
-function tween(from, to, dur, done){
-  const t0 = performance.now();
-  cancelAnimationFrame(Flip.raf);
-  const step = now => {
-    const t = Math.min(1, (now - t0) / dur);
-    const e = 1 - Math.pow(1 - t, 3);                      // easeOutCubic
-    setAngle(from + (to - from) * e);
-    if(t < 1) Flip.raf = requestAnimationFrame(step);
-    else done();
-  };
-  Flip.raf = requestAnimationFrame(step);
 }
 
 /* 看门狗：翻页动画卡住超过 3 秒强制重置，防止滑动彻底失灵 */

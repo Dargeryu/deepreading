@@ -107,21 +107,6 @@ function splitForAI(text, maxLen){
 
 let tsCancelled = false;
 
-async function aiProofread(text, onProgress){
-  const key = store.get('gemini_key');
-  if(!key) throw new Error('NO_KEY');
-  const chunks = splitForAI(text);
-  const out = [];
-  for(let i=0; i<chunks.length; i++){
-    if(tsCancelled) throw new Error('CANCELLED');
-    if(onProgress) onProgress(i+1, chunks.length);
-    const res = await geminiAsk(AI_PROOF_PROMPT(chunks[i]));
-    out.push(res.trim());
-    if(i < chunks.length-1) await new Promise(r=>setTimeout(r, 600)); // 限流缓冲
-  }
-  return out.join('\n');
-}
-
 /* ================= 主流程 ================= */
 function bookChapterTexts(book){
   return book.chapters.map((ch, i)=>{
