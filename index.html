@@ -50,7 +50,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">●</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.95</div>
+    <div class="sb-ver">Apo v3.96</div>
   </div>
 </aside>
 <div id="app">
@@ -209,6 +209,7 @@ if ('serviceWorker' in navigator) {
         <button id="btn-reader-more" class="icon-btn" title="更多">···</button>
       </div>
     </header>
+    <div id="ai-typeset-status" class="hidden"><span class="ai-spin">↻</span><span id="ai-typeset-status-t">AI排版中…</span></div>
     <div id="chapter-drawer" class="drawer hidden">
       <div class="drawer-head"><span class="serif">目录</span> <button id="btn-chapters-close" class="btn-ghost">✕</button></div>
       <div class="cd-seg" role="tablist">
@@ -478,13 +479,47 @@ if ('serviceWorker' in navigator) {
       </div>
     </div>
     <div class="ts-sec">
-      <div class="ts-label">翻页</div>
-      <div class="ts-pills" id="ts-flip-pills">
-        <button data-flip="curl">3D 卷页</button><button data-flip="slide">丝滑滑动</button><button data-flip="none">无动画</button>
+      <div class="ts-label">翻页方式</div>
+      <div class="ts-flip-cards" id="ts-flip-pills">
+        <button data-flip="curl"><span class="flip-ic">📖</span>仿真翻页</button><button data-flip="slide"><span class="flip-ic">↔</span>左右滑动</button><button data-flip="none"><span class="flip-ic">▢</span>无动画</button>
       </div>
     </div>
+    <button class="ts-row" id="ts-more-row"><span class="ts-label">更多设置</span><span class="ts-chev">›</span></button>
     <button class="btn-primary sm" id="btn-reflow" style="margin-top:12px">✦ 智能重排</button>
     <p class="hint" style="padding:6px 0 0">按章节重算分段：段落粘在一起的书会重新分好段，章节结构不变。</p>
+  </div>
+
+  <!-- 更多设置（图五） -->
+  <div id="more-settings-sheet" class="sheet hidden">
+    <div class="sheet-head"><span><button id="ms-back" class="btn-ghost">‹</button> <span class="serif">更多设置</span></span> <button id="btn-ms-close" class="btn-ghost">✕</button></div>
+    <div class="ms-sec">排版</div>
+    <div class="ms-row"><div><div class="ms-t">两端对齐</div></div><button class="ms-switch on" id="ms-justify" role="switch" aria-checked="true"><span class="ms-knob"></span></button></div>
+    <div class="ms-sec">翻页操作</div>
+    <div class="ms-row"><div><div class="ms-t">点击翻页</div><div class="ms-sub">关闭时仅支持滑动翻页</div></div><button class="ms-switch on" id="ms-tapflip" role="switch" aria-checked="true"><span class="ms-knob"></span></button></div>
+    <div class="ms-row"><div><div class="ms-t">单手模式</div><div class="ms-sub">点击左侧也翻至下页</div></div><button class="ms-switch" id="ms-onehand" role="switch" aria-checked="false"><span class="ms-knob"></span></button></div>
+    <div class="ms-row"><div><div class="ms-t">音量键翻页</div><div class="ms-sub">网页版暂不支持</div></div><button class="ms-switch" id="ms-volkey" role="switch" aria-checked="false"><span class="ms-knob"></span></button></div>
+    <div class="ms-sec">通用</div>
+    <button class="ms-row ms-link" id="ms-display"><div><div class="ms-t">阅读显示</div></div><span class="ms-chev">›</span></button>
+    <button class="ms-row ms-link" id="ms-lock"><div><div class="ms-t">锁屏时间</div></div><span class="ms-sub">跟随系统 ›</span></button>
+  </div>
+
+  <!-- 播放设置（图七） -->
+  <div id="playback-sheet" class="sheet hidden">
+    <div class="sheet-head"><span class="serif">播放设置</span> <button id="btn-pb-close" class="btn-ghost">✕</button></div>
+    <div class="pb-card">
+      <div class="pb-row"><span class="pb-t">⏱ 倍速</span><b id="pb-rate-v">1.0x</b></div>
+      <div class="pb-marks"><span>0.5x</span><span>1.0x</span><span>1.5x</span><span>2.0x</span><span>2.5x</span><span>3.0x</span></div>
+      <input type="range" id="pb-rate" min="0.5" max="3" step="0.25" value="1" aria-label="倍速">
+    </div>
+    <div class="pb-card">
+      <div class="pb-row"><span class="pb-t">音质选择 💎</span><span class="pb-sub">高清音质暂未解锁</span></div>
+      <div class="pb-seg"><button id="pb-q-hi" disabled>高音质 ⓘ</button><button id="pb-q-lo" class="cur">普通音质</button></div>
+      <p class="pb-sub" style="margin:8px 2px 0">16K普通音质，流量消耗少</p>
+    </div>
+    <button class="pb-rowcard" id="pb-sleep"><div><div class="pb-t">定时关闭</div><div class="pb-sub">设置播放时间，到时自动暂停</div></div><span class="ms-chev">›</span></button>
+    <div class="pb-rowcard" id="pb-loop"><div><div class="pb-t">循环播放</div><div class="pb-sub">读完从头再读一遍</div></div><button class="ms-switch" id="pb-loop-sw" role="switch" aria-checked="false"><span class="ms-knob"></span></button></div>
+    <button class="pb-rowcard" id="pb-amb"><div><div class="pb-t">背景乐</div><div class="pb-sub">与其他音乐APP一起播放</div></div><span class="ms-chev">›</span></button>
+    <button class="pb-rowcard" id="pb-disp"><div><div class="pb-t">听书显示设置</div><div class="pb-sub">播放自动跟随、段落高亮等</div></div><span class="ms-chev">›</span></button>
   </div>
 
   <!-- AI 助手 -->

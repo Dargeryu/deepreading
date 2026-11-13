@@ -937,7 +937,7 @@ function speakCurrent(){
   }
   u.onend=()=>{ if(!wantPlay) return; sysTtsErrs=0;
     if(cur.progress.idx<cur.total-1){ cur.progress.idx++; markActive(); saveProgress(); speakCurrent(); }
-    else { wantPlay=false; setPlayUI(); saveProgress(); toast('本章播完'); }
+    else { if(store.get('loop_play','0')==='1'){ cur.progress.idx=0; markActive(); saveProgress(); toast('循环播放：从头再读'); speakCurrent(); } else { wantPlay=false; setPlayUI(); saveProgress(); toast('本章播完'); } }
   };
   // v3.76：系统语音持续出错时最多重试 3 次，之后停掉并明说，不再每 600ms 无限重试
   u.onerror=e=>{ if(e.error!=='interrupted'&&wantPlay){ sysTtsErrs++;
@@ -1005,7 +1005,7 @@ function cycleSpeed(){
 $('#rp-play').onclick=()=>{ if(!cur)return; wantPlay?stopSpeak():play(); };
 $('#rp-back').onclick=()=>skipSeconds(-15);
 $('#rp-fwd').onclick=()=>skipSeconds(15);
-$('#rp-speed').onclick=cycleSpeed;
+$('#rp-speed').onclick=()=>{ syncPlaybackSheet(); $('#playback-sheet').classList.remove('hidden'); $('#scrim').classList.remove('hidden'); };
 $('#rp-cover').onclick=()=>{ if(typeof renderVoiceSheet==='function') renderVoiceSheet(); $('#voice-sheet').classList.remove('hidden'); $('#scrim').classList.remove('hidden'); };
 $('#rp-seek').addEventListener('change',e=>{ if(!cur)return; seekTo(Math.round(e.target.value/1000*(cur.total-1))); });
 $('#btn-back').onclick=()=>go(returnView);
@@ -1071,6 +1071,55 @@ $('#pdf-to-text').onclick=closePdfView;
 $('#pdf-prev').onclick=async()=>{ if(!pdfDoc||pdfPage<=1) return; pdfPage--; await renderPdfPage(); };
 $('#pdf-next').onclick=async()=>{ if(!pdfDoc||pdfPage>=pdfDoc.numPages) return; pdfPage++; await renderPdfPage(); };
 $('#btn-reader-typeset').onclick=()=>$('#typeset').classList.remove('hidden');
+
+/* ---------- v3.96 更多设置 & 播放设置 ---------- */
+function applyJustify(){ const c=$('#content'); if(c) c.style.textAlign = store.get('ts_justify','1')==='1' ? 'justify' : 'left'; }
+function syncMoreSettings(){
+  const setSw=(id,on)=>{ const b=$(id); if(!b) return; b.classList.toggle('on',on); b.setAttribute('aria-checked',on?'true':'false'); };
+  setSw('#ms-justify', store.get('ts_justify','1')==='1');
+  setSw('#ms-tapflip', store.get('tap_flip','1')==='1');
+  setSw('#ms-onehand', store.get('one_hand','0')==='1');
+  setSw('#ms-volkey', store.get('volkey_flip','0')==='1');
+}
+function openMoreSettings(){ closeSheets(); syncMoreSettings(); $('#more-settings-sheet').classList.remove('hidden'); $('#scrim').classList.remove('hidden'); }
+function syncPlaybackSheet(){
+  if(!cur) return;
+  const r=cur.rate/100; const s=$('#pb-rate'); if(s) s.value=r;
+  const v=$('#pb-rate-v'); if(v) v.textContent=r.toFixed(2).replace(/0$/,'')+'x';
+  const lp=$('#pb-loop-sw'); if(lp){ const on=store.get('loop_play','0')==='1'; lp.classList.toggle('on',on); lp.setAttribute('aria-checked',on?'true':'false'); }
+}
+function setRateFromSlider(v){
+  if(!cur) return; cur.rate=Math.round(v*100);
+  const el=$('#rng-rate'); if(el) el.value=cur.rate;
+  const rv=$('#rate-val'); if(rv) rv.textContent=fmtRate(v);
+  saveBook(); if(wantPlay) speakCurrent(); syncFullPlayer(); updatePlayer(); syncPlaybackSheet();
+}
+(function initPanels396(){
+  const bind=()=>{
+    const tsMore=$('#ts-more-row'); if(tsMore) tsMore.onclick=()=>{ $('#typeset').classList.add('hidden'); openMoreSettings(); };
+    const msBack=$('#ms-back'); if(msBack) msBack.onclick=()=>{ $('#more-settings-sheet').classList.add('hidden'); $('#typeset').classList.remove('hidden'); };
+    const msClose=$('#btn-ms-close'); if(msClose) msClose.onclick=()=>{ closeSheets(); };
+    const sw=(id,key,fn,def)=>{ const b=$(id); if(!b) return; b.onclick=()=>{ const on=store.get(key,def||'1')!=='1'; store.set(key,on?'1':'0'); b.classList.toggle('on',on); b.setAttribute('aria-checked',on?'true':'false'); if(fn) fn(on); }; };
+    sw('#ms-justify','ts_justify',on=>{ applyJustify(); });
+    sw('#ms-tapflip','tap_flip');
+    sw('#ms-onehand','one_hand',null,'0');
+    const vk=$('#ms-volkey'); if(vk) vk.onclick=()=>{ toast('网页版不支持音量键翻页'); };
+    const md=$('#ms-display'); if(md) md.onclick=()=>{ $('#more-settings-sheet').classList.add('hidden'); $('#typeset').classList.remove('hidden'); };
+    const ml=$('#ms-lock'); if(ml) ml.onclick=()=>{ toast('锁屏时间跟随系统设置'); };
+    const pbClose=$('#btn-pb-close'); if(pbClose) pbClose.onclick=()=>{ closeSheets(); };
+    const pbRate=$('#pb-rate'); if(pbRate) pbRate.addEventListener('input',e=>setRateFromSlider(parseFloat(e.target.value)));
+    const qhi=$('#pb-q-hi'); if(qhi) qhi.onclick=()=>toast('高清音质暂未解锁');
+    const sl=$('#pb-sleep'); if(sl) sl.onclick=()=>{ let ni=SLEEPS.indexOf(sleepMin)+1; if(ni>=SLEEPS.length) ni=0; setSleep(SLEEPS[ni]); toast(SLEEPS[ni]?`定时关闭：${SLEEPS[ni]} 分钟后暂停`:'定时关闭：已关闭'); };
+    const lp=$('#pb-loop-sw'); const lpRow=$('#pb-loop');
+    const toggleLoop=()=>{ const on=store.get('loop_play','0')!=='1'; store.set('loop_play',on?'1':'0'); if(lp){ lp.classList.toggle('on',on); lp.setAttribute('aria-checked',on?'true':'false'); } toast(on?'循环播放已开启':'循环播放已关闭'); };
+    if(lp) lp.onclick=e=>{ e.stopPropagation(); toggleLoop(); };
+    if(lpRow) lpRow.onclick=()=>toggleLoop();
+    const am=$('#pb-amb'); if(am) am.onclick=()=>{ const opts=['','rain','cafe','white','forest']; const names={rain:'雨声',cafe:'咖啡馆',white:'白噪音',forest:'森林夜晚'}; const sel=$('#sel-amb'); if(!sel) return; let i=opts.indexOf(sel.value)+1; if(i>=opts.length) i=0; sel.value=opts[i]; sel.dispatchEvent(new Event('change')); toast(opts[i]?`背景音：${names[opts[i]]}`:'背景音已关闭'); };
+    const pd=$('#pb-disp'); if(pd) pd.onclick=()=>{ closeSheets(); $('#typeset').classList.remove('hidden'); };
+    applyJustify();
+  };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bind); else bind();
+})();
 $('#btn-ai-typeset').onclick=()=>$('#typeset').classList.remove('hidden');
 /* v3.86：目录抽屉三段切换（搜索/目录/书签） */
 function setDrawerTab(tab){
@@ -1740,7 +1789,7 @@ setInterval(()=>{ if(document.hidden) return;
 /* ================= v3.5：导入弹窗 ================= */
 function openSheet(id){ $('#scrim').classList.remove('hidden'); $('#'+id).classList.remove('hidden'); }
 function closeSheets(){ $('#scrim').classList.add('hidden');
-  ['import-sheet','url-sheet','text-sheet','clone-sheet','cast-sheet','voice-sheet','about-sheet','book-menu','typeset-sheet','settings-sheet','typeset','aisheet','reader-book-menu'].forEach(id=>{const el=$('#'+id); if(el) el.classList.add('hidden');});
+  ['import-sheet','url-sheet','text-sheet','clone-sheet','cast-sheet','voice-sheet','about-sheet','book-menu','typeset-sheet','settings-sheet','typeset','aisheet','reader-book-menu','more-settings-sheet','playback-sheet'].forEach(id=>{const el=$('#'+id); if(el) el.classList.add('hidden');});
   if(typeof stopRecord==='function'){ try{stopRecord();}catch(e){} }
   if(typeof discardCloneSource==='function'){ try{discardCloneSource();}catch(e){} } }
 function openImportSheet(){ openSheet('import-sheet'); }

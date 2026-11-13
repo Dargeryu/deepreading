@@ -57,7 +57,9 @@ function bindFlip(){
     const rect = el.getBoundingClientRect();
     const rx = e.clientX - rect.left;
     const flipTo = (pg)=>{ if(flipMode() === 'curl') setPage(pg); else Flip.animateTo(pg); };
-    if(rx < W * 0.22 && PG.page > 0){ flipTo(PG.page - 1); }
+    if(typeof store!=='undefined' && store.get('tap_flip','1')!=='1') return; // 更多设置：点击翻页关闭
+    const oneHand = typeof store!=='undefined' && store.get('one_hand','0')==='1';
+    if(rx < W * 0.22 && PG.page > 0){ flipTo(oneHand ? Math.min(PG.total-1, PG.page+1) : PG.page - 1); }
     else if(rx > W * 0.78 && PG.page < PG.total - 1){ flipTo(PG.page + 1); }
   });
   // v3.88 沉浸阅读：点按正文中部切换 chrome 显隐（左右 1/4 是翻页区，点按不切换）

@@ -1286,3 +1286,43 @@ body.in-reader #tabbar{display:none!important}
 .vsq-row .v-cur{font-size:11px;color:#7c3aed;background:#f3e8ff;border-radius:99px;padding:1px 8px;font-weight:400}
 #voice-sheet{max-height:82dvh;display:flex;flex-direction:column}
 #voice-sheet-list{flex:1}
+
+/* ============ v3.96 AI排版进度状态条（图一/图二） ============ */
+#ai-typeset-status{display:flex;align-items:center;gap:8px;padding:10px 16px;background:#eef0f7;color:#55555e;font-size:14px;flex:none}
+#ai-typeset-status.hidden{display:none}
+#ai-typeset-status .ai-spin{display:inline-block;animation:ai-spin 1s linear infinite;font-size:16px}
+@keyframes ai-spin{to{transform:rotate(360deg)}}
+
+/* ============ v3.96 排版设置卡片 + 更多设置 + 播放设置 + 目录胶囊页签 ============ */
+/* 翻页方式：三张卡片（对标图四） */
+.ts-flip-cards{display:flex;gap:10px;padding:10px 0 14px}
+.ts-flip-cards button{flex:1;border:1px solid var(--line);background:#f5f5f7;border-radius:12px;padding:12px 4px;font-size:13px;color:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px}
+.ts-flip-cards button.cur{border-color:#5b5bd6;background:#fff;box-shadow:0 0 0 1px #5b5bd6}
+.ts-flip-cards .flip-ic{font-size:20px}
+/* 更多设置（图五） */
+.ms-sec{font-size:13px;color:#8e8e93;margin:16px 0 4px}
+.ms-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid #f4f4f6;width:100%;background:none;border-left:none;border-right:none;border-top:none;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.ms-row:last-child{border-bottom:none}
+.ms-t{font-size:16px}
+.ms-sub{font-size:13px;color:#8e8e93;margin-top:2px}
+.ms-chev{font-size:20px;color:#c7c7cc}
+.ms-switch{flex:none;width:52px;height:32px;border-radius:999px;background:#e9e9ee;border:none;position:relative;cursor:pointer;padding:0;transition:background .2s}
+.ms-switch .ms-knob{position:absolute;top:2px;left:2px;width:28px;height:28px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25);transition:left .2s}
+.ms-switch.on{background:#5b5bd6}
+.ms-switch.on .ms-knob{left:22px}
+/* 播放设置（图七） */
+.pb-card{background:#f5f5f7;border-radius:16px;padding:14px 16px;margin:12px 0}
+.pb-row{display:flex;align-items:center;justify-content:space-between}
+.pb-t{font-size:16px}
+.pb-sub{font-size:13px;color:#8e8e93}
+.pb-marks{display:flex;justify-content:space-between;font-size:12px;color:#8e8e93;margin:10px 2px 2px}
+#pb-rate{width:100%;margin:6px 0 2px}
+.pb-seg{display:flex;background:#fff;border-radius:999px;padding:4px;margin-top:12px}
+.pb-seg button{flex:1;border:none;background:none;border-radius:999px;padding:9px 0;font-size:15px;color:inherit;cursor:pointer}
+.pb-seg button.cur{background:#5b5bd6;color:#fff}
+.pb-seg button:disabled{opacity:.45;cursor:default}
+.pb-rowcard{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#f5f5f7;border:none;border-radius:16px;padding:14px 16px;margin:12px 0;width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit}
+/* 目录抽屉胶囊页签（图三）：圆角容器 + 胶囊按钮 */
+.cd-seg{display:flex;background:#f2f2f4;border-radius:999px;padding:4px;margin:12px 0}
+.cd-seg-btn{flex:1;border:none;background:none;border-radius:999px;padding:8px 0;font-size:14px;color:#333;cursor:pointer}
+.cd-seg-btn.cur{background:#fff;color:#111;box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:700}

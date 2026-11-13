@@ -249,14 +249,21 @@ async function refreshTsRestore(){
   btn.style.display = has ? '' : 'none';
 }
 
+function aiTsStatus(msg){
+  const st=$('#ai-typeset-status'); if(!st) return;
+  if(msg){ st.classList.remove('hidden'); const t=$('#ai-typeset-status-t'); if(t) t.textContent=msg; }
+  else st.classList.add('hidden');
+}
 function tsUI(){
   return {
-    onStep(msg){ $('#ts-step').textContent = msg; },
+    onStep(msg){ $('#ts-step').textContent = msg; aiTsStatus(/排版完成|✓/.test(msg)?null:(/AI|排版/.test(msg)?msg:'AI排版中…')); },
     onProgress(done, total, label){
       const bar = $('#ts-progress');
       bar.classList.remove('hidden');
-      $('#ts-bar-fill').style.width = Math.round(100*done/Math.max(1,total)) + '%';
+      const pct=Math.round(100*done/Math.max(1,total));
+      $('#ts-bar-fill').style.width = pct + '%';
       $('#ts-step').textContent = `${label} ${done}/${total}…`;
+      aiTsStatus(`AI排版中 ${pct}%`);
     }
   };
 }
@@ -273,6 +280,7 @@ async function startTypeset(){
   $('#ts-actions').classList.add('hidden');
   $('#ts-cancel').classList.remove('hidden');
   $('#ts-progress').classList.remove('hidden');
+  aiTsStatus('AI排版中…');
   const ui = tsUI();
 
   try{
@@ -284,6 +292,7 @@ async function startTypeset(){
   }
   $('#ts-cancel').classList.add('hidden');
   $('#ts-progress').classList.add('hidden');   // D16：完成后隐藏进度条
+  aiTsStatus(null);
   $('#ts-actions').classList.remove('hidden');
   refreshTsRestore();
 }
