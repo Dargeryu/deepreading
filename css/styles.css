@@ -93,7 +93,7 @@ button{font-family:inherit}
 .reader-ch{flex:1;min-width:0;font-size:13px;color:#8e8e93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
 .reader-count{flex:none;font-size:13px;color:#8e8e93;font-variant-numeric:tabular-nums}
 #reader-pages{flex:1;min-height:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overflow-anchor:none;-webkit-overflow-scrolling:touch;
-  box-sizing:border-box;padding:22px;column-gap:44px;column-fill:auto}
+  box-sizing:border-box;padding:12px;column-gap:24px;column-fill:auto}
 #reader-pages::-webkit-scrollbar{display:none}
 #content{font-size:18px;line-height:2.0;color:#1d1d1f;text-align:justify;orphans:3;widows:3}
 #content .ch-title{display:block;break-before:column;break-inside:avoid;text-align:center;
@@ -391,7 +391,7 @@ textarea.txt.big{resize:vertical;min-height:150px;line-height:1.7}
 .flip-hl{position:absolute;top:0;bottom:0;left:0;width:70px;z-index:19;pointer-events:none;opacity:0;will-change:transform,opacity;
   background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.8),rgba(255,255,255,0))}
 .flip-src{width:100%;height:100%;box-sizing:border-box;padding:22px;
-  column-gap:44px;column-fill:auto;overflow:hidden;backface-visibility:hidden;
+  column-gap:24px;column-fill:auto;overflow:hidden;backface-visibility:hidden;
   -webkit-backface-visibility:hidden}
 .flip-shade{position:absolute;inset:0;pointer-events:none;opacity:0;backface-visibility:hidden;
   -webkit-backface-visibility:hidden;
@@ -756,6 +756,13 @@ button.btn-ghost:hover{background:#303036}
 }
 
 
+/* ---------- v3.88 沉浸阅读：点按正文隐藏全部操作 chrome，再点恢复 ---------- */
+body.reader-immersive #reader-bar,
+body.reader-immersive #reader-player,
+body.reader-immersive #reader-fabs,
+body.reader-immersive .reader-turn-controls{display:none !important}
+body.reader-immersive #view-reader #reader-pages{padding-top:max(12px, env(safe-area-inset-top, 12px)) !important;padding-bottom:max(12px, env(safe-area-inset-bottom, 12px)) !important}
+
 /* ---------- Readify-inspired focused reader experience ---------- */
 #view-reader{position:relative;background:#111114;color:#f4f1ec}
 #reader-bar{min-height:56px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;background:rgba(18,18,20,.96);color:#f3f1ed;border-bottom:1px solid rgba(255,255,255,.07);backdrop-filter:blur(14px)}
@@ -763,7 +770,7 @@ button.btn-ghost:hover{background:#303036}
 #reader-bar .icon-btn:hover{background:#34343a}
 .reader-ch{font-size:13px;color:#d1ced0}
 .reader-count{padding:5px 9px;border-radius:999px;background:#252529;color:#d2cfd1;font-size:11px;white-space:nowrap}
-#reader-pages{width:calc(100% - 20px);max-width:980px;margin:8px auto 12px;padding:22px;background:#1b1b1f;border:1px solid #2b2b30;border-radius:9px;box-shadow:0 14px 38px rgba(0,0,0,.28);touch-action:pan-y;overscroll-behavior-x:contain}
+#reader-pages{width:100%;max-width:980px;margin:0 auto;padding:12px;background:#1b1b1f;border:none;border-radius:0;box-shadow:none;touch-action:pan-y;overscroll-behavior-x:contain}
 #reader-pages.slide-mode{touch-action:pan-x pan-y}
 #content{font-size:clamp(18px,2vw,21px);line-height:1.88;letter-spacing:.015em;orphans:3;widows:3}
 #content[data-theme=day]{background:#fbf8f0;color:#292621}
@@ -787,13 +794,13 @@ button.btn-ghost:hover{background:#303036}
 #reader-find .reader-find-top input{background:#242428;color:#f5f3f1}
 #sel-tip{background:#26262b;color:#f4f2f0;border:1px solid #3e3e44;box-shadow:0 8px 24px rgba(0,0,0,.35)}
 @media(min-width:720px){
-  #reader-pages{width:min(900px,calc(100% - 48px));margin:18px auto 16px;padding:22px}
+  #reader-pages{width:min(900px,calc(100% - 48px));margin:0 auto;padding:12px}
   #reader-bar{padding-left:max(20px,calc((100% - 980px)/2));padding-right:max(20px,calc((100% - 980px)/2))}
   .reader-turn{width:42px;height:70px;opacity:.38}
   .reader-turn-controls:hover .reader-turn{opacity:.84}
 }
 @media(max-width:480px){
-  #reader-pages{width:calc(100% - 12px);margin:5px auto 8px;padding:22px;border-radius:7px}
+  #reader-pages{width:100%;margin:0;padding:12px;border-radius:0}
   .reader-turn-controls{left:5px;right:5px}
   .reader-turn{width:30px;height:52px;opacity:.48}
   #reader-bar{gap:6px;padding-left:9px;padding-right:9px}
@@ -971,7 +978,7 @@ button,.icon-btn,.rd-icbtn,.tab,.fp-tool,.fp-skip{color:#111}button:focus-visibl
 #reader-count{flex:none;padding:4px 9px;border-radius:7px;background:#f3f3f7;color:#575761;font-size:11px;white-space:nowrap}
 #reader-bar .icon-btn{display:grid;place-items:center;width:38px;height:38px;padding:0;border:0;border-radius:10px;background:transparent;color:#181818!important;font-size:19px}
 #reader-bar .icon-btn:hover{background:#f3f3f7!important}
-#reader-pages{width:min(calc(100% - 28px),1120px)!important;max-width:1120px!important;margin:0 auto!important;padding:clamp(28px,5vw,72px)!important;border:0!important;border-radius:0!important;background:#fff!important;box-shadow:none!important;touch-action:pan-y}
+#reader-pages{width:min(calc(100% - 28px),1120px)!important;max-width:1120px!important;margin:0 auto!important;padding:12px 12px 96px!important;border:0!important;border-radius:0!important;background:#fff!important;box-shadow:none!important;touch-action:pan-y}
 #content{color:#111!important}
 #reader-player{flex:none;background:#fff!important;border-top:0!important;box-shadow:none!important}
 #rp-progress{height:4px;background:#ededf1}
@@ -989,7 +996,7 @@ button,.icon-btn,.rd-icbtn,.tab,.fp-tool,.fp-skip{color:#111}button:focus-visibl
   #reader-bar .icon-btn{width:34px;height:34px;font-size:17px}
   #reader-format{display:none}
   #reader-chapter{max-width:44vw}
-  #reader-pages{width:100%!important;padding:24px!important}
+  #reader-pages{width:100%!important;padding:12px 12px 96px!important}
   .rp-row{grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:9px 12px calc(10px + env(safe-area-inset-bottom))!important}
   .rp-controls{grid-column:1/-1;grid-row:2;gap:14px}
   .rp-controls .rp-btn{width:36px;height:36px}
@@ -1213,3 +1220,15 @@ body.in-reader #tabbar{display:none!important}
 #pdf-canvas{max-width:100%;background:#fff;box-shadow:0 4px 24px rgba(0,0,0,.4)}
 .pdf-foot{display:flex;align-items:center;justify-content:center;gap:18px;padding:12px;color:#fff;font-size:14px}
 .pdf-foot .icon-btn{color:#fff;font-size:20px}
+
+/* v3.88：纸面背景跟主题走（放文件尾，盖过白底覆盖层），纸才真正铺满全屏 */
+#reader-pages[data-theme=day]{background:#fff !important}
+#reader-pages[data-theme=sepia]{background:#f6efe0 !important}
+#reader-pages[data-theme=ink]{background:#101418 !important}
+#reader-pages[data-theme=night]{background:#14101d !important}
+#reader-pages[data-theme=blue]{background:#e8f0f8 !important}
+#reader-pages[data-theme=green]{background:#e8f5e9 !important}
+#reader-pages[data-theme=yellow]{background:#fff9e6 !important}
+#reader-pages[data-theme=pink]{background:#fce4ec !important}
+#reader-pages[data-theme=gray]{background:#f0f0f0 !important}
+#reader-pages[data-theme=darkblue]{background:#1a2332 !important}

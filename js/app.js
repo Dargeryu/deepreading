@@ -573,6 +573,7 @@ function go(name){
 }
 function showView(name){ go(name); } // 兼容旧调用
 async function openBook(id){
+  document.body.classList.remove('reader-immersive'); // v3.88：每次开书回到正常模式，点按一次再进沉浸
   cur=books.find(b=>b.id===id);
   if(!cur){
     const all=await idb.all().catch(()=>[]);
@@ -628,7 +629,7 @@ function renderWindow(centerIdx){
     }
     if(sn.p){ const pb=document.createElement('span'); pb.className='para-break'; c.appendChild(pb); }
     const sp=document.createElement('span'); sp.className='sent'+(readerFindQuery&&readerMatchSet.has(i)?' find-hit':''); sp.textContent=sn.t; sp.dataset.g=i;
-    sp.onclick=(()=>{ const g=i; return ()=>{ if(pageTouchMoved || window.getSelection().toString()) return; seekTo(g, true); }; })();
+    sp.onclick=(()=>{ const g=i; return ()=>{ if(pageTouchMoved || window.getSelection().toString()) return; if(typeof Flip!=='undefined' && Flip.suppressSentClick){ Flip.suppressSentClick=false; return; } seekTo(g, true); }; })();
     c.appendChild(sp); c.appendChild(document.createTextNode(' ')); sentEls.push(sp);
   }
   layoutPages();
@@ -638,11 +639,13 @@ function renderWindow(centerIdx){
  * 手势与翻页动画见 js/flip.js，本文件负责页状态与渲染窗口的衔接。 */
 let pageTouchMoved=false;
 const pagesEl=()=>$('#reader-pages');
+function readerPadX(el){ const ps=getComputedStyle(el); return (parseFloat(ps.paddingLeft)||0)+(parseFloat(ps.paddingRight)||0); }
 function layoutPages(){
   const el=pagesEl(); if(!el||!cur) return;
   const w=el.clientWidth||0;
   if(w<10) return; // 阅读器隐藏时不写，避免 200px 最小列宽污染后续排版
-  el.style.columnWidth=Math.max(200, w-44)+'px'; // 多列直接建在滚动容器上（一列一页）
+  el.style.columnWidth=Math.max(200, w-readerPadX(el))+'px'; // 多列直接建在滚动容器上（一列一页）
+  el.style.columnGap=readerPadX(el)+'px'; // v3.88：列间距 = 总横向内边距，列进位(列宽+间距)恒等于容器宽，翻页不漂移
 }
 /* 全局页 -> 当前渲染窗口内的列号 */
 function localPageOffset(){ return (PG.ready&&PG.starts.length)?pageOfSentence(winStart):0; }
@@ -656,7 +659,7 @@ function showPageInstant(gp){
   gp=PG.ready?Math.max(0,Math.min(PG.total-1,gp)):0;
   const el=pagesEl(), W=el.clientWidth||1;
   if(W>10){ // 自愈：列宽若与当前视口不符先重算；清除橡皮筋残留位移
-    const want=W-44, has=parseFloat(el.style.columnWidth||'0');
+    const want=W-readerPadX(el), has=parseFloat(el.style.columnWidth||'0');
     if(Math.abs(has-want)>2) layoutPages();
     if(el.style.transform){ el.style.transition=''; el.style.transform=''; }
   }
@@ -682,7 +685,7 @@ function verifyPageAlignment(gp, W){
       const ps = getComputedStyle(el);
       const pad = parseFloat(ps.paddingLeft) || 0;
       const padR = parseFloat(ps.paddingRight) || 0;
-      const gap = parseFloat(ps.columnGap) || 44;
+      const gap = parseFloat(ps.columnGap) || 24;
       const advance = Math.max(1, (W - pad - padR) + gap);
       const absX = (r.left - cr.left) + el.scrollLeft; // 句子在滚动坐标系下的 x
       const actualCol = Math.max(0, Math.round((absX - pad) / advance));
@@ -1902,6 +1905,7 @@ font=store.get('ts_font','serif'), theme=store.get('ts_theme','sepia');
 c.style.fontSize=size+'px'; c.style.lineHeight=(lh/10);
 c.style.fontFamily=font==='serif'?'Georgia,"Songti SC","Noto Serif CJK SC",serif':'-apple-system,"PingFang SC","Microsoft YaHei",sans-serif';
 c.dataset.theme=theme;
+const _pe=pagesEl(); if(_pe) _pe.dataset.theme=theme; // v3.88：容器背景跟主题走，纸才铺满全屏
 $('#ts-size').value=size; $('#ts-size-v').textContent=size;
 $('#ts-lh').value=lh; $('#ts-lh-v').textContent=(lh/10).toFixed(1);
 $('#ts-font').value=font; $('#ts-theme').value=theme;

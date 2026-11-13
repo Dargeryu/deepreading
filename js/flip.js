@@ -16,6 +16,7 @@ const Flip = {
   startX: 0, startY: 0, lastX: 0, lastT: 0, vel: 0, W: 0,
   queued: null,     // 翻页进行中时新到的目标页（朗读连续翻页）
   dragRaf: 0, pendingDx: 0, // 合并高频指针事件，最多每帧更新一次卷页
+  suppressSentClick: false, // v3.88：沉浸切换的点按不触发句子朗读跳转
 };
 
 /* v3.67 翻页模式：slide=原生滑动（默认，对标 Readify），curl=3D仿真，none=无动画 */
@@ -55,6 +56,29 @@ function bindFlip(){
     if(rx < W * 0.22 && PG.page > 0){ flipTo(PG.page - 1); }
     else if(rx > W * 0.78 && PG.page < PG.total - 1){ flipTo(PG.page + 1); }
   });
+  // v3.88 沉浸阅读：点按正文中部切换 chrome 显隐（左右 1/4 是翻页区，点按不切换）
+  // pointerup 先于 click 触发，置旗后句子的 click 会跳过朗读跳转，避免一次点按又切 UI 又跳读。
+  let tapStart = null;
+  el.addEventListener('pointerdown', (e)=>{
+    if(e.target.closest('button, a, input, textarea, select, .sel-tip')) return;
+    tapStart = { x: e.clientX, y: e.clientY, t: performance.now() };
+  });
+  el.addEventListener('pointerup', (e)=>{
+    if(!tapStart) return;
+    const dx = e.clientX - tapStart.x, dy = e.clientY - tapStart.y, dt = performance.now() - tapStart.t;
+    tapStart = null;
+    if(Math.abs(dx) > 10 || Math.abs(dy) > 10 || dt > 500) return; // 拖动/长按不是点按
+    if(!PG.ready || PG.total <= 1 || Flip.active || Flip.dragging) return;
+    if(e.target.closest('button, a, input, textarea, select, .sel-tip')) return;
+    if(window.getSelection().toString()) return; // 正在选词不切换
+    const dr = document.querySelector('#chapter-drawer');
+    if(dr && !dr.classList.contains('hidden')) return; // 抽屉打开时不切换
+    if(document.querySelector('.sheet:not(.hidden)')) return; // 弹窗打开时不切换
+    const W = el.clientWidth || 1, rect = el.getBoundingClientRect(), rx = e.clientX - rect.left;
+    if(rx < W * 0.25 || rx > W * 0.75) return; // 左右边缘是翻页区，交给翻页
+    Flip.suppressSentClick = true;
+    toggleReaderImmersive();
+  });
   // 滑动模式：滚动时只做轻量防抖；分页窗口调整延后到手势停下后。
   let snapT = null;
   el.addEventListener('scroll', ()=>{
@@ -90,6 +114,12 @@ function applyFlipMode(){
   const el = pagesEl(); if(!el) return;
   el.classList.toggle('slide-mode', flipMode() === 'slide');
 }
+/* v3.88 沉浸阅读：隐藏/恢复全部操作 chrome；高度变化后重排（保住当前句） */
+function setReaderImmersive(on){
+  document.body.classList.toggle('reader-immersive', !!on);
+  if(typeof scheduleRepaginate === 'function') scheduleRepaginate();
+}
+function toggleReaderImmersive(){ setReaderImmersive(!document.body.classList.contains('reader-immersive')); }
 function snapToPage(){
   if(flipMode() !== 'slide' || !PG.ready || PG.total <= 1) return;
   const el = pagesEl(), W = el.clientWidth || 1;

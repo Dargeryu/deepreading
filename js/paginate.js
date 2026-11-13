@@ -52,7 +52,7 @@ function buildMeasurer(){
   const cs = getComputedStyle(c);
   const ps = getComputedStyle(src);   // live padding/gap, not hardcoded guesses
   const padL = parseFloat(ps.paddingLeft)||22, padR = parseFloat(ps.paddingRight)||22;
-  const gap = parseFloat(ps.columnGap)||44;
+  const gap = parseFloat(ps.columnGap)||24;
   const m = document.createElement('div');
   m.setAttribute('aria-hidden','true');
   m.style.cssText =
