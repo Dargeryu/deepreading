@@ -20,7 +20,11 @@ const Flip = {
 };
 
 /* v3.67 翻页模式：slide=原生滑动（默认，对标 Readify），curl=3D仿真，none=无动画 */
-function flipMode(){ return store.get('ts_flip', 'curl'); }
+function flipMode(){ return store.get('ts_flip', 'slide'); }
+/* v3.89 Readify 式滑动吸附状态：slidePeakV=本次手势的峰值甩动速度(px/ms)，供 fling 判页；
+   slideSnapping=真时滚动是程序吸附动画，不再触发新的吸附；slideSnapTargetX=本次吸附的目标 scrollLeft，
+   用来在 scrollend 里区分"吸附动画结束"与"用户手势结束"。 */
+let slideSnapT = null, slideSnapFallbackT = null, slideLastX = 0, slideLastT = 0, slidePeakV = 0, slideSnapping = false, slideSnapTargetX = 0, slidePointerDown = false;
 function bindFlip(){
   const el = pagesEl();
   if(!el) return;
@@ -79,13 +83,47 @@ function bindFlip(){
     Flip.suppressSentClick = true;
     toggleReaderImmersive();
   });
-  // 滑动模式：滚动时只做轻量防抖；分页窗口调整延后到手势停下后。
-  let snapT = null;
+  // 滑动模式（v3.89 Readify 式）：原生滚动跟手 1:1、惯性自然；scrollend 停稳立即吸附，
+  // 不再等 120ms 定时器——那 120ms 就是"松手后顿一下"的来源；80ms 防抖只作 scrollend 不触发时的兜底。
+  // 滚动速度记峰值，供 snapToPage 做 fling 判页；用户手指按下即取消进行中的程序吸附（可连续快滑）。
   el.addEventListener('scroll', ()=>{
-    if(flipMode() !== 'slide' || Flip.active) return;
-    clearTimeout(snapT);
-    snapT = setTimeout(snapToPage, 120);
+    if(flipMode() !== 'slide' || Flip.active || slideSnapping) return;
+    // 速度只在手指按住拖动时累计：程序滚动与松手后的惯性滚动都不计入峰值速度
+    if(slidePointerDown){
+      const now = performance.now(), x = el.scrollLeft;
+      if(slideLastT){
+        const dt = now - slideLastT;
+        if(dt > 0){
+          const v = (x - slideLastX) / dt; // px/ms
+          if(Math.abs(v) > Math.abs(slidePeakV)) slidePeakV = v;
+        }
+      }
+      slideLastX = x; slideLastT = now;
+    }
+    clearTimeout(slideSnapT);
+    slideSnapT = setTimeout(snapToPage, 80);
   }, { passive: true });
+  el.addEventListener('scrollend', ()=>{
+    if(flipMode() !== 'slide' || Flip.active) return;
+    if(slideSnapping){
+      // 吸附动画的 scrollend：只有滚到了目标位置才算完成，清旗并验一次对齐；否则是用户手势的 scrollend 在吸附中途到达，忽略
+      if(Math.abs(el.scrollLeft - slideSnapTargetX) <= 3){
+        slideSnapping = false; clearTimeout(slideSnapFallbackT);
+        verifyPageAlignment(PG.page, el.clientWidth || 1);
+      }
+      return;
+    }
+    clearTimeout(slideSnapT);
+    snapToPage();
+  }, { passive: true });
+  el.addEventListener('pointerdown', ()=>{
+    if(flipMode() !== 'slide') return;
+    if(slideSnapping){ slideSnapping = false; clearTimeout(slideSnapFallbackT); }
+    slidePointerDown = true;
+    slidePeakV = 0; slideLastT = 0; slideLastX = el.scrollLeft; // 新手势重新累计速度
+  }, { passive: true });
+  el.addEventListener('pointerup', ()=>{ if(flipMode() === 'slide') slidePointerDown = false; }, { passive: true });
+  el.addEventListener('pointercancel', ()=>{ if(flipMode() === 'slide') slidePointerDown = false; }, { passive: true });
   // v3.86 卷页模式滚动看门狗：原生横向滚动本应被禁用，任何偏离页边界的滚动
   // 都是异常状态（字体加载/窗口变化/旧状态残留），停稳 180ms 后自动回正到当前页。
   let watchT = null;
@@ -110,6 +148,14 @@ function applyFlipMode(){
       const tf = document.getElementById('ts-flip');
       if(tf) tf.value = store.get('ts_flip', 'curl');
     }
+    // v3.89 一次性迁移：对标 Readify，默认改回原生滑动（丝滑滑动）；之前在 curl 的用户切到 slide，之后用户手动改的优先
+    if(!localStorage.getItem('ts_flip_migrated_389')){
+      const cur2 = store.get('ts_flip', null);
+      if(cur2 === 'curl'){ store.set('ts_flip', 'slide'); }
+      localStorage.setItem('ts_flip_migrated_389', '1');
+      const tf2 = document.getElementById('ts-flip');
+      if(tf2) tf2.value = store.get('ts_flip', 'slide');
+    }
   }catch(e){}
   const el = pagesEl(); if(!el) return;
   el.classList.toggle('slide-mode', flipMode() === 'slide');
@@ -121,10 +167,21 @@ function setReaderImmersive(on){
 }
 function toggleReaderImmersive(){ setReaderImmersive(!document.body.classList.contains('reader-immersive')); }
 function snapToPage(){
-  if(flipMode() !== 'slide' || !PG.ready || PG.total <= 1) return;
+  if(flipMode() !== 'slide' || !PG.ready || PG.total <= 1 || slideSnapping) return;
+  clearTimeout(slideSnapT);
   const el = pagesEl(), W = el.clientWidth || 1;
-  const local = Math.round(el.scrollLeft / W);
-  let gp = Math.max(0, Math.min(PG.total - 1, local + localPageOffset()));
+  // 目标页：甩得够快（峰值速度超阈值）就按甩的方向进一页（ViewPager2 的 fling 判页：快 flick 即使没拖过半页也翻页）；
+  // 否则按最近页（拖过一半进下一页，不到一半回弹）。
+  const FLING_V = 0.5; // px/ms，约 500px/s；手指一甩即超，慢拖远不到
+  let gp;
+  if(Math.abs(slidePeakV) > FLING_V){
+    gp = PG.page + (slidePeakV > 0 ? 1 : -1);
+  } else {
+    const local = Math.round(el.scrollLeft / W);
+    gp = local + localPageOffset();
+  }
+  slidePeakV = 0; // 本次手势的速度已消费，下次手势重新累计
+  gp = Math.max(0, Math.min(PG.total - 1, gp));
   // 用力猛滑也只允许翻一页（Readify 式单页步进）
   if(gp > PG.page + 1) gp = PG.page + 1;
   if(gp < PG.page - 1) gp = PG.page - 1;
@@ -139,17 +196,17 @@ function snapToPage(){
     }
   }
   const targetLocal = gp - localPageOffset();
-  if(gp !== PG.page){
-    el.scrollTo({ left: targetLocal * W, behavior: 'smooth' });
+  const target = targetLocal * W;
+  if(gp !== PG.page || Math.abs(el.scrollLeft - target) > 2){
+    slideSnapping = true; // 吸附动画期间的滚动不再触发新的吸附
+    slideSnapTargetX = target;
+    el.scrollTo({ left: target, behavior: 'smooth' });
     PG.page = gp; commitPageState(); updateCount();
-  } else {
-    // 对齐到精确位置
-    const target = targetLocal * W;
-    if(Math.abs(el.scrollLeft - target) > 2) el.scrollTo({ left: target, behavior: 'smooth' });
+    // 兜底：若 scrollend 未触发（如滚动被打断），600ms 后也要清旗并验对齐
+    clearTimeout(slideSnapFallbackT);
+    slideSnapFallbackT = setTimeout(()=>{ if(slideSnapping){ slideSnapping = false; verifyPageAlignment(PG.page, W); } }, 600);
   }
-  // v3.86：平滑滚动停稳后验一次对齐（列进位 4px/页的漂移靠它纠；滚动中途被打断也能自愈）
-  const sl0 = el.scrollLeft;
-  setTimeout(()=>{ if(el.scrollLeft === sl0 && PG.page === gp && !Flip.active) verifyPageAlignment(gp, W); }, 420);
+  // v3.89：不再用 420ms 定时器二次验对齐——吸附动画的 scrollend 里验一次即够，避免"顿一下再跳"的双跳感。
 }
 
 function onFlipDown(e){
