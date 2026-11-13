@@ -22,7 +22,7 @@ function pageHash(){
   const ps = el ? getComputedStyle(el) : null;
   const pad = ps ? [ps.paddingTop, ps.paddingRight, ps.paddingBottom, ps.paddingLeft].join(',') : '';
   return [store.get('ts_size','18'), store.get('ts_lh','18'),
-          store.get('ts_font','serif'), w, h, pad, 'pg5'].join('|'); // v3.85：padding 也进指纹，改 padding 不用再手动升版；pg4 缓存按旧（窄 24px）测量器列宽算的页作废
+          store.get('ts_font','serif'), w, h, pad, 'pg6'].join('|'); // v3.85：padding 也进指纹，改 padding 不用再手动升版；pg4 缓存按旧（窄 24px）测量器列宽算的页作废
 }
 
 /* 二分：句子 g 位于哪一页（0-based） */
@@ -91,10 +91,13 @@ async function paginateBook(book, hash){
         const sn = book.sentences[i];
         if(sn.c !== ci){
           ci = sn.c;
-          const h = document.createElement('span');
-          h.style.cssText = CH_TITLE_CSS;
-          h.textContent = book.chapters[ci] ? book.chapters[ci].title : ('第'+(ci+1)+'章');
-          art.appendChild(h);
+          // v3.93：与 renderWindow 一致，单章默认“正文”不渲染标题
+          if(!(book.chapters.length===1 && book.chapters[0] && book.chapters[0].title==='正文')){
+            const h = document.createElement('span');
+            h.style.cssText = CH_TITLE_CSS;
+            h.textContent = book.chapters[ci] ? book.chapters[ci].title : ('第'+(ci+1)+'章');
+            art.appendChild(h);
+          }
         }
         if(sn.p){ const pb = document.createElement('span');
           pb.style.cssText = 'display:block;height:.7em;'; art.appendChild(pb); }

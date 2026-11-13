@@ -50,7 +50,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">●</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.91</div>
+    <div class="sb-ver">Apo v3.93</div>
   </div>
 </aside>
 <div id="app">
@@ -194,7 +194,7 @@ if ('serviceWorker' in navigator) {
   <!-- 书籍详情 -->
   <!-- 阅读器 -->
   <main id="view-reader" class="view hidden">
-    <header id="reader-bar">
+    <header id="reader-bar" class="reader-bar--compact" title="点按顶栏展开排版/目录等控件">
       <div class="reader-leading">
         <button id="btn-back" class="icon-btn" aria-label="返回">‹</button>
       </div>
@@ -269,7 +269,7 @@ if ('serviceWorker' in navigator) {
           <button id="rp-play" class="rp-play" title="播放/暂停"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 2v20l14-10z"/></svg></button>
           <button id="rp-fwd" class="rp-btn" title="快进15秒"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg></button>
         </div>
-        <button id="rp-speed" class="rp-speed" title="倍速"><span id="rp-speed-v">1.0x</span></button>
+        <button id="rp-speed" class="rp-speed" title="倍速"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2.5l7.5 4.3v8.4L12 19.5l-7.5-4.3V6.8z"/><circle cx="12" cy="11" r="2.6"/></svg><span id="rp-speed-v">1.0x</span></button>
       </div>
     </footer>
   </main>

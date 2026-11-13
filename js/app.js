@@ -624,8 +624,11 @@ function renderWindow(centerIdx){
   for(let i=s;i<e;i++){
     const sn=cur.sentences[i];
     if(sn.c!==ci){ ci=sn.c;
-      const h=document.createElement('span'); h.className='ch-title';
-      h.textContent=cur.chapters[ci]?cur.chapters[ci].title:`第${ci+1}章`; c.appendChild(h);
+      // v3.93：单章且标题是默认“正文”时不渲染标题（Readify 导入 TXT 直接出正文）
+      if(!(cur.chapters.length===1 && cur.chapters[0] && cur.chapters[0].title==='正文')){
+        const h=document.createElement('span'); h.className='ch-title';
+        h.textContent=cur.chapters[ci]?cur.chapters[ci].title:`第${ci+1}章`; c.appendChild(h);
+      }
     }
     if(sn.p){ const pb=document.createElement('span'); pb.className='para-break'; c.appendChild(pb); }
     const sp=document.createElement('span'); sp.className='sent'+(readerFindQuery&&readerMatchSet.has(i)?' find-hit':''); sp.textContent=sn.t; sp.dataset.g=i;
@@ -689,7 +692,7 @@ function verifyPageAlignment(gp, W){
   });
 }
 function commitPage(gp){ PG.page=gp; commitPageState(); }
-function commitPageState(){ updateCount(); saveProgress(); }
+function commitPageState(){ updateCount(); saveProgress(); updatePlayer(); }
 /* 对外翻页入口：相邻页走仿真翻页动画，跨页直接切换 */
 function setPage(gp, opts){
   opts=opts||{};
@@ -827,9 +830,10 @@ function seekTo(i, autoplay){
 const fmtRate=sp=>{ let s=sp.toFixed(2).replace(/0+$/,''); if(s.endsWith('.')) s+='0'; return s+'x'; };
 function updatePlayer(){
   if(!cur) return;
-  const pct=100*cur.progress.idx/Math.max(1,cur.total);
+  // v3.92：进度按当前页算（阅读位置），不是按朗读 idx——翻页时线也要走；朗读时页会跟着走，线一样走
+  const pct=(PG.ready&&PG.total>0)?100*sentenceOfPage(PG.page)/Math.max(1,cur.total):0;
   updateCount();
-  const sk=$('#rp-seek'); if(sk) sk.value=Math.round(pct*10);
+  const sk=$('#rp-seek'); if(sk){ sk.value=Math.round(pct*10); sk.style.setProperty('--p', pct+'%'); }
   const tm=estTimes();
   const el=$('#rp-elapsed'); if(el) el.textContent=fmtClock(tm.el);
   const rm=$('#rp-remaining'); if(rm) rm.textContent='-'+fmtClock(tm.total-tm.el);
@@ -1005,6 +1009,7 @@ $('#rp-speed').onclick=cycleSpeed;
 $('#rp-cover').onclick=()=>openFullPlayer();
 $('#rp-seek').addEventListener('change',e=>{ if(!cur)return; seekTo(Math.round(e.target.value/1000*(cur.total-1))); });
 $('#btn-back').onclick=()=>go(returnView);
+$('#reader-bar').addEventListener('click',e=>{ if(e.target.closest('#btn-back')) return; $('#reader-bar').classList.toggle('reader-bar--compact'); });
 $('#reader-chapter').onclick=()=>{ renderChapters(); $('#chapter-drawer').classList.remove('hidden'); setDrawerTab('toc'); };
 $('#btn-reader-toc').onclick=()=>$('#reader-chapter').click();
 $('#btn-reader-more').onclick=()=>{ openReaderBookMenu(); };
@@ -1892,9 +1897,11 @@ async function doAiSearch(q){
 }
 /* ---------- 排版 ---------- */
 function applyType(){
+if(!store.get('ts_theme_migrated_393') && store.get('ts_theme')==='sepia'){ store.set('ts_theme','day'); store.set('ts_theme_migrated_393','1'); }
 const c=$('#content'); if(!c) return;
 const size=store.get('ts_size','24'), lh=store.get('ts_lh','18'),
-font=store.get('ts_font','serif'), theme=store.get('ts_theme','sepia');
+font=store.get('ts_font','serif'), theme=store.get('ts_theme','day');
+// v3.93：默认主题由暖纸黄改成 Readify 白底；老用户已存的 sepia 一次性迁到 day（用户亲口嫌黄）
 c.style.fontSize=size+'px'; c.style.lineHeight=(lh/10);
 c.style.fontFamily=font==='serif'?'Georgia,"Songti SC","Noto Serif CJK SC",serif':'-apple-system,"PingFang SC","Microsoft YaHei",sans-serif';
 c.dataset.theme=theme;
@@ -1917,9 +1924,9 @@ function syncTypesetUI(){
   const fn=$('#ts-font-name'); if(fn) fn.textContent=store.get('ts_font','serif')==='serif'?'宋体':'无衬线';
   const lh=String(store.get('ts_lh','18'));
   document.querySelectorAll('#ts-lh-pills button').forEach(b=>b.classList.toggle('cur', b.dataset.lh===lh));
-  const ink=store.get('ts_ink','')||TS_THEME_TEXT[store.get('ts_theme','sepia')]||'';
+  const ink=store.get('ts_ink','')||TS_THEME_TEXT[store.get('ts_theme','day')]||'';
   document.querySelectorAll('#ts-ink-sw button').forEach(b=>b.classList.toggle('cur', ink && b.dataset.ink.toLowerCase()===ink.toLowerCase()));
-  const th=store.get('ts_theme','sepia');
+  const th=store.get('ts_theme','day');
   document.querySelectorAll('#ts-bg-sw button').forEach(b=>b.classList.toggle('cur', b.dataset.theme===th));
   const fl=store.get('ts_flip','curl');
   document.querySelectorAll('#ts-flip-pills button').forEach(b=>b.classList.toggle('cur', b.dataset.flip===fl));

@@ -1106,7 +1106,7 @@ button,.icon-btn,.rd-icbtn,.tab,.fp-tool,.fp-skip{color:#111}button:focus-visibl
 #reader-player{padding-bottom:env(safe-area-inset-bottom)}
 .rp-times{display:flex;align-items:center;gap:10px;padding:10px 18px 2px}
 .rp-times span{font-size:12px;color:#8e8e93;font-variant-numeric:tabular-nums;white-space:nowrap}
-#rp-seek{flex:1;min-width:0;-webkit-appearance:none;appearance:none;height:4px;border-radius:99px;background:#e5e5e5;outline:none;cursor:pointer}
+#rp-seek{flex:1;min-width:0;-webkit-appearance:none;appearance:none;height:4px;border-radius:99px;--p:0%;background:linear-gradient(90deg,#5f91ff,#8536ff) 0 0/var(--p) 100% no-repeat,#ebebf3;outline:none;cursor:pointer}
 #rp-seek::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 5px rgba(0,0,0,.35)}
 #rp-seek::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 5px rgba(0,0,0,.35)}
 /* 底部播放器：圆封面 + ↩ ▶ ↪ + 1.0x */
@@ -1247,3 +1247,16 @@ body.in-reader #tabbar{display:none!important}
 #reader-player #rp-speed svg{display:none}
 /* 封面：Readify 约 38-40px */
 #reader-player .rp-cover{width:40px!important;height:40px!important}
+
+
+/* ============ v3.93 阅读器对标 Readify 手机版（用户两张截图） ============ */
+/* 顶栏默认极简：只留返回键；点按顶栏空白处展开页码/AI排版/目录/Aa/更多 */
+#reader-bar.reader-bar--compact .reader-doc,
+#reader-bar.reader-bar--compact .reader-actions{display:none!important}
+#reader-bar.reader-bar--compact{cursor:pointer}
+/* 倍速钮改回手机版 Readify：42px #F5F5FA 圆钮，齿轮+1.0x 上下叠放 */
+#reader-player .rp-controls .rp-speed{width:42px!important;height:42px!important;min-width:42px!important;border-radius:50%!important;background:#f5f5fa!important;padding:0!important;flex-direction:column;gap:1px;justify-content:center}
+#reader-player .rp-controls .rp-speed svg{width:16px!important;height:16px!important}
+#reader-player .rp-controls .rp-speed span{font-size:10px!important;line-height:1}
+/* 返回键去掉灰底方框，只剩一个 <，跟 Readify 一样 */
+#reader-bar .reader-leading .icon-btn{background:transparent!important;border:none!important;box-shadow:none!important}
