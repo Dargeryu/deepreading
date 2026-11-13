@@ -22,7 +22,7 @@ function pageHash(){
   const ps = el ? getComputedStyle(el) : null;
   const pad = ps ? [ps.paddingTop, ps.paddingRight, ps.paddingBottom, ps.paddingLeft].join(',') : '';
   return [store.get('ts_size','18'), store.get('ts_lh','18'),
-          store.get('ts_font','serif'), w, h, pad, 'pg4'].join('|'); // v3.85：padding 也进指纹，改 padding 不用再手动升版；pg3 缓存按旧 padding 算的页作废
+          store.get('ts_font','serif'), w, h, pad, 'pg5'].join('|'); // v3.85：padding 也进指纹，改 padding 不用再手动升版；pg4 缓存按旧（窄 24px）测量器列宽算的页作废
 }
 
 /* 二分：句子 g 位于哪一页（0-based） */
@@ -58,7 +58,7 @@ function buildMeasurer(){
   m.style.cssText =
     'position:fixed;left:-100000px;top:0;width:'+pageW+'px;height:'+pageH+'px;' +
     'padding:'+ps.paddingTop+' '+ps.paddingRight+' '+ps.paddingBottom+' '+ps.paddingLeft+';box-sizing:border-box;overflow:hidden;visibility:hidden;pointer-events:none;' +
-    'column-width:'+Math.max(200,pageW-padL-padR-gap)+'px;column-gap:'+gap+'px;column-fill:auto;';
+    'column-width:'+Math.max(200,pageW-padL-padR)+'px;column-gap:'+gap+'px;column-fill:auto;'; // v3.91：列宽须与实况 layoutPages 一致（w-padL-padR），不减 gap；减 gap 会让测量器列宽窄 24px，分页与实况断列不一致，末页错乱
   const art = document.createElement('div');
   art.style.cssText =
     'font-size:'+cs.fontSize+';line-height:'+cs.lineHeight+';font-family:'+cs.fontFamily+';' +

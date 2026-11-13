@@ -1232,3 +1232,18 @@ body.in-reader #tabbar{display:none!important}
 #reader-pages[data-theme=pink]{background:#fce4ec !important}
 #reader-pages[data-theme=gray]{background:#f0f0f0 !important}
 #reader-pages[data-theme=darkblue]{background:#1a2332 !important}
+
+/* ============ v3.91 播放器对标 Readify（浏览器实测 app.readifyai.com） ============ */
+/* 播放键：黑圆 #131316（近黑非纯黑）；三角高窄（14x20/44px）、光学中心略偏右；暂停两竖条粗短圆角 */
+#reader-player .rp-controls .rp-play{background:#131316!important}
+.rp-play svg{width:36px;height:36px;display:block}
+#mp-play svg{width:22px;height:22px;display:block}
+#fp-play svg{width:40px;height:40px;display:block}
+/* 前后退：Readify 的 #EBEBF3 圆底 + 270°弯曲箭头、无数字（v3.83 曾去掉圆底改纯线条箭头，现改回） */
+#reader-player .rp-controls .rp-btn{width:42px!important;height:42px!important;border-radius:50%!important;background:#ebebf3!important;color:#1d1d1f!important;padding:0!important}
+#reader-player .rp-controls .rp-btn svg{width:20px;height:20px;display:block}
+/* 倍速：#F5F5FA 圆底 + 纯 "1.0x" 文字（去掉齿轮图标） */
+#reader-player #rp-speed{width:42px!important;height:42px!important;min-width:42px!important;border-radius:50%!important;background:#f5f5fa!important;color:#1d1d1f!important;font-size:13px!important;font-weight:500!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important}
+#reader-player #rp-speed svg{display:none}
+/* 封面：Readify 约 38-40px */
+#reader-player .rp-cover{width:40px!important;height:40px!important}

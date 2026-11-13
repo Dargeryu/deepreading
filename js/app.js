@@ -676,23 +676,14 @@ function verifyPageAlignment(gp, W){
   requestAnimationFrame(()=>{
     if(!cur || PG.page!==gp || Flip.active) return;
     try{
-      const si = sentenceOfPage(gp) - winStart;
-      const node = sentEls[si];
-      if(!node) return;
       const el = pagesEl();
-      const r = node.getBoundingClientRect(), cr = el.getBoundingClientRect();
-      if(r.width < 1) return; // 未布局完成，跳过
-      const ps = getComputedStyle(el);
-      const pad = parseFloat(ps.paddingLeft) || 0;
-      const padR = parseFloat(ps.paddingRight) || 0;
-      const gap = parseFloat(ps.columnGap) || 24;
-      const advance = Math.max(1, (W - pad - padR) + gap);
-      const absX = (r.left - cr.left) + el.scrollLeft; // 句子在滚动坐标系下的 x
-      const actualCol = Math.max(0, Math.round((absX - pad) / advance));
-      const expectCol = localPageOf(gp);
-      const err = (r.left - cr.left) - pad;
-      if(actualCol === expectCol && Math.abs(err) > 3 && Math.abs(err) < W/2){
-        el.scrollTo({left: el.scrollLeft + err, behavior:'auto'});
+      // v3.91：滚动以页边界为准（localPageOf*W），不以首句位置为准。
+      // 首句位置由分页算出，分页有误差时按首句纠会把滚动推到非页边界（两列之间）——
+      // 末页就是这么错乱的（scrollLeft 573，应为 390）。页边界是 ground truth，每页恰好一容器宽。
+      const target = localPageOf(gp) * W;
+      const diff = el.scrollLeft - target;
+      if(Math.abs(diff) > 3 && Math.abs(diff) < W/2){
+        el.scrollTo({left: target, behavior:'auto'});
       }
     }catch(e){}
   });
@@ -965,7 +956,9 @@ async function speakCustom(s, voiceId){
   if(cur.progress.idx<cur.total-1){ cur.progress.idx++; markActive(); saveProgress(); speakCurrent(); }
   else { wantPlay=false; setPlayUI(); saveProgress(); toast('播完'); }
 }
-function setPlayUI(){ const t=wantPlay?'⏸':'▶'; const b=$('#rp-play'); if(b) b.textContent=t; playing=wantPlay;
+const PLAY_ICON='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 2v20l14-10z"/></svg>'; // Readify：高窄三角（14x20/44px），光学中心略偏右
+const PAUSE_ICON='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="2.5" y="3" width="6.5" height="18" rx="2"/><rect x="15" y="3" width="6.5" height="18" rx="2"/></svg>'; // Readify：两竖条各 7x18、间隔 6、圆角 2-3px
+function setPlayUI(){ const b=$('#rp-play'); if(b) b.innerHTML=wantPlay?PAUSE_ICON:PLAY_ICON; playing=wantPlay;
   try{ updateMiniPlayer(); syncFullPlayer(); }catch(e){} }
 async function ensureWakeLock(){
   try{
@@ -2211,7 +2204,7 @@ function updateMiniPlayer(){
   setCoverEl($('#mp-cover'), cur, 6);
   $('#mp-title').textContent=cur.title;
   $('#mp-pos').textContent=Math.round(100*cur.progress.idx/Math.max(1,cur.total))+'%';
-  $('#mp-play').textContent=wantPlay?'⏸':'▶';
+  $('#mp-play').innerHTML=wantPlay?PAUSE_ICON:PLAY_ICON;
   const mf=$('#mp-fill');
   if(mf) mf.style.width=Math.round(100*cur.progress.idx/Math.max(1,cur.total))+'%';
   paintWave();
@@ -2250,7 +2243,7 @@ function syncFullPlayer(){
   const fs=$('#fp-state'); if(fs) fs.textContent=wantPlay?'正在播放':'已暂停';
   const pct=Math.round(1000*cur.progress.idx/Math.max(1,cur.total));
   $('#fp-seek').value=pct;
-  $('#fp-play').textContent=wantPlay?'⏸':'▶';
+  $('#fp-play').innerHTML=wantPlay?PAUSE_ICON:PLAY_ICON;
   const _tm=estTimes();
   $('#fp-cur').textContent=fmtClock(_tm.el);
   $('#fp-total').textContent=fmtClock(_tm.total);
