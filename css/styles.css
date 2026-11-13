@@ -1260,3 +1260,29 @@ body.in-reader #tabbar{display:none!important}
 #reader-player .rp-controls .rp-speed span{font-size:10px!important;line-height:1}
 /* 返回键去掉灰底方框，只剩一个 <，跟 Readify 一样 */
 #reader-bar .reader-leading .icon-btn{background:transparent!important;border:none!important;box-shadow:none!important}
+
+/* ============ v3.94 顶栏改回 Readify 全功能 ============ */
+/* Readify 顶栏：返回 + AI排版 + ☰ + Aa + ···，无页码章名；.reader-doc 藏掉（章节仍可点 ☰ 开目录） */
+#reader-bar .reader-doc{display:none!important}
+#reader-bar.reader-bar--compact .reader-doc,
+#reader-bar.reader-bar--compact .reader-actions{display:none!important}
+
+/* ============ v3.95 音色广场（Readify 式） ============ */
+/* 页签：选中黑底白字，其余浅灰 */
+#vs-tabs{display:flex;gap:8px;padding:12px 18px 4px;overflow-x:auto;scrollbar-width:none}
+#vs-tabs button{flex:none;border:none;border-radius:999px;padding:8px 13px;font-size:14px;background:#f2f2f4;color:#333;cursor:pointer}
+#vs-tabs button.cur{background:#111;color:#fff}
+/* 筛选：灰字 + ›，选中变深 */
+#vs-filters{display:flex;gap:22px;padding:8px 18px 10px;border-bottom:1px solid #f4f4f6;overflow-x:auto;scrollbar-width:none}
+#vs-filters button{flex:none;border:none;background:none;font-size:14px;color:#666;cursor:pointer;padding:0}
+#vs-filters button.on{color:#111;font-weight:700}
+/* 音色行：头像 + 名字/标签 + 收藏心（对标 Readify 图二） */
+.vsq-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid #f4f4f6;cursor:pointer}
+.vsq-row:last-child{border-bottom:none}
+.vsq-row .v-ava{width:56px;height:56px;font-size:22px}
+.vsq-row .v-info{cursor:pointer}
+.vsq-row .v-fav{flex:none;border:none;background:none;font-size:22px;color:#c7c7cc;cursor:pointer;padding:4px}
+.vsq-row .v-fav.on{color:#f43f5e}
+.vsq-row .v-cur{font-size:11px;color:#7c3aed;background:#f3e8ff;border-radius:99px;padding:1px 8px;font-weight:400}
+#voice-sheet{max-height:82dvh;display:flex;flex-direction:column}
+#voice-sheet-list{flex:1}

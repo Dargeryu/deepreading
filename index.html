@@ -50,7 +50,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">●</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.93</div>
+    <div class="sb-ver">Apo v3.95</div>
   </div>
 </aside>
 <div id="app">
@@ -194,7 +194,7 @@ if ('serviceWorker' in navigator) {
   <!-- 书籍详情 -->
   <!-- 阅读器 -->
   <main id="view-reader" class="view hidden">
-    <header id="reader-bar" class="reader-bar--compact" title="点按顶栏展开排版/目录等控件">
+    <header id="reader-bar">
       <div class="reader-leading">
         <button id="btn-back" class="icon-btn" aria-label="返回">‹</button>
       </div>
@@ -252,9 +252,22 @@ if ('serviceWorker' in navigator) {
       <button id="stop-fab" title="停止朗读">■</button>
     </div>
     <div id="voice-sheet" class="sheet hidden">
-      <div class="sheet-head"><span class="serif">🎙 挑选朗读音色</span> <button id="voice-sheet-close" class="btn-ghost">✕</button></div>
+      <div class="sheet-head"><span class="serif">音色广场</span> <button id="voice-sheet-close" class="btn-ghost">✕</button></div>
+      <div id="vs-tabs" role="tablist">
+        <button data-tab="plaza" class="cur">音色广场</button>
+        <button data-tab="recent">最近</button>
+        <button data-tab="fav">收藏</button>
+        <button data-tab="clone">克隆</button>
+        <button data-tab="offline">离线</button>
+      </div>
+      <div id="vs-filters">
+        <button data-f="lang">中文 ›</button>
+        <button data-f="gender">性别 ›</button>
+        <button data-f="texture">音色质感 ›</button>
+        <button data-f="scene">场景 ›</button>
+      </div>
       <div id="voice-sheet-list"></div>
-      <p class="hint" style="padding:0 18px 18px">选用后整本书都用这个音色朗读。云端音色按字符计费。</p>
+      <p class="hint" style="padding:0 18px 14px">点头像试听，点名字选用；云端音色按字符计费。</p>
     </div>
     <footer id="reader-player">
       <div class="rp-times">

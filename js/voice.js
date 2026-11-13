@@ -782,55 +782,108 @@ function vsBindRow(d, onPlay, onUse){
   d.querySelector('.play').onclick=onPlay;
   d.querySelector('.use').onclick=onUse;
 }
+/* ---------- 音色广场（Readify 式）：页签 + 筛选 + 列表 ---------- */
+let vsTab='plaza';
+const vsF={lang:'中文', gender:'全部', texture:'全部', scene:'全部'};
+const VS_LANG_OPTS=['中文','English','全部'];
+const VS_GENDER_OPTS=['全部','男声','女声'];
+const VS_TEXTURE_OPTS=['全部','磁性','气声','清透','深厚','英气','亲切','沉稳','甜美','中性'];
+const VS_SCENE_OPTS=['全部','小说类','纪实类','学术类','新势力'];
+const vsCycle=(arr,cur)=>arr[(arr.indexOf(cur)+1)%arr.length];
+function vsqVoiceList(){
+  // 统一音色：目录（主）+ 本机系统中文语音（离线）+ 云端（若配 key）+ 克隆
+  const out=[];
+  VOICE_CATALOG.forEach(e=>out.push({kind:'catalog', id:'cat:'+e.name, name:e.name, gender:e.gender, tags:e.tags.slice(), desc:e.desc, entry:e}));
+  const zhVs=(typeof voices!=='undefined')?voices.filter(v=>v.lang&&v.lang.toLowerCase().startsWith('zh')):[];
+  zhVs.forEach(v=>out.push({kind:'system', id:'sys:'+v.voiceURI, name:v.name.replace(/Microsoft\s+|Google\s+/i,'').replace(/\s*\(.*\)/,'').trim()||v.name, gender:'x', tags:[v.lang||'中文'], desc:v.name, v}));
+  return out;
+}
+function vsqMatch(it){
+  if(vsF.lang==='中文' && it.kind==='system' && !(it.v.lang||'').toLowerCase().startsWith('zh')) return false;
+  if(vsF.lang==='English' && it.kind!=='system') return false;
+  if(vsF.lang==='English' && it.kind==='system' && !(it.v.lang||'').toLowerCase().startsWith('en')) return false;
+  if(vsF.gender==='男声' && it.gender!=='m') return false;
+  if(vsF.gender==='女声' && it.gender!=='f') return false;
+  if(vsF.texture!=='全部' && !it.tags.includes(vsF.texture)) return false;
+  if(vsF.scene!=='全部' && !it.tags.includes(vsF.scene)) return false;
+  return true;
+}
+function vsqUse(it){
+  if(it.kind==='catalog') useCatalogVoice(it.entry);
+  else if(it.kind==='system') useSystemVoice(it.v);
+  else if(it.kind==='cloud') useCloudVoice(it.v);
+  else if(it.kind==='clone') useCloned(it.v);
+}
+function vsqPreview(it){
+  if(it.kind==='catalog') previewCatalog(it.entry);
+  else if(it.kind==='system') previewSystemVoice(it.v);
+  else if(it.kind==='cloud') previewCloudVoice(it.v);
+  else if(it.kind==='clone') previewCloned(it.v);
+}
+function vsqIsCurrent(it){
+  const key=currentVoiceKey();
+  if(it.kind==='system') return key==='sys:'+it.v.voiceURI;
+  if(it.kind==='cloud') return key==='el:'+it.v.id;
+  if(it.kind==='clone') return key===(it.v.provider==='elevenlabs'?'el:'+it.v.voiceId:'cu:'+it.v.voiceId);
+  return currentDefaultName()===it.name;
+}
 async function renderVoiceSheet(){
   const box=$('#voice-sheet-list'); if(!box) return;
-  const key=currentVoiceKey();
-  box.innerHTML='';
-  const sec=(t)=>{ const h=document.createElement('div'); h.className='vs-sec'; h.textContent=t; box.appendChild(h); };
-  const row=(name,sub,active,onPlay,onUse)=>{
-    const d=document.createElement('div'); d.className='vs-row v-card'; d.innerHTML=vsRowHTML(name,sub,active);
-    vsBindRow(d,onPlay,onUse); box.appendChild(d);
-  };
-  // 1. 本机系统语音
-  const zhVs=(typeof voices!=='undefined')?voices.filter(v=>v.lang&&v.lang.toLowerCase().startsWith('zh')):[];
-  if(zhVs.length){
-    sec('本机系统语音');
-    zhVs.slice(0,8).forEach(v=>{
-      row(v.name.replace(/[^a-zA-Z\u4e00-\u9fa5]+/g,' ').trim()||v.name, v.lang, key==='sys:'+v.voiceURI,
-        ()=>previewSystemVoice(v), ()=>useSystemVoice(v));
-    });
-  }
-  // 2. 广场精选
-  sec('广场精选');
-  const defName=(function(){ try{ const d=JSON.parse(store.get('voice_default','null')); return d&&d.name||''; }catch(e){ return ''; } })();
-  VOICE_CATALOG.forEach(e=>{
-    row(e.name, e.tags.slice(0,2).join(' / '), store.get('tts_engine')!=='elevenlabs'&&store.get('tts_engine')!=='custom'&&defName===e.name,
-      ()=>previewCatalog(e), ()=>{ useCatalogVoice(e); renderVoiceSheet(); });
+  // 页签
+  document.querySelectorAll('#vs-tabs button').forEach(b=>{
+    b.classList.toggle('cur', b.dataset.tab===vsTab);
+    b.onclick=()=>{ vsTab=b.dataset.tab; renderVoiceSheet(); };
   });
-  // 3. 云端音色
+  // 筛选（点按轮换）
+  const fbtns={lang:['lang',VS_LANG_OPTS], gender:['gender',VS_GENDER_OPTS], texture:['texture',VS_TEXTURE_OPTS], scene:['scene',VS_SCENE_OPTS]};
+  document.querySelectorAll('#vs-filters button').forEach(b=>{
+    const k=b.dataset.f, opts=fbtns[k][1], cur=vsF[k];
+    b.textContent=(k==='lang')?cur+' ›':(cur==='全部'?'':cur+' ')+({gender:'性别',texture:'音色质感',scene:'场景'})[k]+' ›';
+    b.classList.toggle('on', cur!=='全部' && !(k==='lang'&&cur==='中文'));
+    b.onclick=()=>{ vsF[k]=vsCycle(opts,cur); renderVoiceSheet(); };
+  });
+  const favs=getFavs(), key=currentVoiceKey();
+  let items=vsqVoiceList();
+  // 云端音色（若配 key）并入广场
   if(store.get('eleven_key')){
-    sec('云端音色');
-    try{
-      const vs=await elevenVoices(false);
-      vs.slice(0,30).forEach(v=>{
-        row(v.name, ((v.labels||{}).description||'').slice(0,12), key==='el:'+v.id,
-          ()=>previewCloudVoice(v), ()=>useCloudVoice(v));
-      });
-      if(!vs.length) box.insertAdjacentHTML('beforeend','<p class="sub" style="padding:8px 0">暂无云端音色</p>');
-    }catch(e){
-      box.insertAdjacentHTML('beforeend',`<p class="sub" style="padding:8px 0">云端加载失败：${esc(e.message)}</p>`);
-    }
+    try{ const vs=await elevenVoices(false);
+      vs.slice(0,30).forEach(v=>items.push({kind:'cloud', id:'el:'+v.id, name:v.name, gender:(v.labels&&v.labels.gender)||'x', tags:((v.labels&&v.labels.description)||'云端').split(/[,，]/).slice(0,2), desc:(v.labels&&v.labels.description)||'', v}));
+    }catch(e){}
   }
-  // 4. 我的克隆
-  try{
-    const clones=await idb.allVoices();
-    if(clones.length){
-      sec('我的克隆');
-      clones.forEach(v=>{
-        const kid=v.provider==='elevenlabs'?'el:'+v.voiceId:'cu:'+v.voiceId;
-        row(v.name, '克隆', key===kid, ()=>previewCloned(v), ()=>{ useCloned(v); renderVoiceSheet(); });
-      });
-    }
-  }catch(e){}
-  if(!box.children.length) box.innerHTML='<p class="sub" style="padding:20px;text-align:center">暂无可用音色</p>';
+  // 克隆
+  let clones=[];
+  try{ clones=await idb.allVoices(); }catch(e){}
+  clones.forEach(v=>items.push({kind:'clone', id:'cl:'+v.voiceId, name:v.name, gender:'x', tags:['克隆'], desc:'我的克隆', v}));
+  // 按页签过滤
+  if(vsTab==='recent'){
+    let r=[]; try{ r=JSON.parse(store.get('voice_recent','[]')); }catch(e){}
+    items=items.filter(it=>r.includes(it.name));
+    items.sort((a,b)=>r.indexOf(a.name)-r.indexOf(b.name));
+  }else if(vsTab==='fav'){
+    items=items.filter(it=>favs.includes(it.name));
+  }else if(vsTab==='clone'){
+    items=items.filter(it=>it.kind==='clone');
+  }else if(vsTab==='offline'){
+    items=items.filter(it=>it.kind==='system');
+  }else{
+    items=items.filter(it=>it.kind==='catalog'||it.kind==='cloud');
+  }
+  items=items.filter(vsqMatch);
+  box.innerHTML='';
+  if(!items.length){
+    box.innerHTML='<p class="sub" style="padding:20px;text-align:center">'+(vsTab==='clone'?'暂无克隆音色，去声音页克隆一个':vsTab==='fav'?'还没有收藏，点音色右边的 ♡ 收藏':vsTab==='recent'?'最近还没用过音色':'这里空空如也，换个筛选试试')+'</p>';
+    return;
+  }
+  items.forEach(it=>{
+    const isFav=favs.includes(it.name), isCur=vsqIsCurrent(it);
+    const d=document.createElement('div'); d.className='vsq-row';
+    d.innerHTML=`<div class="v-ava" style="background:${avaBG(it.name)}" title="试听">${esc(it.name[0]||'?')}</div>
+      <div class="v-info"><div class="v-name">${esc(it.name)}${isCur?'<span class="v-cur">使用中</span>':''}</div>
+      <div class="v-tags">${it.tags.slice(0,3).map(t=>`<span>${esc(t)}</span>`).join('')}</div></div>
+      <button class="v-fav${isFav?' on':''}" title="收藏">${isFav?'♥':'♡'}</button>`;
+    d.querySelector('.v-ava').onclick=e=>{ e.stopPropagation(); vsqPreview(it); };
+    d.querySelector('.v-fav').onclick=e=>{ e.stopPropagation(); toggleFav(it.name); renderVoiceSheet(); };
+    d.querySelector('.v-info').onclick=()=>{ vsqUse(it); renderVoiceSheet(); };
+    box.appendChild(d);
+  });
 }
