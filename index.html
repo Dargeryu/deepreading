@@ -50,7 +50,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">●</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.86</div>
+    <div class="sb-ver">Apo v3.87</div>
   </div>
 </aside>
 <div id="app">
@@ -192,29 +192,6 @@ if ('serviceWorker' in navigator) {
   </main>
 
   <!-- 书籍详情 -->
-  <main id="view-detail" class="view hidden">
-    <div class="dt-nav">
-      <button id="dt-back" class="icon-btn">‹</button>
-      <span class="serif" style="font-weight:700">书籍详情</span>
-      <span style="width:34px"></span>
-    </div>
-    <div class="dt-hero">
-      <div class="cover lg" id="dt-cover"></div>
-      <h2 id="dt-title" class="serif"></h2>
-      <p class="sub" id="dt-sub"></p>
-      <div class="dt-tags" id="dt-tags"></div>
-    </div>
-    <p class="dt-desc" id="dt-desc"></p>
-    <div class="dt-actions">
-      <button class="btn-primary" id="btn-read-now">📖 开始阅读</button>
-      <button class="btn-soft" id="btn-listen-now">🎧 开始听书</button>
-    </div>
-    <div style="padding:0 24px"><button class="btn-ghost" id="btn-cast" style="width:100%">🎭 AI 多角色配音</button></div>
-    <div style="padding:12px 24px 0"><button class="btn-ghost" id="btn-typeset" style="width:100%">✨ AI 排版</button></div>
-    <div class="toc-head"><span class="serif">目录</span><span id="dt-toc-count"></span></div>
-    <div class="toc" id="dt-toc"></div>
-  </main>
-
   <!-- 阅读器 -->
   <main id="view-reader" class="view hidden">
     <header id="reader-bar">
@@ -532,6 +509,8 @@ if ('serviceWorker' in navigator) {
       <button class="rbm-row" id="rbm-notes"><span class="rbm-ic">▤</span><span class="rbm-t">笔记</span><span class="rbm-n" id="rbm-notes-n">0</span><span class="rbm-chev">›</span></button>
       <div class="rbm-row rbm-toggle-row"><span class="rbm-ic">✦</span><span class="rbm-t">情感增强 <em class="rbm-beta">BETA</em></span><button class="rbm-switch" id="rbm-emotion" role="switch" aria-checked="false" aria-label="情感增强"><span class="rbm-knob"></span></button></div>
       <button class="rbm-row" id="rbm-tr"><span class="rbm-ic">🌐</span><span class="rbm-t">翻译设置</span><span class="rbm-chev">›</span></button>
+      <button class="rbm-row" id="rbm-cast"><span class="rbm-ic">🎭</span><span class="rbm-t">多角色配音</span><span class="rbm-chev">›</span></button>
+      <button class="rbm-row" id="rbm-typeset"><span class="rbm-ic">✨</span><span class="rbm-t">AI 排版</span><span class="rbm-chev">›</span></button>
       <button class="rbm-row" id="rbm-rename"><span class="rbm-ic">✎</span><span class="rbm-t">重命名</span><span class="rbm-chev">›</span></button>
       <button class="rbm-row rbm-danger" id="rbm-del"><span class="rbm-ic">🗑</span><span class="rbm-t">删除</span></button>
     </div>
@@ -715,7 +694,7 @@ if ('serviceWorker' in navigator) {
     <div class="grab"></div>
     <div class="sheet-title serif" id="bm-title"></div>
     <p class="sheet-sub" id="bm-sub"></p>
-    <button class="imp-opt" id="bm-open">📖 <span class="io-t">打开详情</span><i>›</i></button>
+    <button class="imp-opt" id="bm-open">📖 <span class="io-t">打开</span><i>›</i></button>
     <button class="imp-opt hidden" id="bm-dl">⏬ <span class="io-t">下载原文件</span><i>›</i></button>
     <button class="imp-opt" id="bm-cat">📁 <span class="io-t">移动到分类</span><i>›</i></button>
     <button class="imp-opt" id="bm-del">🗑 <span class="io-t">删除此书</span><i>›</i></button>

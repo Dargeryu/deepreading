@@ -597,7 +597,7 @@ async function renderCastBooks(){
         <div class="meta">${n} 个角色 · 已配置多角色</div></div>
         <button class="btn-ghost sm">管理</button>`;
       d.querySelector('button').onclick=e=>{ e.stopPropagation(); openCastSheet(b.id); };
-      d.onclick=()=>openDetail(b.id);
+      d.onclick=async()=>{ returnView='voice'; await openBook(b.id); };
       box.appendChild(d);
     });
   }
@@ -612,7 +612,7 @@ async function renderCastBooks(){
       <div class="meta">${b.total} 句</div></div>
       <button class="btn-ghost sm">🎭 解析</button>`;
     d.querySelector('button').onclick=e=>{ e.stopPropagation(); openCastSheet(b.id); };
-    d.onclick=()=>openDetail(b.id);
+    d.onclick=async()=>{ returnView='voice'; await openBook(b.id); };
     all.appendChild(d);
   });
   if(!books.length) box.innerHTML='<div class="empty"><div class="empty-icon">📚</div><p class="sub">先去导入一本书</p></div>';

@@ -465,7 +465,7 @@ async function renderShelf(){
       <span class="recent-info"><strong>${esc(b.title||'未命名书籍')}</strong><small>${esc(b.author||'未知作者')}</small><span class="recent-progress">${done?'已读完':pct+'%'}</span></span>
     </button>`;
   }).join('');
-  recentList.querySelectorAll('[data-book-index]').forEach(el=>el.onclick=()=>openDetail(recent[Number(el.dataset.bookIndex)].id));
+  recentList.querySelectorAll('[data-book-index]').forEach(el=>el.onclick=async()=>{ returnView='library'; await openBook(recent[Number(el.dataset.bookIndex)].id); });
   $('#recent-count').textContent=recent.length?String(recent.length):'';
 
   const query=($('#shelf-filter')?.value||shelfQuery).trim().toLocaleLowerCase();
@@ -491,7 +491,7 @@ async function renderShelf(){
       <span class="inf"><span class="t">${esc(b.title||'未命名书籍')}</span>
       <span class="a">${esc(b.author||'未知作者')}</span>
       <span class="fb">${esc((b.format||'').toUpperCase()||'BOOK')}</span></span>`;
-    el.onclick=()=>openDetail(b.id);
+    el.onclick=async()=>{ returnView='library'; await openBook(b.id); };
     el.oncontextmenu=e=>{e.preventDefault();openBookMenu(b);};
     list.appendChild(el);
   });
@@ -507,7 +507,7 @@ function openBookMenu(b){
   $('#bm-dl').classList.toggle('hidden', !b.hasFile);
   openSheet('book-menu');
 }
-$('#bm-open').onclick=()=>{ closeSheets(); if(menuBook) openDetail(menuBook.id); };
+$('#bm-open').onclick=async()=>{ closeSheets(); if(menuBook){ returnView='library'; await openBook(menuBook.id); } };
 $('#bm-dl').onclick=()=>{ closeSheets(); if(menuBook) downloadBook(menuBook); };
 $('#bm-cat').onclick=()=>{
   const b=menuBook; if(!b) return;
@@ -545,7 +545,7 @@ async function downloadBook(b){
 let cur=null, sentEls=[];
 let readerFindMatches=[], readerFindIndex=0, readerFindQuery='', readerMatchSet=new Set();
 /* ---------- v3 导航 ---------- */
-const VIEWS=['splash','home','library','detail','reader','mine','notes','bookchat','bookmarks','stats','search','voice','badges'];
+const VIEWS=['splash','home','library','reader','mine','notes','bookchat','bookmarks','stats','search','voice','badges'];
 const CLASSICS=['红楼梦','西游记','三国演义','水浒传','聊斋志异','儒林外史','镜花缘','老残游记']; // v3.86：提前声明，启动 go('home') 在 CLASSICS 原位置之前，防 TDZ
 let curView='home', returnView='library';
 function go(name){
@@ -1033,6 +1033,8 @@ $('#rbm-bookmark').onclick=()=>{ closeSheets(); toggleBookmark(); };
 $('#rbm-notes').onclick=()=>{ closeSheets(); returnView='reader'; go('notes'); };
 $('#rbm-emotion').onclick=()=>{ const on=store.get('tts_emotion','0')!=='1'; store.set('tts_emotion', on?'1':'0'); syncEmotionSwitch(); toast(on?'情感增强已开启':'情感增强已关闭'); };
 $('#rbm-tr').onclick=()=>{ closeSheets(); $('#chapter-drawer').classList.remove('hidden'); setDrawerTab('toc'); toast('双语 / 整书翻译在目录页'); };
+$('#rbm-cast').onclick=()=>{ closeSheets(); if(cur) openCastSheet(cur.id); };
+$('#rbm-typeset').onclick=()=>{ closeSheets(); if(cur) openTypesetSheet(cur.id); };
 $('#rbm-rename').onclick=async()=>{ if(!cur) return; const n=prompt('重命名：', cur.title); if(n==null) return; const t=n.trim(); if(!t||t===cur.title) return; cur.title=t; try{ await idb.put(stripBook(cur)); }catch(e){} document.title='Apo · '+t; const rt=$('#rbm-title'); if(rt) rt.textContent=t; toast('已重命名'); };
 $('#rbm-del').onclick=async()=>{ if(!cur) return; const b=cur; closeSheets(); if(confirm(`删除《${b.title}》？`)){ await idb.del(b.id); cur=null; stopSpeak(); go('library'); renderShelf(); } };
 /* ---------- v3.86：PDF 原版视图 ---------- */
@@ -2087,7 +2089,7 @@ async function renderHome(){
   cont.forEach(b=>{
     const d=document.createElement('div'); d.className='rd-bcard';
     d.innerHTML=rdCardHTML(b);
-    d.onclick=()=>{ returnView='home'; openDetail(b.id); };
+    d.onclick=async()=>{ returnView='home'; await openBook(b.id); };
     cl.appendChild(d);
   });
   renderStats();
@@ -2120,10 +2122,10 @@ function renderBanner(){
 $('#btn-mine').onclick=()=>go('mine');
 $('#btn-home-settings').onclick=()=>go('mine');
 $('#mine-back').onclick=()=>go('home');
-$('#banner-btn').onclick=()=>{
+$('#banner-btn').onclick=async()=>{
   const cont=books.filter(b=>b.progress.idx>0 && b.progress.idx<b.total-1);
-  if(cont.length){ returnView='home'; openDetail(cont[0].id); }
-  else if(books.length){ returnView='home'; openDetail(books[0].id); }
+  if(cont.length){ returnView='home'; await openBook(cont[0].id); }
+  else if(books.length){ returnView='home'; await openBook(books[0].id); }
   else openImportSheet();
 };
 $('#banner-x').onclick=e=>{ e.stopPropagation(); try{ localStorage.setItem('apo_banner_hide', statKey(new Date())); }catch(err){} $('#banner').classList.add('hidden'); };
@@ -2194,32 +2196,6 @@ async function shareApo(){
 }
 
 /* ---------- 书籍详情 ---------- */
-let detailId=null;
-function openDetail(id){ detailId=id; renderDetail(); go('detail'); }
-function renderDetail(){
-  const b=books.find(x=>x.id===detailId); if(!b){ go('library'); return; }
-  setCoverEl($('#dt-cover'), b, 12);
-  $('#dt-title').textContent=b.title;
-  const pct=Math.round(100*b.progress.idx/Math.max(1,b.total));
-  $('#dt-sub').textContent=`${b.format?b.format.toUpperCase()+' · ':''}${b.total} 句${pct?` · 已读 ${pct}%`:''}`;
-  $('#dt-tags').innerHTML=[b.format?b.format.toUpperCase():null, b.lang==='zh'?'中文':'英文', b.hasFile?'原文件已保存':null]
-    .filter(Boolean).map(t=>`<span>${esc(t)}</span>`).join('');
-  $('#dt-desc').textContent=(b.sentences.slice(0,2).map(s=>s.t).join('')).slice(0,160)+'…';
-  $('#dt-toc-count').textContent=`共 ${b.chapters.length} 章`;
-  const toc=$('#dt-toc'); toc.innerHTML='';
-  b.chapters.forEach((c,i)=>{
-    const next=b.chapters[i+1];
-    const n=(next?next.start:b.total)-c.start;
-    const d=document.createElement('div'); d.className='toc-item';
-    d.innerHTML=`<span class="n">${i+1}</span><span class="t">${esc(c.title)}</span><span class="c">${n}句</span><span class="go">›</span>`;
-    d.onclick=async()=>{ returnView='detail'; await openBook(b.id); seekTo(c.start); };
-    toc.appendChild(d);
-  });
-}
-$('#dt-back').onclick=()=>go('library');
-$('#btn-read-now').onclick=async()=>{ returnView='detail'; await openBook(detailId); };
-$('#btn-listen-now').onclick=async()=>{ returnView='detail'; await openBook(detailId); play(); };
-$('#btn-cast').onclick=()=>{ const b=books.find(x=>x.id===detailId); if(b) openCastSheet(b.id); };
 
 /* ---------- 迷你播放器 ---------- */
 function updateMiniPlayer(){
@@ -2319,7 +2295,7 @@ function setSleep(min){
   } else toast('已取消定时');
   syncFullPlayer();
 }
-$('#fp-chapters').onclick=()=>{ $('#player-full').classList.add('hidden'); if(cur){ returnView=curView==='detail'?'detail':'library'; go('reader'); } };
+$('#fp-chapters').onclick=()=>{ $('#player-full').classList.add('hidden'); if(cur){ returnView='library'; go('reader'); } };
 
 /* 同步迷你/完整播放器状态 */
 const _markActive=markActive;

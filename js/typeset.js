@@ -150,7 +150,6 @@ async function restoreBackup(bookId){
   await idb.delPageCacheByBook(bookId).catch(()=>{});
   await idb.putProgress(bookId, 0).catch(()=>{});
   if(cur && cur.id===bookId) await openBook(bookId);
-  if(typeof renderDetail==='function' && typeof detailId!=='undefined' && detailId===bookId) renderDetail();
   toast('已还原排版前的原文');
   return true;
 }
@@ -220,7 +219,6 @@ async function runTypeset(bookId, opts, ui){
   await idb.delPageCacheByBook(bookId).catch(()=>{});
   await idb.putProgress(bookId, 0).catch(()=>{});
   if(cur && cur.id===bookId) await openBook(bookId);
-  if(typeof renderDetail==='function' && typeof detailId!=='undefined' && detailId===bookId) renderDetail();
   ui.onStep('排版完成 ✓');   // D16：进度文案同步成完成态，别还挂着“正在重建排版…”
   toast(`排版完成，共 ${newSentences.length} 句`);
 }
@@ -293,7 +291,6 @@ async function startTypeset(){
 // 事件绑定（typeset.js 在 app.js 之后加载，直接绑定）
 (function initTypeset(){
   const bind = ()=>{
-    if($('#btn-typeset')) $('#btn-typeset').onclick = ()=>{ if(detailId) openTypesetSheet(detailId); };
     if($('#ts-do')) $('#ts-do').onclick = startTypeset;
     if($('#ts-cancel')) $('#ts-cancel').onclick = ()=>{ tsCancelled = true; };
     if($('#ts-restore')) $('#ts-restore').onclick = async ()=>{
