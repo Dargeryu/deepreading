@@ -1909,10 +1909,10 @@ const _pe=pagesEl(); if(_pe) _pe.dataset.theme=theme; // v3.88：容器背景跟
 $('#ts-size').value=size; $('#ts-size-v').textContent=size;
 $('#ts-lh').value=lh; $('#ts-lh-v').textContent=(lh/10).toFixed(1);
 $('#ts-font').value=font; $('#ts-theme').value=theme;
-const tf=$('#ts-flip'); if(tf) tf.value=store.get('ts_flip','slide');
+const tf=$('#ts-flip'); if(tf) tf.value=store.get('ts_flip','curl');
 const s2=$('#ts-size2'); if(s2){ s2.value=size; const v2=$('#ts-size2-v'); if(v2) v2.textContent=size; }
 const l2=$('#ts-lh2'); if(l2){ l2.value=lh; const v3=$('#ts-lh2-v'); if(v3) v3.textContent=(lh/10).toFixed(1); }
-const f2=$('#ts-flip2'); if(f2) f2.value=store.get('ts_flip','slide');
+const f2=$('#ts-flip2'); if(f2) f2.value=store.get('ts_flip','curl');
 const t2=$('#ts-theme2'); if(t2) t2.value=theme;
 const ink=store.get('ts_ink','');
 c.style.color=ink||'';
@@ -1928,7 +1928,7 @@ function syncTypesetUI(){
   document.querySelectorAll('#ts-ink-sw button').forEach(b=>b.classList.toggle('cur', ink && b.dataset.ink.toLowerCase()===ink.toLowerCase()));
   const th=store.get('ts_theme','sepia');
   document.querySelectorAll('#ts-bg-sw button').forEach(b=>b.classList.toggle('cur', b.dataset.theme===th));
-  const fl=store.get('ts_flip','slide');
+  const fl=store.get('ts_flip','curl');
   document.querySelectorAll('#ts-flip-pills button').forEach(b=>b.classList.toggle('cur', b.dataset.flip===fl));
 }
 /* 排版按钮已并入目录抽屉（#dr-type） */
