@@ -50,7 +50,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">●</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.98</div>
+    <div class="sb-ver">Apo v3.99</div>
   </div>
 </aside>
 <div id="app">
@@ -213,7 +213,7 @@ if ('serviceWorker' in navigator) {
     </header>
     <div id="ai-typeset-status" class="hidden"><span class="ai-spin">↻</span><span id="ai-typeset-status-t">AI排版中…</span></div>
     <div id="chapter-drawer" class="drawer hidden">
-      <div class="drawer-head"><span class="serif">目录</span> <button id="btn-chapters-close" class="btn-ghost">✕</button></div>
+      <div class="cd-handle" aria-hidden="true"></div>
       <div class="cd-seg" role="tablist">
         <button class="cd-seg-btn" data-tab="search">搜索</button>
         <button class="cd-seg-btn cur" data-tab="toc">目录</button>
@@ -229,15 +229,6 @@ if ('serviceWorker' in navigator) {
         <div id="cd-search-results"></div>
       </div>
       <div class="cd-pane" id="cd-pane-toc">
-        <div class="drawer-tools">
-          <button id="dr-ai" class="btn-ghost sm">✦ AI 助手</button>
-          <button id="dr-type" class="btn-ghost sm">Aa 排版</button>
-          <button id="dr-bilingual" class="btn-ghost sm">🌐 双语</button>
-          <button id="dr-trbook" class="btn-ghost sm">📖 整书翻译</button>
-          <button id="dr-notes" class="btn-ghost sm">▤ 划线笔记</button>
-          <button id="dr-bookmark" class="btn-ghost sm">♧ 本页书签</button>
-          <div id="tr-progress" style="display:none;width:100%;font-size:12px;color:#666;padding:6px 0"></div>
-        </div>
         <div id="chapter-list"></div>
       </div>
       <div class="cd-pane hidden" id="cd-pane-marks">
@@ -558,7 +549,8 @@ if ('serviceWorker' in navigator) {
       <button class="rbm-row" id="rbm-bookmark"><span class="rbm-ic">♧</span><span class="rbm-t">添加书签</span><span class="rbm-chev">›</span></button>
       <button class="rbm-row" id="rbm-notes"><span class="rbm-ic">▤</span><span class="rbm-t">笔记</span><span class="rbm-n" id="rbm-notes-n">0</span><span class="rbm-chev">›</span></button>
       <div class="rbm-row rbm-toggle-row"><span class="rbm-ic">✦</span><span class="rbm-t">情感增强 <em class="rbm-beta">BETA</em></span><button class="rbm-switch" id="rbm-emotion" role="switch" aria-checked="false" aria-label="情感增强"><span class="rbm-knob"></span></button></div>
-      <button class="rbm-row" id="rbm-tr"><span class="rbm-ic">🌐</span><span class="rbm-t">翻译设置</span><span class="rbm-chev">›</span></button>
+      <button class="rbm-row" id="rbm-tr"><span class="rbm-ic">🌐</span><span class="rbm-t">双语对照</span><span class="rbm-chev">›</span></button>
+      <button class="rbm-row" id="rbm-trbook"><span class="rbm-ic">📖</span><span class="rbm-t">整书翻译</span><span class="rbm-chev">›</span></button>
       <button class="rbm-row" id="rbm-cast"><span class="rbm-ic">🎭</span><span class="rbm-t">多角色配音</span><span class="rbm-chev">›</span></button>
       <button class="rbm-row" id="rbm-typeset"><span class="rbm-ic">✨</span><span class="rbm-t">AI 排版</span><span class="rbm-chev">›</span></button>
       <button class="rbm-row hidden" id="rbm-restore"><span class="rbm-ic">↩</span><span class="rbm-t">还原排版</span><span class="rbm-chev">›</span></button>
