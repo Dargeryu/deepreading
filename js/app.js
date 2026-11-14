@@ -1026,6 +1026,7 @@ function openReaderBookMenu(){
   $('#rbm-sub').textContent=[fmt, cur.lang==='zh'?'中文':'英文', '共 '+(cur.total||cur.sentences.length)+' 句'].filter(Boolean).join(' · ');
   idbMarks.byBook(cur.id).then(ms=>{ const n=(ms||[]).filter(m=>m.note).length; const el=$('#rbm-notes-n'); if(el) el.textContent=n; }).catch(()=>{});
   syncEmotionSwitch();
+  if(typeof refreshRbmRestore==='function') refreshRbmRestore();
   openSheet('reader-book-menu');
 }
 $('#rbm-search').onclick=()=>{ closeSheets(); $('#chapter-drawer').classList.remove('hidden'); setDrawerTab('search'); };
@@ -1034,7 +1035,8 @@ $('#rbm-notes').onclick=()=>{ closeSheets(); returnView='reader'; go('notes'); }
 $('#rbm-emotion').onclick=()=>{ const on=store.get('tts_emotion','0')!=='1'; store.set('tts_emotion', on?'1':'0'); syncEmotionSwitch(); toast(on?'情感增强已开启':'情感增强已关闭'); };
 $('#rbm-tr').onclick=()=>{ closeSheets(); $('#chapter-drawer').classList.remove('hidden'); setDrawerTab('toc'); toast('双语 / 整书翻译在目录页'); };
 $('#rbm-cast').onclick=()=>{ closeSheets(); if(cur) openCastSheet(cur.id); };
-$('#rbm-typeset').onclick=()=>{ closeSheets(); if(cur) openTypesetSheet(cur.id); };
+$('#rbm-typeset').onclick=()=>{ closeSheets(); if(cur) autoTypeset(cur.id); };
+$('#rbm-restore').onclick=async()=>{ closeSheets(); if(cur && await restoreBackup(cur.id)) refreshRbmRestore(); };
 $('#rbm-rename').onclick=async()=>{ if(!cur) return; const n=prompt('重命名：', cur.title); if(n==null) return; const t=n.trim(); if(!t||t===cur.title) return; cur.title=t; try{ await idb.put(stripBook(cur)); }catch(e){} document.title='Apo · '+t; const rt=$('#rbm-title'); if(rt) rt.textContent=t; toast('已重命名'); };
 $('#rbm-del').onclick=async()=>{ if(!cur) return; const b=cur; closeSheets(); if(confirm(`删除《${b.title}》？`)){ await idb.del(b.id); cur=null; stopSpeak(); go('library'); renderShelf(); } };
 /* ---------- v3.86：PDF 原版视图 ---------- */
@@ -1120,7 +1122,7 @@ function setRateFromSlider(v){
   };
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bind); else bind();
 })();
-$('#btn-ai-typeset').onclick=()=>$('#typeset').classList.remove('hidden');
+$('#btn-ai-typeset').onclick=()=>{ if(cur) autoTypeset(cur.id); };
 /* v3.86：目录抽屉三段切换（搜索/目录/书签） */
 function setDrawerTab(tab){
   document.querySelectorAll('.cd-seg-btn').forEach(b=>b.classList.toggle('cur', b.dataset.tab===tab));

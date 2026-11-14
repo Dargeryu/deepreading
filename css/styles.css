@@ -1326,3 +1326,9 @@ body.in-reader #tabbar{display:none!important}
 .cd-seg{display:flex;background:#f2f2f4;border-radius:999px;padding:4px;margin:12px 0}
 .cd-seg-btn{flex:1;border:none;background:none;border-radius:999px;padding:8px 0;font-size:14px;color:#333;cursor:pointer}
 .cd-seg-btn.cur{background:#fff;color:#111;box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:700}
+
+/* ============ v3.97 顶栏按 Notify 图重排：AI排版居中对称 ============ */
+#reader-bar{position:relative}
+#reader-bar .reader-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;pointer-events:none}
+#reader-bar .reader-center .ai-typeset-btn{pointer-events:auto}
+#reader-bar .reader-actions{margin-left:auto}

@@ -50,7 +50,7 @@ if ('serviceWorker' in navigator) {
   <button class="sb-item" data-v="mine"><span class="ti">●</span>我的</button>
   <div class="sb-foot">
     <button class="sb-import" id="sb-add">＋ 导入书籍</button>
-    <div class="sb-ver">Apo v3.96</div>
+    <div class="sb-ver">Apo v3.97</div>
   </div>
 </aside>
 <div id="app">
@@ -201,9 +201,11 @@ if ('serviceWorker' in navigator) {
       <div class="reader-doc">
         <div class="reader-doc-meta"><span id="reader-chapter" class="reader-ch" title="打开目录"></span><span id="reader-count" class="reader-count"></span></div>
       </div>
+      <div class="reader-center">
+        <button id="btn-ai-typeset" class="ai-typeset-btn" title="AI 排版"><span class="ai-spark">✦</span>AI排版</button>
+      </div>
       <div class="reader-actions">
         <button id="btn-reader-pdf" class="icon-btn pdf-btn hidden" title="切到 PDF 原版">P</button>
-        <button id="btn-ai-typeset" class="ai-typeset-btn" title="AI 排版"><span class="ai-spark">✦</span>AI排版</button>
         <button id="btn-reader-toc" class="icon-btn" title="目录">☰</button>
         <button id="btn-reader-typeset" class="icon-btn" title="排版设置">Aa</button>
         <button id="btn-reader-more" class="icon-btn" title="更多">···</button>
@@ -559,6 +561,7 @@ if ('serviceWorker' in navigator) {
       <button class="rbm-row" id="rbm-tr"><span class="rbm-ic">🌐</span><span class="rbm-t">翻译设置</span><span class="rbm-chev">›</span></button>
       <button class="rbm-row" id="rbm-cast"><span class="rbm-ic">🎭</span><span class="rbm-t">多角色配音</span><span class="rbm-chev">›</span></button>
       <button class="rbm-row" id="rbm-typeset"><span class="rbm-ic">✨</span><span class="rbm-t">AI 排版</span><span class="rbm-chev">›</span></button>
+      <button class="rbm-row hidden" id="rbm-restore"><span class="rbm-ic">↩</span><span class="rbm-t">还原排版</span><span class="rbm-chev">›</span></button>
       <button class="rbm-row" id="rbm-rename"><span class="rbm-ic">✎</span><span class="rbm-t">重命名</span><span class="rbm-chev">›</span></button>
       <button class="rbm-row rbm-danger" id="rbm-del"><span class="rbm-ic">🗑</span><span class="rbm-t">删除</span></button>
     </div>

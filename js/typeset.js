@@ -226,20 +226,38 @@ async function runTypeset(bookId, opts, ui){
 /* ================= UI ================= */
 let tsBookId = null;
 
-function openTypesetSheet(bookId){
+let tsRunning = false;
+/* v3.97 一键自动 AI 排版（对标 Notify/Readify：点一下直接排，不选参数）：
+ * 本地智能排版必做（免费秒排）；有 Gemini Key 时自动加 AI 校对，无 Key 只做本地。
+ * 排版参数直接用本地专业规则（typesetLocal：断行合并、空行压缩、标点规范、引号配对、盘古空格），
+ * 与 Readify“自动优化排版”同款思路——用户不用选，App 自己定。 */
+async function autoTypeset(bookId){
+  if(tsRunning){ toast('正在排版中…'); return; }
+  const book = books.find(b=>b.id===bookId);
+  if(!book){ toast('找不到这本书'); return; }
   tsBookId = bookId;
-  const hasKey = !!store.get('gemini_key');
-  $('#ts-opt-local').checked = true;
-  $('#ts-opt-ai').checked = hasKey;
-  $('#ts-ai-hint').textContent = hasKey
-    ? '将调用 Gemini 逐章校对错别字与语病'
-    : '未填写 Gemini Key（去 设置 → AI 里填写后可用）';
-  $('#ts-ai-hint').style.color = hasKey ? '' : '#c00';
-  $('#ts-progress').classList.add('hidden');
-  $('#ts-actions').classList.remove('hidden');
-  $('#ts-cancel').classList.add('hidden');
-  refreshTsRestore();
-  openSheet('typeset-sheet');
+  tsRunning = true;
+  tsCancelled = false;
+  const opts = { local:true, ai: !!store.get('gemini_key') };
+  aiTsStatus('AI排版中…');
+  const ui = tsUI();
+  try{
+    await runTypeset(bookId, opts, ui);
+  }catch(e){
+    if(e.message==='CANCELLED') toast('已取消');
+    else if(e.message==='NO_KEY') toast('请先在 设置 → AI 里填写 Gemini Key');
+    else toast('排版失败：' + e.message);
+  }
+  tsRunning = false;
+  aiTsStatus(null);
+  refreshRbmRestore();
+}
+function openTypesetSheet(bookId){ autoTypeset(bookId); }
+/* ··· 菜单“还原排版”行的显隐（有备份才显示） */
+async function refreshRbmRestore(){
+  const row = $('#rbm-restore'); if(!row) return;
+  const has = cur ? await hasBackup(cur.id) : false;
+  row.classList.toggle('hidden', !has);
 }
 
 async function refreshTsRestore(){
