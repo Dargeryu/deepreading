@@ -1,5 +1,5 @@
 /* Deepreading service worker：应用壳离线缓存 */
-const CACHE = 'deepreading-v3.100';
+const CACHE = 'deepreading-v3.101';
 const CORE = [
   './', './index.html', './manifest.json',
   './icon-192.png', './icon-512.png',

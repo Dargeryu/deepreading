@@ -2025,6 +2025,15 @@ setInterval(()=>{ if(document.hidden) return;
 
 /* ================= v3.5：导入弹窗 ================= */
 function openSheet(id){ $('#scrim').classList.remove('hidden'); $('#'+id).classList.remove('hidden'); }
+/* v3.101：触感反馈——点按按钮时轻微震动（navigator.vibrate，安卓 Chrome 有效；iOS Safari 不开放该接口，无震动）。
+   点按按钮时触发，8ms 轻震，配 CSS :active 的 3D 下沉，模拟实体按键。桌面无震动马达时调用即空转，无影响。 */
+function haptic(ms){
+  try{ if(navigator.vibrate) navigator.vibrate(ms||8); }catch(e){}
+}
+document.addEventListener('pointerdown', (e)=>{
+  const t = e.target && e.target.closest ? e.target.closest('button, .ch, .cd-seg-btn, .rbm-row, .tab, .voice-row, .vs-chip, .pb-rowcard') : null;
+  if(t) haptic(8);
+}, {passive:true});
 function closeSheets(){ $('#scrim').classList.add('hidden');
   ['import-sheet','url-sheet','text-sheet','clone-sheet','cast-sheet','voice-sheet','about-sheet','book-menu','typeset-sheet','settings-sheet','typeset','aisheet','reader-book-menu','more-settings-sheet','playback-sheet','chapter-drawer'].forEach(id=>{const el=$('#'+id); if(el) el.classList.add('hidden');});
   if(typeof stopRecord==='function'){ try{stopRecord();}catch(e){} }
