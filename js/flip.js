@@ -57,6 +57,9 @@ function bindFlip(){
     const rect = el.getBoundingClientRect();
     const rx = e.clientX - rect.left;
     const flipTo = (pg)=>{ if(flipMode() === 'curl') setPage(pg); else Flip.animateTo(pg); };
+    if(document.body.classList.contains('reader-immersive')){
+      if(rx < W * 0.22 || rx > W * 0.78){ setReaderImmersive(false); return; }
+    }
     if(typeof store!=='undefined' && store.get('tap_flip','1')!=='1') return; // 更多设置：点击翻页关闭
     const oneHand = typeof store!=='undefined' && store.get('one_hand','0')==='1';
     if(rx < W * 0.22 && PG.page > 0){ flipTo(oneHand ? Math.min(PG.total-1, PG.page+1) : PG.page - 1); }
@@ -287,7 +290,14 @@ function onFlipUp(e){
       const x = e.clientX;
       const rect = pagesEl().getBoundingClientRect();
       const rx = x - rect.left;
-      if(rx < W * 0.25 && PG.page > 0){ setPage(PG.page - 1); return; }
+      // v3.98：沉浸模式（界面隐藏）下点边缘先显示界面（顶栏/播放条/浮钮），不翻页——
+      // 听书时想切回阅读，点一下就该出界面，而不是莫名其妙翻到下一页
+      if(document.body.classList.contains('reader-immersive')){
+        if(rx < W * 0.25 || rx > W * 0.75){ setReaderImmersive(false); return; }
+      }
+      if(typeof store!=='undefined' && store.get('tap_flip','1')!=='1') return;
+      const oneHand = typeof store!=='undefined' && store.get('one_hand','0')==='1';
+      if(rx < W * 0.25 && PG.page > 0){ setPage(oneHand ? Math.min(PG.total-1, PG.page+1) : PG.page - 1); return; }
       if(rx > W * 0.75 && PG.page < PG.total - 1){ setPage(PG.page + 1); return; }
     }
     return; // 轻触：交给句子的 click
