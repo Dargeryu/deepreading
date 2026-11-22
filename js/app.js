@@ -811,7 +811,7 @@ function renderWindow(centerIdx){
     }
     if(sn.p){ const pb=document.createElement('span'); pb.className='para-break'; c.appendChild(pb); }
     const sp=document.createElement('span'); sp.className='sent'+(readerFindQuery&&readerMatchSet.has(i)?' find-hit':''); sp.textContent=sn.t; sp.dataset.g=i;
-    sp.onclick=(()=>{ const g=i; return ()=>{ if(pageTouchMoved || window.getSelection().toString()) return; if(typeof Flip!=='undefined' && Flip.suppressSentClick){ Flip.suppressSentClick=false; return; } if(typeof PG!=='undefined' && PG.ready && typeof pageOfSentence==='function' && pageOfSentence(g)!==PG.page) return; /* v3.102：点按句子只在本页内跳转，跨页不跳（点一下页面不能变走） */ seekTo(g, true); }; })();
+    sp.onclick=(()=>{ const g=i; return ()=>{ /* v3.103：点按句子不再跳转（点一下页面不能变走）；跳句只走进度条/目录/书签 */ return; }; })();
     c.appendChild(sp); c.appendChild(document.createTextNode(' ')); sentEls.push(sp);
   }
   layoutPages();
