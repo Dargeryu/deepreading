@@ -45,10 +45,11 @@ function bindFlip(){
   window.addEventListener('pointermove', onFlipMove, { passive: false });
   window.addEventListener('pointerup', onFlipUp, { passive: true });
   window.addEventListener('pointercancel', onFlipCancel, { passive: true });
-  // 滑动模式：点按左右边缘翻页（兜底）
+  // v3.102：点按不再翻页（用户要求：点一下页面不能变走/划走）。翻页只走滑动拖拽、‹ › 按钮、方向键。
+  // click 只保留沉浸模式下点边缘出界面（顶栏/播放条/浮钮）。
   el.addEventListener('click', (e)=>{
     if(!PG.ready || PG.total <= 1) return;
-    // D10：卷页模式下触屏点按走 onFlipUp 的边缘点按，click 只补桌面鼠标；
+    // D10：卷页模式下触屏点按走 onFlipUp，click 只补桌面鼠标；
     // 滑动模式保持原行为（所有指针都走这里）
     if(flipMode() === 'curl' && Flip.lastPointerType !== 'mouse') return;
     if(window.getSelection().toString()) return;
@@ -56,14 +57,9 @@ function bindFlip(){
     const W = el.clientWidth || 1;
     const rect = el.getBoundingClientRect();
     const rx = e.clientX - rect.left;
-    const flipTo = (pg)=>{ if(flipMode() === 'curl') setPage(pg); else Flip.animateTo(pg); };
     if(document.body.classList.contains('reader-immersive')){
       if(rx < W * 0.22 || rx > W * 0.78){ setReaderImmersive(false); return; }
     }
-    if(typeof store!=='undefined' && store.get('tap_flip','1')!=='1') return; // 更多设置：点击翻页关闭
-    const oneHand = typeof store!=='undefined' && store.get('one_hand','0')==='1';
-    if(rx < W * 0.22 && PG.page > 0){ flipTo(oneHand ? Math.min(PG.total-1, PG.page+1) : PG.page - 1); }
-    else if(rx > W * 0.78 && PG.page < PG.total - 1){ flipTo(PG.page + 1); }
   });
   // v3.88 沉浸阅读：点按正文中部切换 chrome 显隐（左右 1/4 是翻页区，点按不切换）
   // pointerup 先于 click 触发，置旗后句子的 click 会跳过朗读跳转，避免一次点按又切 UI 又跳读。
@@ -84,7 +80,7 @@ function bindFlip(){
     if(dr && !dr.classList.contains('hidden')) return; // 抽屉打开时不切换
     if(document.querySelector('.sheet:not(.hidden)')) return; // 弹窗打开时不切换
     const W = el.clientWidth || 1, rect = el.getBoundingClientRect(), rx = e.clientX - rect.left;
-    if(rx < W * 0.25 || rx > W * 0.75) return; // 左右边缘是翻页区，交给翻页
+    if(rx < W * 0.25 || rx > W * 0.75){ Flip.suppressSentClick = true; return; } // v3.102：边缘点按不触发句子跳转（点一下页面不能变走）
     Flip.suppressSentClick = true;
     toggleReaderImmersive();
   });
@@ -284,21 +280,16 @@ function onFlipUp(e){
   if(!Flip.tracking) return;
   Flip.tracking = false;
   if(!Flip.dragging){
-    // 轻触：左右边缘 1/4 区域点按翻页（滑动失灵时的兜底）
+    // v3.102：轻触不再翻页（用户要求：点一下页面不能变走/划走）。
+    // 只保留沉浸模式下点边缘先显示界面（顶栏/播放条/浮钮）；其余轻触交给句子的 click。
     if(e && e.clientX != null && PG.ready && PG.total > 1 && !window.getSelection().toString()){
       const W = (pagesEl().clientWidth || 1);
       const x = e.clientX;
       const rect = pagesEl().getBoundingClientRect();
       const rx = x - rect.left;
-      // v3.98：沉浸模式（界面隐藏）下点边缘先显示界面（顶栏/播放条/浮钮），不翻页——
-      // 听书时想切回阅读，点一下就该出界面，而不是莫名其妙翻到下一页
       if(document.body.classList.contains('reader-immersive')){
         if(rx < W * 0.25 || rx > W * 0.75){ setReaderImmersive(false); return; }
       }
-      if(typeof store!=='undefined' && store.get('tap_flip','1')!=='1') return;
-      const oneHand = typeof store!=='undefined' && store.get('one_hand','0')==='1';
-      if(rx < W * 0.25 && PG.page > 0){ setPage(oneHand ? Math.min(PG.total-1, PG.page+1) : PG.page - 1); return; }
-      if(rx > W * 0.75 && PG.page < PG.total - 1){ setPage(PG.page + 1); return; }
     }
     return; // 轻触：交给句子的 click
   }

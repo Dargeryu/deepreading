@@ -811,7 +811,7 @@ function renderWindow(centerIdx){
     }
     if(sn.p){ const pb=document.createElement('span'); pb.className='para-break'; c.appendChild(pb); }
     const sp=document.createElement('span'); sp.className='sent'+(readerFindQuery&&readerMatchSet.has(i)?' find-hit':''); sp.textContent=sn.t; sp.dataset.g=i;
-    sp.onclick=(()=>{ const g=i; return ()=>{ if(pageTouchMoved || window.getSelection().toString()) return; if(typeof Flip!=='undefined' && Flip.suppressSentClick){ Flip.suppressSentClick=false; return; } seekTo(g, true); }; })();
+    sp.onclick=(()=>{ const g=i; return ()=>{ if(pageTouchMoved || window.getSelection().toString()) return; if(typeof Flip!=='undefined' && Flip.suppressSentClick){ Flip.suppressSentClick=false; return; } if(typeof PG!=='undefined' && PG.ready && typeof pageOfSentence==='function' && pageOfSentence(g)!==PG.page) return; /* v3.102：点按句子只在本页内跳转，跨页不跳（点一下页面不能变走） */ seekTo(g, true); }; })();
     c.appendChild(sp); c.appendChild(document.createTextNode(' ')); sentEls.push(sp);
   }
   layoutPages();
@@ -1313,8 +1313,6 @@ function applyJustify(){ const c=$('#content'); if(c) c.style.textAlign = store.
 function syncMoreSettings(){
   const setSw=(id,on)=>{ const b=$(id); if(!b) return; b.classList.toggle('on',on); b.setAttribute('aria-checked',on?'true':'false'); };
   setSw('#ms-justify', store.get('ts_justify','1')==='1');
-  setSw('#ms-tapflip', store.get('tap_flip','1')==='1');
-  setSw('#ms-onehand', store.get('one_hand','0')==='1');
   setSw('#ms-volkey', store.get('volkey_flip','0')==='1');
 }
 function openMoreSettings(){ closeSheets(); syncMoreSettings(); $('#more-settings-sheet').classList.remove('hidden'); $('#scrim').classList.remove('hidden'); }
@@ -1337,8 +1335,6 @@ function setRateFromSlider(v){
     const msClose=$('#btn-ms-close'); if(msClose) msClose.onclick=()=>{ closeSheets(); };
     const sw=(id,key,fn,def)=>{ const b=$(id); if(!b) return; b.onclick=()=>{ const on=store.get(key,def||'1')!=='1'; store.set(key,on?'1':'0'); b.classList.toggle('on',on); b.setAttribute('aria-checked',on?'true':'false'); if(fn) fn(on); }; };
     sw('#ms-justify','ts_justify',on=>{ applyJustify(); });
-    sw('#ms-tapflip','tap_flip');
-    sw('#ms-onehand','one_hand',null,'0');
     const vk=$('#ms-volkey'); if(vk) vk.onclick=()=>{ toast('网页版不支持音量键翻页'); };
     const md=$('#ms-display'); if(md) md.onclick=()=>{ $('#more-settings-sheet').classList.add('hidden'); $('#typeset').classList.remove('hidden'); };
     const ml=$('#ms-lock'); if(ml) ml.onclick=()=>{ toast('锁屏时间跟随系统设置'); };

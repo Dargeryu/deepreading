@@ -770,6 +770,8 @@ button.btn-ghost:hover{background:#303036}
 body.reader-immersive #reader-bar,
 body.reader-immersive #reader-player,
 body.reader-immersive #reader-fabs,
+/* v3.102：藏掉左右翻页箭头（点按翻页已移除；箭头盖在正文边缘，点一下就翻页，与"点按绝不翻页"冲突；翻页只走滑动/进度条/目录） */
+.reader-turn-controls{display:none !important}
 body.reader-immersive .reader-turn-controls{display:none !important}
 body.reader-immersive #view-reader #reader-pages{padding-top:max(12px, env(safe-area-inset-top, 12px)) !important;padding-bottom:max(12px, env(safe-area-inset-bottom, 12px)) !important}
 
