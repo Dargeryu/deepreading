@@ -935,7 +935,7 @@ async function repaginate(){
   if(!cur||curView!=='reader'||Flip.active){ if(cur&&curView==='reader'&&Flip.active) scheduleRepaginate(); return; }
   const h=pageHash();
   if(h===PG.hash&&PG.ready){ layoutPages(); showPageInstant(PG.page); return; }
-  const keepIdx=cur.progress.idx;
+  const keepIdx=sentenceOfPage(PG.page); // v3.104：锚点用当前页首句，不用 stale 的 cur.progress.idx（翻页不改 idx，切沉浸会跳回旧页）
   PG.hash=h; PG.ready=false; PG.starts=[]; PG.total=1; updateCount();
   layoutPages();
   const hit=await idb.getPageCache(cur.id+'|'+h).catch(()=>null);
