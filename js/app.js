@@ -495,11 +495,11 @@ async function importFile(file){
     const buf=await file.arrayBuffer();
     const fileData=buf.slice(0); // pdf.js 可能转移原 buffer，先复制一份存档
     const ext=file.name.split('.').pop().toLowerCase();
-    // v3.76：MOBI/AZW 是二进制容器，此前被当纯文本硬解，只会产出乱码书——明确拒掉，不再假装支持
-    if(ext==='mobi'||ext==='azw') throw new Error('暂不支持 MOBI / AZW，请先转成 EPUB 或 TXT 再导入');
+    // v3.105：AZW3/MOBI/AZW 走真正的 KF8/MOBI 解析（js/azw3.js），不再拒掉；带 DRM 的在解析里报错
     let title=file.name.replace(/\.[^.]+$/,''), chapters;
     let cover='';
-    if (ext==='pdf'){ const r=await parsePDF(buf); chapters=splitChapters(r.text); cover=r.cover||''; }
+    if (ext==='azw3'||ext==='mobi'||ext==='azw'){ const r=await parseAZW3(buf); title=r.title||title; chapters=r.chapters; cover=r.cover||''; }
+    else if (ext==='pdf'){ const r=await parsePDF(buf); chapters=splitChapters(r.text); cover=r.cover||''; }
     else if (ext==='epub'){ const r=await parseEPUB(buf); title=r.title||title; chapters=r.chapters; cover=r.cover||''; }
     else if (ext==='docx'){ const r=await parseDOCX(buf); chapters=splitChapters(r.text); }
     else if (ext==='fb2'){ const r=await parseFB2(buf); title=r.title||title; chapters=splitChapters(r.text); }
